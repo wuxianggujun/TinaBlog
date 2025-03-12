@@ -247,6 +247,7 @@ set(common_SOURCES
     stream/ngx_stream_pass_module.c
         
     # Blog模块
+    blog/Nginx.cpp    
     blog/ngx_http_blog_module.cpp    
 )
 
@@ -314,8 +315,9 @@ target_link_libraries(nginx
     ${OPENSSL_LIBRARIES}
     
     # Boost库
-    Boost::asio
     Boost::container
+    Boost::exception
+    Boost::utility
 )
 
 # 链接选项

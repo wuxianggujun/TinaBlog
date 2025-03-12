@@ -17,7 +17,7 @@ CPMAddPackage(
   URL ${CMAKE_SOURCE_DIR}/third_party/boost/boost-1.87.0-cmake.tar.xz
   URL_HASH SHA256=7da75f171837577a52bbf217e17f8ea576c7c246e4594d617bfde7fafd408be5
   OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON"
-          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;asio"
+          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;exception\\\;utility"
 )
 
 # 启用文件夹分组
@@ -64,8 +64,6 @@ add_compile_definitions(
 
 # 添加src作为子目录进行构建
 add_subdirectory(src)
-
-file(GLOB_RECURSE nginx_HEADERS "${NGINX_ROOT_DIR}/src/*.h")
 
 # 创建运行时目录
 foreach(DIR ${NGINX_CONF_DIR} ${NGINX_LOGS_DIR} ${NGINX_TEMP_DIR})

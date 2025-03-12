@@ -36,13 +36,13 @@ typedef void (*ngx_event_handler_pt)(ngx_event_t *ev);
 typedef void (*ngx_connection_handler_pt)(ngx_connection_t *c);
 
 
-#define  NGX_OK          0
-#define  NGX_ERROR      -1
-#define  NGX_AGAIN      -2
-#define  NGX_BUSY       -3
-#define  NGX_DONE       -4
-#define  NGX_DECLINED   -5
-#define  NGX_ABORT      -6
+#define  NGX_OK          0 // 执行成功
+#define  NGX_ERROR      -1 // 执行失败
+#define  NGX_AGAIN      -2 // 未准备好，需要重试
+#define  NGX_BUSY       -3 // 后端服务正忙
+#define  NGX_DONE       -4 // 执行成功，但还需要后续操作
+#define  NGX_DECLINED   -5 // 执行成功，但未做处理
+#define  NGX_ABORT      -6 // 发生了严重的错误
 
 
 #include <ngx_errno.h>

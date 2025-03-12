@@ -75,9 +75,9 @@
 
 #endif
 
-typedef intptr_t        ngx_int_t;
-typedef uintptr_t       ngx_uint_t;
-typedef intptr_t        ngx_flag_t;
+typedef intptr_t        ngx_int_t; // 有符号整数
+typedef uintptr_t       ngx_uint_t;// 无符号整数
+typedef intptr_t        ngx_flag_t;// 标志整数类型
 
 
 #define NGX_INT32_LEN   (sizeof("-2147483648") - 1)
