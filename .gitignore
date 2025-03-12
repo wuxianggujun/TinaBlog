@@ -8,3 +8,4 @@
 /nginx.pdb
 /cmake-build-*/
 /third_party/boost/boost-1.87.0-cmake.tar.xz
+/logs/nginx.pid

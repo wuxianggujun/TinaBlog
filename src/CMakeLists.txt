@@ -318,6 +318,7 @@ target_link_libraries(nginx
     Boost::container
     Boost::exception
     Boost::utility
+    Boost::tti
 )
 
 # 链接选项

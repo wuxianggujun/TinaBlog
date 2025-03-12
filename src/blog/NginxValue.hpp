@@ -37,6 +37,14 @@ public:
             c = inValid(p) ? d : p;
         }
     }
+    
+    static void merge(ngx_str_t& c, const ngx_str_t& p, const ngx_str_t& d){
+        //检查字符串是否为空
+          if(!c.data){
+            c = p.data ? p : d;
+           }
+      }
+    
 
     template<typename T,typename ... Args>
     static void unset(T& v,Args&... args)

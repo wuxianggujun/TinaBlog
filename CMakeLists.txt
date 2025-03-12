@@ -17,7 +17,7 @@ CPMAddPackage(
   URL ${CMAKE_SOURCE_DIR}/third_party/boost/boost-1.87.0-cmake.tar.xz
   URL_HASH SHA256=7da75f171837577a52bbf217e17f8ea576c7c246e4594d617bfde7fafd408be5
   OPTIONS "BOOST_ENABLE_CMAKE ON" "BOOST_SKIP_INSTALL_RULES ON"
-          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;exception\\\;utility"
+          "BUILD_SHARED_LIBS OFF" "BOOST_INCLUDE_LIBRARIES container\\\;exception\\\;utility\\\;tti"
 )
 
 # 启用文件夹分组
