@@ -41,6 +41,7 @@ static ngx_conf_enum_t  ngx_debug_points[] = {
 
 static ngx_command_t  ngx_core_commands[] = {
 
+    // 守护进程指令
     { ngx_string("daemon"),
       NGX_MAIN_CONF|NGX_DIRECT_CONF|NGX_CONF_FLAG,
       ngx_conf_set_flag_slot,
