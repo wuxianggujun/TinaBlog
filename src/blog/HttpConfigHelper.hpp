@@ -11,8 +11,6 @@
 #include <memory>
 #include <vector>
 
-namespace blog {
-
 /**
  * @brief 辅助处理HTTP模块配置的工具类
  *
@@ -81,6 +79,5 @@ public:
     static ngx_int_t setAllowedMethods(ngx_http_request_t* r, ngx_uint_t methods);
 };
 
-} // namespace blog
 
 #endif // TINA_BLOG_HTTP_CONFIG_HELPER_HPP 

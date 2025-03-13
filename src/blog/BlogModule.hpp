@@ -8,7 +8,6 @@
 #include "Nginx.hpp"
 #include <string>
 
-namespace blog {
 
 /**
  * @brief Blog模块配置结构体
@@ -120,7 +119,5 @@ private:
     static bool isRegistered_;
     static ngx_module_t* blogModule_;
 };
-
-} // namespace blog
 
 #endif // TINA_BLOG_BLOG_MODULE_HPP 

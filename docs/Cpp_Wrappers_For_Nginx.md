@@ -11,6 +11,7 @@
 - [5. 请求对象封装](#5-请求对象封装)
 - [6. 配置指令封装](#6-配置指令封装)
 - [7. 完整示例](#7-完整示例)
+- [8. Nginx基类设计](#8-nginx基类设计)
 
 ## 1. 封装原则
 
@@ -501,4 +502,395 @@ private:
 };
 ```
 
-通过这些封装，您可以使用现代C++的方式来开发Nginx模块，使代码更加安全、简洁和易于维护。 
+通过这些封装，您可以使用现代C++的方式来开发Nginx模块，使代码更加安全、简洁和易于维护。
+
+## 8. Nginx基类设计
+
+为了提高代码复用性并遵循面向对象设计原则，我们可以创建一个基类来管理Nginx数据结构指针，然后让其他类继承该基类。
+
+### 8.1 NgxContext基类
+
+以下是一个通用的NgxContext基类设计：
+
+```cpp
+/**
+ * @brief Nginx上下文基类，作为所有Nginx数据结构封装的基础
+ * @tparam T Nginx C结构类型
+ */
+template <typename T>
+class NgxContext {
+public:
+    /**
+     * @brief 从原始指针构造上下文
+     * @param ptr 原始Nginx结构指针
+     * @param owns_ptr 是否拥有指针（是否负责释放）
+     */
+    explicit NgxContext(T* ptr, bool owns_ptr = false)
+        : ptr_(ptr), owns_ptr_(owns_ptr) {}
+    
+    /**
+     * @brief 虚析构函数
+     */
+    virtual ~NgxContext() {
+        // 如果拥有指针并且需要释放，则派生类应重写此方法
+        // 基类不直接管理释放，因为不同Nginx结构有不同的释放方法
+    }
+    
+    /**
+     * @brief 获取原始指针
+     * @return 原始Nginx结构指针
+     */
+    T* get_raw() const { 
+        return ptr_; 
+    }
+    
+    /**
+     * @brief 检查指针是否有效
+     * @return 指针是否有效
+     */
+    bool is_valid() const { 
+        return ptr_ != nullptr; 
+    }
+    
+    /**
+     * @brief 获取记录器
+     * @return Nginx日志对象
+     */
+    ngx_log_t* get_log() const {
+        // 派生类应重写此方法以返回适当的日志对象
+        return nullptr;
+    }
+    
+protected:
+    T* ptr_ = nullptr;          // 原始Nginx结构指针
+    bool owns_ptr_ = false;     // 是否拥有指针（是否负责释放）
+};
+```
+
+### 8.2 请求上下文类
+
+重构NgxHttpRequest为继承NgxContext的类：
+
+```cpp
+/**
+ * @brief HTTP请求上下文类
+ */
+class NgxHttpRequest : public NgxContext<ngx_http_request_t> {
+public:
+    /**
+     * @brief 从原始请求指针构造
+     * @param r 原始请求指针
+     */
+    explicit NgxHttpRequest(ngx_http_request_t* r)
+        : NgxContext<ngx_http_request_t>(r) {}
+    
+    /**
+     * @brief 获取请求方法
+     * @return 请求方法名称
+     */
+    std::string get_method() const {
+        if (!is_valid()) {
+            return "INVALID";
+        }
+        
+        if (ptr_->method_name.len > 0) {
+            return std::string(
+                reinterpret_cast<char*>(ptr_->method_name.data),
+                ptr_->method_name.len);
+        }
+        
+        // 如果没有方法名，返回方法ID
+        switch (ptr_->method) {
+            case NGX_HTTP_GET:
+                return "GET";
+            case NGX_HTTP_POST:
+                return "POST";
+            case NGX_HTTP_HEAD:
+                return "HEAD";
+            // ... 其他方法
+            default:
+                return "UNKNOWN";
+        }
+    }
+    
+    /**
+     * @brief 获取URI
+     * @return URI字符串封装
+     */
+    NgxString get_uri() const {
+        if (!is_valid()) {
+            return NgxString(ngx_string(""));
+        }
+        return NgxString(ptr_->uri);
+    }
+    
+    // ... 其他方法 ...
+    
+    /**
+     * @brief 重写获取日志方法
+     * @return 请求的日志对象
+     */
+    ngx_log_t* get_log() const override {
+        if (!is_valid()) {
+            return nullptr;
+        }
+        return ptr_->connection->log;
+    }
+};
+```
+
+### 8.3 配置上下文类
+
+重构NgxConfContext为继承NgxContext的类：
+
+```cpp
+/**
+ * @brief 配置上下文类
+ */
+class NgxConfContext : public NgxContext<ngx_conf_t> {
+public:
+    /**
+     * @brief 从原始配置指针构造
+     * @param conf 原始配置指针
+     */
+    explicit NgxConfContext(ngx_conf_t* conf)
+        : NgxContext<ngx_conf_t>(conf) {}
+    
+    /**
+     * @brief 获取参数数组
+     * @return 参数数组
+     */
+    std::vector<NgxString> get_args() const {
+        std::vector<NgxString> result;
+        if (!is_valid() || !ptr_->args) {
+            return result;
+        }
+        
+        ngx_str_t* values = static_cast<ngx_str_t*>(ptr_->args->elts);
+        
+        for (ngx_uint_t i = 0; i < ptr_->args->nelts; ++i) {
+            result.emplace_back(values[i]);
+        }
+        
+        return result;
+    }
+    
+    // ... 其他方法 ...
+    
+    /**
+     * @brief 重写获取日志方法
+     * @return 配置的日志对象
+     */
+    ngx_log_t* get_log() const override {
+        if (!is_valid()) {
+            return nullptr;
+        }
+        return ptr_->log;
+    }
+};
+```
+
+### 8.4 内存池上下文类
+
+重构NgxPool为继承NgxContext的类：
+
+```cpp
+/**
+ * @brief 内存池上下文类
+ */
+class NgxPool : public NgxContext<ngx_pool_t> {
+public:
+    /**
+     * @brief 创建新的内存池
+     * @param size 内存池大小
+     */
+    explicit NgxPool(size_t size = NGX_DEFAULT_POOL_SIZE)
+        : NgxContext<ngx_pool_t>(ngx_create_pool(size, nullptr), true) {
+        if (!is_valid()) {
+            throw std::bad_alloc();
+        }
+    }
+    
+    /**
+     * @brief 从现有池构造
+     * @param pool 现有内存池指针
+     * @param owns 是否拥有池（负责释放）
+     */
+    explicit NgxPool(ngx_pool_t* pool, bool owns = false)
+        : NgxContext<ngx_pool_t>(pool, owns) {}
+    
+    /**
+     * @brief 析构函数，释放内存池
+     */
+    ~NgxPool() override {
+        if (is_valid() && owns_ptr_) {
+            ngx_destroy_pool(ptr_);
+            ptr_ = nullptr;
+        }
+    }
+    
+    /**
+     * @brief 分配内存
+     * @tparam T 需要分配的类型
+     * @return 分配的内存指针
+     */
+    template<typename T>
+    T* alloc() {
+        if (!is_valid()) {
+            throw std::runtime_error("Invalid pool");
+        }
+        
+        void* p = ngx_pcalloc(ptr_, sizeof(T));
+        if (p == nullptr) {
+            throw std::bad_alloc();
+        }
+        return static_cast<T*>(p);
+    }
+    
+    // ... 其他方法 ...
+    
+    /**
+     * @brief 重写获取日志方法
+     * @return 内存池的日志对象
+     */
+    ngx_log_t* get_log() const override {
+        if (!is_valid()) {
+            return nullptr;
+        }
+        return ptr_->log;
+    }
+};
+```
+
+### 8.5 扩展设计 - 模块上下文类
+
+为了方便模块开发，我们可以创建一个模块上下文类：
+
+```cpp
+/**
+ * @brief 模块上下文类
+ */
+class NgxModuleContext : public NgxContext<ngx_module_t> {
+public:
+    /**
+     * @brief 从原始模块指针构造
+     * @param module 原始模块指针
+     */
+    explicit NgxModuleContext(ngx_module_t* module)
+        : NgxContext<ngx_module_t>(module) {}
+    
+    /**
+     * @brief 获取模块类型
+     * @return 模块类型字符串
+     */
+    std::string get_type() const {
+        if (!is_valid()) {
+            return "INVALID";
+        }
+        
+        switch (ptr_->type) {
+            case NGX_CORE_MODULE:
+                return "CORE";
+            case NGX_EVENT_MODULE:
+                return "EVENT";
+            case NGX_HTTP_MODULE:
+                return "HTTP";
+            case NGX_MAIL_MODULE:
+                return "MAIL";
+            case NGX_STREAM_MODULE:
+                return "STREAM";
+            default:
+                return "UNKNOWN";
+        }
+    }
+    
+    /**
+     * @brief 获取模块名称
+     * @return 模块名称
+     */
+    std::string get_name() const {
+        if (!is_valid() || !ptr_->name) {
+            return "unnamed";
+        }
+        return std::string(reinterpret_cast<const char*>(ptr_->name));
+    }
+    
+    /**
+     * @brief 获取模块命令
+     * @return 模块命令数组
+     */
+    std::vector<NgxCommand> get_commands() const {
+        std::vector<NgxCommand> result;
+        if (!is_valid() || !ptr_->commands) {
+            return result;
+        }
+        
+        for (ngx_command_t* cmd = ptr_->commands; cmd->name.len; ++cmd) {
+            result.emplace_back(*cmd);
+        }
+        
+        return result;
+    }
+};
+```
+
+### 8.6 使用示例
+
+下面是一个演示如何使用这些基于基类的封装类的示例：
+
+```cpp
+// 模块回调函数
+ngx_int_t handle_blog_request(ngx_http_request_t* r) {
+    // 创建请求上下文
+    NgxHttpRequest request(r);
+    
+    // 获取URI
+    NgxString uri = request.get_uri();
+    
+    // 记录日志
+    ngx_log_error(NGX_LOG_INFO, request.get_log(), 0, 
+                  "Processing request for URI: %V", &uri.to_ngx_str());
+    
+    // 创建内存池
+    NgxPool pool(r->pool);
+    
+    // 创建响应
+    std::string response = "<html><body><h1>Blog</h1></body></html>";
+    
+    // 发送响应
+    return request.send_response(NGX_HTTP_OK, "text/html", response);
+}
+
+// 配置处理函数
+char* handle_blog_path(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
+    // 创建配置上下文
+    NgxConfContext ctx(cf);
+    
+    // 获取参数
+    auto args = ctx.get_args();
+    if (args.size() < 2) {
+        ngx_conf_log_error(NGX_LOG_EMERG, ctx.get_log(), 0,
+                         "blog_path requires a parameter");
+        return NGX_CONF_ERROR;
+    }
+    
+    // 获取配置
+    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
+    
+    // 设置路径
+    ngx_str_t path = args[1].to_ngx_str();
+    bmconf->base_path = path;
+    
+    return NGX_CONF_OK;
+}
+```
+
+通过这种基类设计，我们可以：
+
+1. 减少重复代码，将共同的功能集中在基类中
+2. 提供一致的接口，所有Nginx结构封装类都继承自同一个基类
+3. 实现多态行为，可以根据具体需求扩展和特化不同的Nginx结构
+4. 简化错误处理，在基类中统一提供验证方法
+5. 统一日志处理，通过基类提供一致的日志接口
+
+这种设计特别适合大型Nginx模块项目，可以显著提高代码的可维护性和可扩展性。 

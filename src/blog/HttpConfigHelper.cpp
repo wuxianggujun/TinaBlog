@@ -5,7 +5,6 @@
 #include "HttpConfigHelper.hpp"
 #include <cstring>
 
-namespace blog {
 
 ngx_command_t HttpConfigHelper::createCommand(
     const std::string& name,
@@ -91,5 +90,3 @@ ngx_int_t HttpConfigHelper::setAllowedMethods(ngx_http_request_t* r, ngx_uint_t 
     
     return NGX_OK;
 }
-
-} // namespace blog 

@@ -6,7 +6,6 @@
 #include <iostream>
 #include <cstring>
 
-namespace blog {
 
 // 初始化静态成员变量 - 不再需要这种单例方式
 bool BlogModule::isRegistered_ = false;
@@ -320,14 +319,13 @@ char* BlogModule::setCacheTime(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
     return NGX_CONF_OK;
 }
 
-} // namespace blog
 
 // 在命名空间外部定义全局可见的模块结构
 extern "C" {
     ngx_module_t ngx_http_blog_module = {
         NGX_MODULE_V1,
-        &blog::blog_module_ctx,     /* module context */
-        blog::blog_commands,        /* module directives */
+        &blog_module_ctx,     /* module context */
+        blog_commands,        /* module directives */
         NGX_HTTP_MODULE,            /* module type */
         NULL,                       /* init master */
         NULL,                       /* init module */
@@ -338,4 +336,5 @@ extern "C" {
         NULL,                       /* exit master */
         NGX_MODULE_V1_PADDING
     };
-} 
+
+}

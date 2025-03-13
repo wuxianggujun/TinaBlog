@@ -248,7 +248,6 @@ set(common_SOURCES
         
     # Blog模块
     blog/Nginx.cpp
-    blog/ModuleRegistrar.cpp
     blog/HttpConfigHelper.cpp
     blog/BlogModule.cpp
 )
