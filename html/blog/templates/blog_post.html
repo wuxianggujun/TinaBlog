@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - TinaBlog</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            margin-bottom: 30px;
+        }
+        .site-title {
+            color: #2c3e50;
+            text-decoration: none;
+        }
+        .site-title:hover {
+            text-decoration: underline;
+        }
+        .post-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 25px;
+        }
+        .post-title {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .post-meta {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .post-content {
+            font-size: 16px;
+            line-height: 1.8;
+        }
+        .post-content img {
+            max-width: 100%;
+            height: auto;
+            margin: 15px 0;
+        }
+        .post-content h2, .post-content h3 {
+            margin-top: 30px;
+            color: #2c3e50;
+        }
+        .post-content blockquote {
+            margin: 20px 0;
+            padding: 15px 20px;
+            background-color: #f8f9fa;
+            border-left: 4px solid #e9ecef;
+        }
+        .post-content code {
+            background-color: #f8f9fa;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: Consolas, Monaco, 'Andale Mono', monospace;
+        }
+        .post-content pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .post-tags {
+            margin: 30px 0;
+        }
+        .tag {
+            display: inline-block;
+            background-color: #eee;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin-right: 8px;
+            font-size: 14px;
+            color: #555;
+            text-decoration: none;
+        }
+        .tag:hover {
+            background-color: #e0e0e0;
+        }
+        .comments-section {
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            padding-top: 30px;
+        }
+        .comments-heading {
+            margin-bottom: 20px;
+        }
+        .comment {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .comment-meta {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        .comment-author {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        .back-button {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #2980b9;
+            text-decoration: none;
+        }
+        .back-button:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <a href="/blog" class="back-button">&laquo; 返回博客首页</a>
+        <h1 class="site-title">TinaBlog</h1>
+    </header>
+
+    <main>
+        <article class="blog-post">
+            <div class="post-header">
+                <h1 class="post-title">{{title}}</h1>
+                <div class="post-meta">
+                    <span>作者: {{author}}</span> |
+                    <span>发布时间: {{publish_date}}</span> |
+                    <span>分类: {{category}}</span> |
+                    <span>阅读次数: {{view_count}}</span>
+                </div>
+            </div>
+
+            <div class="post-content">
+                {{{content}}}
+            </div>
+
+            <div class="post-tags">
+                {{#tags}}
+                <a href="/blog/tag/{{.}}" class="tag">{{.}}</a>
+                {{/tags}}
+            </div>
+        </article>
+
+        {{#comments_enabled}}
+        <section class="comments-section">
+            <h2 class="comments-heading">评论 ({{comment_count}})</h2>
+            
+            {{#comments}}
+            <div class="comment">
+                <div class="comment-meta">
+                    <span class="comment-author">{{author}}</span> 发表于 {{date}}
+                </div>
+                <div class="comment-content">
+                    {{content}}
+                </div>
+            </div>
+            {{/comments}}
+
+            {{^comments}}
+            <p>暂无评论。</p>
+            {{/comments}}
+        </section>
+        {{/comments_enabled}}
+    </main>
+
+    <footer>
+        <p>&copy; 2023 TinaBlog - 由Nginx模块强力驱动</p>
+    </footer>
+</body>
+</html> 

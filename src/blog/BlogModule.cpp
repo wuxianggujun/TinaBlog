@@ -7,6 +7,10 @@
 #include <iostream>
 #include <cstring>
 
+// 声明外部模块变量，这样代码中使用时编译器能识别它
+extern "C" {
+    extern ngx_module_t ngx_http_blog_module;
+}
 
 // 初始化静态成员变量 - 不再需要这种单例方式
 bool BlogModule::isRegistered_ = false;
@@ -228,45 +232,151 @@ ngx_int_t BlogModule::handleBlogRequest(ngx_http_request_t* r) {
         return rc;
     }
 
+    // 获取模块配置
+    BlogModuleConfig* bmcf = static_cast<BlogModuleConfig*>(
+        ngx_http_get_module_loc_conf(r, ngx_http_blog_module));
+    
+    if (bmcf == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to get blog module configuration");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 检查模板路径是否配置
+    if (bmcf->template_path.len == 0 || bmcf->template_path.data == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Template path is not set");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 打印出模板路径，方便调试
+    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "Template path: %s", bmcf->template_path.data);
+
+    // 构建模板文件路径
+    ngx_str_t template_file;
+    template_file.len = bmcf->template_path.len + sizeof("/blog_index.html") - 1;
+    template_file.data = static_cast<u_char*>(ngx_palloc(r->pool, template_file.len + 1));
+    
+    if (template_file.data == nullptr) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    // 复制路径并确保路径结尾有斜杠
+    u_char* p = ngx_copy(template_file.data, bmcf->template_path.data, bmcf->template_path.len);
+    
+    // 检查最后一个字符是否为斜杠
+    if (bmcf->template_path.len > 0 && *(p - 1) != '/' && *(p - 1) != '\\') {
+        *p++ = '/';
+    } else {
+        // 如果已经有斜杠，减少总长度
+        template_file.len--;
+    }
+    
+    // 添加文件名
+    p = ngx_cpystrn(p, (u_char*)"blog_index.html", sizeof("blog_index.html"));
+    
+    // 确保字符串以NULL结尾
+    *p = '\0';
+    
+    // 打开模板文件
+    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "Opening template file: %s", template_file.data);
+    
+    // 使用直接的方式打开文件
+    ngx_file_t file;
+    ngx_memzero(&file, sizeof(ngx_file_t));
+    
+    file.name = template_file;
+    file.log = r->connection->log;
+    
+    file.fd = ngx_open_file(template_file.data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
+    
+    if (file.fd == NGX_INVALID_FILE) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, ngx_errno,
+                      "Failed to open template file: %s", template_file.data);
+        return NGX_HTTP_NOT_FOUND;
+    }
+    
+    // 获取文件大小
+    off_t file_size;
+    
+    // 首先获取文件信息
+    if (ngx_file_info(template_file.data, &file.info) == NGX_FILE_ERROR) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, ngx_errno,
+                     "Failed to get file info: %s", template_file.data);
+        ngx_close_file(file.fd);
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    // 然后通过宏获取文件大小
+    file_size = ngx_file_size(&file.info);
+    
+    if (file_size == 0) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0,
+                      "Template file is empty: %s", template_file.data);
+        ngx_close_file(file.fd);
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
     // 设置响应头类型
     r->headers_out.content_type_len = sizeof("text/html") - 1;
     r->headers_out.content_type.len = sizeof("text/html") - 1;
     r->headers_out.content_type.data = (u_char *) "text/html";
-
+    
     // 设置响应码
     r->headers_out.status = NGX_HTTP_OK;
-
-    // 创建响应内容
-    ngx_str_t response = ngx_string("<html><body><h1>Blog Module</h1>"
-                                   "<p>This is a placeholder for the blog module.</p>"
-                                   "</body></html>");
-
+    
     // 设置响应内容长度
-    r->headers_out.content_length_n = response.len;
-
+    r->headers_out.content_length_n = file_size;
+    
+    // 如果是HEAD请求，只发送头部
+    if (r->method == NGX_HTTP_HEAD) {
+        rc = ngx_http_send_header(r);
+        ngx_close_file(file.fd);
+        
+        if (rc == NGX_ERROR || rc > NGX_OK) {
+            return rc;
+        }
+        
+        return NGX_OK;
+    }
+    
     // 发送响应头
     rc = ngx_http_send_header(r);
-    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+    if (rc == NGX_ERROR || rc > NGX_OK) {
+        ngx_close_file(file.fd);
         return rc;
     }
-
-    // 创建缓冲区链
+    
+    // 创建读取文件的缓冲区
     ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_calloc_buf(r->pool));
     if (b == nullptr) {
+        ngx_close_file(file.fd);
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-
-    // 设置缓冲区属性
-    b->pos = response.data;
-    b->last = response.data + response.len;
-    b->memory = 1;    // 内存缓冲区
-    b->last_buf = 1;  // 最后一个缓冲区
-
+    
+    // 设置缓冲区与文件关联
+    b->file = static_cast<ngx_file_t*>(ngx_pcalloc(r->pool, sizeof(ngx_file_t)));
+    if (b->file == nullptr) {
+        ngx_close_file(file.fd);
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    // 复制文件信息
+    b->file->fd = file.fd;
+    b->file->name = file.name;
+    b->file->log = file.log;
+    
+    b->file_pos = 0;
+    b->file_last = file_size;
+    
+    b->in_file = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+    b->sync = 1;     // 建议使用同步读取
+    
     // 创建缓冲区链
     ngx_chain_t out;
     out.buf = b;
     out.next = nullptr;
-
+    
     // 发送响应体
     return ngx_http_output_filter(r, &out);
 }
