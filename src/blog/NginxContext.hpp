@@ -36,7 +36,7 @@ public:
      * 防止意外的资源所有权复制
      */
     NginxContextBase(const NginxContextBase&) = delete;
-    
+
     /**
      * @brief 禁用复制赋值运算符
      * 防止意外的资源所有权复制
@@ -48,7 +48,7 @@ public:
      * 转移对象的所有权
      * @param rhs 右值引用，源对象
      */
-    NginxContextBase(NginxContextBase&& rhs) noexcept 
+    NginxContextBase(NginxContextBase&& rhs) noexcept
         : ptr_(rhs.ptr_), owns_ptr_(rhs.owns_ptr_)
     {
         rhs.ptr_ = nullptr;
@@ -67,7 +67,7 @@ public:
         {
             // 使用CRTP调用派生类的清理方法
             static_cast<Derived*>(this)->cleanup_impl();
-            
+
             ptr_ = rhs.ptr_;
             owns_ptr_ = rhs.owns_ptr_;
             rhs.ptr_ = nullptr;
@@ -109,7 +109,8 @@ public:
      * @brief 重载->运算符，方便访问包装对象的成员
      * @return 指向Nginx对象的原始指针
      */
-    inline T* operator->() const noexcept {
+    inline T* operator->() const noexcept
+    {
         return ptr_;
     }
 
@@ -117,7 +118,8 @@ public:
      * @brief 重载隐式转换到bool
      * 用于条件判断，检查是否有效
      */
-    explicit operator bool() const noexcept {
+    explicit operator bool() const noexcept
+    {
         return valid();
     }
 
@@ -141,8 +143,8 @@ protected:
         owns_ptr_ = false;
     }
 
-    T* ptr_ = nullptr;        ///< 指向Nginx对象的指针
-    bool owns_ptr_ = false;   ///< 是否拥有指针生命周期标志
+    T* ptr_ = nullptr; ///< 指向Nginx对象的指针
+    bool owns_ptr_ = false; ///< 是否拥有指针生命周期标志
 };
 
 /**
@@ -159,10 +161,10 @@ class NginxContext : public NginxContextBase<T, NginxContext<T>>
 public:
     // 导入基类构造函数
     using NginxContextBase<T, NginxContext<T>>::NginxContextBase;
-    
+
     // 友元声明，允许基类访问派生类的私有方法
     friend class NginxContextBase<T, NginxContext<T>>;
-    
+
 private:
     /**
      * @brief 特定的资源清理实现
@@ -176,68 +178,4 @@ private:
         this->owns_ptr_ = false;
     }
 };
-
-/**
- * @brief 针对ngx_pool_t的特化，提供内存池管理
- */
-template <>
-class NginxContext<ngx_pool_t> : public NginxContextBase<ngx_pool_t, NginxContext<ngx_pool_t>>
-{
-public:
-    /**
-     * @brief 构造函数
-     * @param pool 内存池指针
-     * @param owns_pool 是否拥有内存池（负责释放）
-     */
-    explicit NginxContext(ngx_pool_t* pool, bool owns_pool = false) noexcept
-        : NginxContextBase<ngx_pool_t, NginxContext<ngx_pool_t>>(pool, owns_pool)
-    {
-    }
-    
-    /**
-     * @brief 创建新内存池
-     * @param size 内存池大小
-     * @param log 日志对象
-     */
-    explicit NginxContext(size_t size, ngx_log_t* log = nullptr) noexcept
-        : NginxContextBase<ngx_pool_t, NginxContext<ngx_pool_t>>(
-            ngx_create_pool(size, log), true)
-    {
-    }
-    
-    /**
-     * @brief 分配内存
-     * @tparam U 需要分配的类型
-     * @return 分配的内存指针
-     */
-    template<typename U>
-    inline U* alloc() const noexcept {
-        if (!this->valid()) {
-            return nullptr;
-        }
-        return static_cast<U*>(ngx_pcalloc(this->ptr_, sizeof(U)));
-    }
-
-    // 友元声明，允许基类访问派生类的私有方法
-    friend class NginxContextBase<ngx_pool_t, NginxContext<ngx_pool_t>>;
-    
-private:
-    /**
-     * @brief 特定的资源清理实现
-     * 如果拥有内存池，则销毁池
-     */
-    inline void cleanup_impl() noexcept {
-        if (this->valid() && this->owns_ptr_) {
-            ngx_destroy_pool(this->ptr_);
-        }
-        this->ptr_ = nullptr;
-        this->owns_ptr_ = false;
-    }
-};
-
-// 常用类型别名定义
-using NgxPoolContext = NginxContext<ngx_pool_t>;
-using NgxRequestContext = NginxContext<ngx_http_request_t>;
-using NgxConfContext = NginxContext<ngx_conf_t>;
-
 #endif //TINA_BLOG_NGINX_CONTEXT_HPP
