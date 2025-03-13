@@ -247,8 +247,11 @@ set(common_SOURCES
     stream/ngx_stream_pass_module.c
         
     # Blog模块
-    blog/Nginx.cpp    
-    blog/ngx_http_blog_module.cpp    
+    blog/Nginx.cpp
+    blog/ModuleRegistrar.cpp
+    blog/HttpConfigHelper.cpp
+    blog/BlogModule.cpp
+    blog/BlogInitializer.cpp
 )
 
 # 设置平台特定的源文件
