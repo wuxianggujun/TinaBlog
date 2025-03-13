@@ -251,7 +251,6 @@ set(common_SOURCES
     blog/ModuleRegistrar.cpp
     blog/HttpConfigHelper.cpp
     blog/BlogModule.cpp
-    blog/BlogInitializer.cpp
 )
 
 # 设置平台特定的源文件

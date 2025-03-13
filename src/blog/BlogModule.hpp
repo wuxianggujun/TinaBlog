@@ -48,7 +48,6 @@ public:
      */
     static const char* getModuleVersion();
 
-private:
     // Nginx模块回调函数
     
     /**

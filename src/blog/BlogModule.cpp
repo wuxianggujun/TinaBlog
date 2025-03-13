@@ -3,14 +3,12 @@
 //
 
 #include "BlogModule.hpp"
-#include "ModuleRegistrar.hpp"
-#include "HttpConfigHelper.hpp"
 #include <iostream>
 #include <cstring>
 
 namespace blog {
 
-// 初始化静态成员变量
+// 初始化静态成员变量 - 不再需要这种单例方式
 bool BlogModule::isRegistered_ = false;
 ngx_module_t* BlogModule::blogModule_ = nullptr;
 
@@ -18,85 +16,57 @@ ngx_module_t* BlogModule::blogModule_ = nullptr;
 constexpr const char* MODULE_NAME = "ngx_http_blog_module";
 constexpr const char* MODULE_VERSION = "1.0.0";
 
+// 命令定义 - 作为全局变量
+static ngx_command_t blog_commands[] = {
+    { ngx_string("blog_path"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      BlogModule::setBlogPath,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(BlogModuleConfig, base_path),
+      NULL },
+    
+    { ngx_string("blog_template_path"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      BlogModule::setTemplatePath,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(BlogModuleConfig, template_path),
+      NULL },
+    
+    { ngx_string("blog_enable_cache"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      BlogModule::setEnableCache,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(BlogModuleConfig, enable_cache),
+      NULL },
+    
+    { ngx_string("blog_cache_time"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      BlogModule::setCacheTime,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(BlogModuleConfig, cache_time),
+      NULL },
+    
+    ngx_null_command
+};
+
+// 模块上下文定义 - 作为全局变量
+static ngx_http_module_t blog_module_ctx = {
+    BlogModule::preConfiguration,   /* preconfiguration */
+    BlogModule::postConfiguration,  /* postconfiguration */
+    BlogModule::createMainConfig,   /* create main configuration */
+    BlogModule::initMainConfig,     /* init main configuration */
+    BlogModule::createServerConfig, /* create server configuration */
+    BlogModule::mergeServerConfig,  /* merge server configuration */
+    BlogModule::createLocationConfig, /* create location configuration */
+    BlogModule::mergeLocationConfig   /* merge location configuration */
+};
+
+// registerModule函数可以删除，因为现在我们直接在ngx_modules.c中注册
+// 改为记录日志的函数
 bool BlogModule::registerModule() {
-    // 防止重复注册
-    if (isRegistered_) {
-        return true;
-    }
-
-    try {
-        // 创建HTTP模块上下文
-        auto* ctx = ModuleRegistrar::createHttpModuleContext(
-            preConfiguration,           // 预配置回调
-            postConfiguration,          // 后配置回调
-            createMainConfig,           // 创建主配置
-            initMainConfig,             // 初始化主配置
-            createServerConfig,         // 创建服务器配置
-            mergeServerConfig,          // 合并服务器配置
-            createLocationConfig,       // 创建位置配置
-            mergeLocationConfig         // 合并位置配置
-        );
-
-        // 创建命令列表
-        std::vector<ngx_command_t> commands = {
-            HttpConfigHelper::createCommand(
-                "blog_path",
-                NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-                setBlogPath,
-                NGX_HTTP_LOC_CONF_OFFSET,
-                offsetof(BlogModuleConfig, base_path)
-            ),
-            HttpConfigHelper::createCommand(
-                "blog_template_path",
-                NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-                setTemplatePath,
-                NGX_HTTP_LOC_CONF_OFFSET,
-                offsetof(BlogModuleConfig, template_path)
-            ),
-            HttpConfigHelper::createCommand(
-                "blog_enable_cache",
-                NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
-                setEnableCache,
-                NGX_HTTP_LOC_CONF_OFFSET,
-                offsetof(BlogModuleConfig, enable_cache)
-            ),
-            HttpConfigHelper::createCommand(
-                "blog_cache_time",
-                NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
-                setCacheTime,
-                NGX_HTTP_LOC_CONF_OFFSET,
-                offsetof(BlogModuleConfig, cache_time)
-            )
-        };
-
-        // 创建命令数组
-        auto* cmds = HttpConfigHelper::createCommandArray(commands);
-
-        // 创建HTTP模块
-        blogModule_ = ModuleRegistrar::createHttpModule(
-            MODULE_NAME,     // 模块名称
-            ctx,             // 模块上下文
-            cmds,            // 模块命令
-            nullptr,         // init_master
-            nullptr,         // init_module
-            nullptr,         // init_process
-            nullptr,         // init_thread
-            nullptr,         // exit_thread
-            nullptr,         // exit_process
-            nullptr          // exit_master
-        );
-
-        // 注册模块
-        if (ModuleRegistrar::instance().registerHttpModule(blogModule_)) {
-            isRegistered_ = true;
-            return true;
-        }
-
-        return false;
-    } catch (const std::exception& e) {
-        std::cerr << "Error registering blog module: " << e.what() << std::endl;
-        return false;
-    }
+    std::cout << "BlogModule is now registered directly in ngx_modules.c" << std::endl;
+    std::cout << "Module name: " << MODULE_NAME << ", version: " << MODULE_VERSION << std::endl;
+    return true;
 }
 
 const char* BlogModule::getModuleName() {
@@ -223,14 +193,23 @@ char* BlogModule::mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child)
 
 // 处理博客请求
 ngx_int_t BlogModule::handleBlogRequest(ngx_http_request_t* r) {
-    // 获取位置配置 - 使用指针直接访问成员
+    // 获取位置配置
     auto* conf = static_cast<BlogModuleConfig*>(
         ngx_http_get_module_loc_conf(r, ngx_http_core_module));
 
-    // 检查是否应该处理这个请求
-    // 例如，检查URL是否以/blog/开头
+    // 移除特定路径前缀检查，处理所有请求
+    // 或者，如果您希望保留某些检查逻辑，可以修改为更宽松的条件
+    
+    /*
+    // 原来的检查代码
     if (r->uri.len < 6 || ngx_strncmp(r->uri.data, "/blog/", 6) != 0) {
         return NGX_DECLINED;
+    }
+    */
+    
+    // 新的检查逻辑 - 例如可以排除某些路径
+    if (r->uri.len > 8 && ngx_strncmp(r->uri.data, "/static/", 8) == 0) {
+        return NGX_DECLINED;  // 静态资源路径交给其他处理器
     }
 
     // 只接受GET和HEAD方法
@@ -311,10 +290,14 @@ char* BlogModule::setEnableCache(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
     auto* bmconf = static_cast<BlogModuleConfig*>(conf);
     ngx_str_t* value = static_cast<ngx_str_t*>(cf->args->elts);
 
+    // 创建临时ngx_str_t来存储比较字符串
+    ngx_str_t on_str = ngx_string("on");
+    ngx_str_t off_str = ngx_string("off");
+    
     // 处理启用/禁用缓存
-    if (ngx_strcasecmp(value[1].data, reinterpret_cast<u_char*>("on")) == 0) {
+    if (ngx_strcasecmp(value[1].data, on_str.data) == 0) {
         bmconf->enable_cache = 1;
-    } else if (ngx_strcasecmp(value[1].data, reinterpret_cast<u_char*>("off")) == 0) {
+    } else if (ngx_strcasecmp(value[1].data, off_str.data) == 0) {
         bmconf->enable_cache = 0;
     } else {
         return const_cast<char*>("Invalid value (on/off expected)");
@@ -337,4 +320,22 @@ char* BlogModule::setCacheTime(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
     return NGX_CONF_OK;
 }
 
-} // namespace blog 
+} // namespace blog
+
+// 在命名空间外部定义全局可见的模块结构
+extern "C" {
+    ngx_module_t ngx_http_blog_module = {
+        NGX_MODULE_V1,
+        &blog::blog_module_ctx,     /* module context */
+        blog::blog_commands,        /* module directives */
+        NGX_HTTP_MODULE,            /* module type */
+        NULL,                       /* init master */
+        NULL,                       /* init module */
+        NULL,                       /* init process */
+        NULL,                       /* init thread */
+        NULL,                       /* exit thread */
+        NULL,                       /* exit process */
+        NULL,                       /* exit master */
+        NGX_MODULE_V1_PADDING
+    };
+} 
