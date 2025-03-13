@@ -343,6 +343,29 @@ public:
     }
 
     /**
+     * @brief 字符串与C字符串比较
+     * @param cstr 要比较的C字符串
+     * @return 如果相等返回true
+     */
+    [[nodiscard]] inline bool equals(const char* cstr) const noexcept {
+        if (!valid() || !cstr) {
+            return false;
+        }
+        
+        size_t cstr_len = std::strlen(cstr);
+        
+        if (ptr_->len != cstr_len) {
+            return false;
+        }
+        
+        if (ptr_->len == 0) {
+            return true;
+        }
+        
+        return std::memcmp(ptr_->data, cstr, ptr_->len) == 0;
+    }
+
+    /**
      * @brief 字符串比较，忽略大小写
      * @param other 要比较的字符串
      * @return 如果相等返回true
@@ -360,7 +383,30 @@ public:
             return true;
         }
         
-        return ngx_strncasecmp(ptr_->data, other.ptr_->data, ptr_->len) == 0;
+        return ngx_strncasecmp(ptr_->data, const_cast<u_char*>(other.ptr_->data), ptr_->len) == 0;
+    }
+
+    /**
+     * @brief 字符串与C字符串比较，忽略大小写
+     * @param cstr 要比较的C字符串
+     * @return 如果相等返回true
+     */
+    [[nodiscard]] inline bool iequals(const char* cstr) const noexcept {
+        if (!valid() || !cstr) {
+            return false;
+        }
+        
+        size_t cstr_len = std::strlen(cstr);
+        
+        if (ptr_->len != cstr_len) {
+            return false;
+        }
+        
+        if (ptr_->len == 0) {
+            return true;
+        }
+        
+        return ngx_strncasecmp(ptr_->data, const_cast<u_char*>(reinterpret_cast<const u_char*>(cstr)), ptr_->len) == 0;
     }
 
     /**

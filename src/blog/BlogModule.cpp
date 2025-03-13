@@ -3,6 +3,7 @@
 //
 
 #include "BlogModule.hpp"
+#include "NgxConf.hpp"
 #include <iostream>
 #include <cstring>
 
@@ -78,18 +79,24 @@ const char* BlogModule::getModuleVersion() {
 
 // 预配置回调
 ngx_int_t BlogModule::preConfiguration(ngx_conf_t* cf) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     // 这里可以进行一些预配置工作
     return NGX_OK;
 }
 
 // 后配置回调
 ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     ngx_http_core_main_conf_t* cmcf;
     ngx_http_handler_pt* h;
 
     // 获取HTTP核心模块的主配置
     cmcf = static_cast<ngx_http_core_main_conf_t*>(
-        ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module));
+        ngx_http_conf_get_module_main_conf(conf.get(), ngx_http_core_module));
 
     // 添加处理器到访问阶段
     h = static_cast<ngx_http_handler_pt*>(
@@ -107,127 +114,129 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
 
 // 创建主配置
 void* BlogModule::createMainConfig(ngx_conf_t* cf) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     // 分配内存
-    auto* conf = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(cf->pool, sizeof(BlogModuleConfig)));
+    auto* config = static_cast<BlogModuleConfig*>(
+        ngx_pcalloc(conf.pool(), sizeof(BlogModuleConfig)));
 
-    if (conf == nullptr) {
+    if (config == nullptr) {
         return nullptr;
     }
 
     // 设置默认值
-    conf->enable_cache = NGX_CONF_UNSET;
-    conf->cache_time = NGX_CONF_UNSET_UINT;
+    config->enable_cache = NGX_CONF_UNSET;
+    config->cache_time = NGX_CONF_UNSET_UINT;
 
-    return conf;
+    return config;
 }
 
 // 初始化主配置
 char* BlogModule::initMainConfig(ngx_conf_t* cf, void* conf) {
+    // 使用NgxConf封装原始指针
+    NgxConf ctx(cf);
+    
     // 这里可以进行主配置的初始化
     return NGX_CONF_OK;
 }
 
 // 创建服务器配置
 void* BlogModule::createServerConfig(ngx_conf_t* cf) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     // 分配内存
-    auto* conf = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(cf->pool, sizeof(BlogModuleConfig)));
+    auto* config = static_cast<BlogModuleConfig*>(
+        ngx_pcalloc(conf.pool(), sizeof(BlogModuleConfig)));
 
-    if (conf == nullptr) {
+    if (config == nullptr) {
         return nullptr;
     }
 
     // 设置默认值
-    conf->enable_cache = NGX_CONF_UNSET;
-    conf->cache_time = NGX_CONF_UNSET_UINT;
+    config->enable_cache = NGX_CONF_UNSET;
+    config->cache_time = NGX_CONF_UNSET_UINT;
 
-    return conf;
+    return config;
 }
 
 // 合并服务器配置
 char* BlogModule::mergeServerConfig(ngx_conf_t* cf, void* parent, void* child) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     auto* prev = static_cast<BlogModuleConfig*>(parent);
-    auto* conf = static_cast<BlogModuleConfig*>(child);
+    auto* curr = static_cast<BlogModuleConfig*>(child);
 
     // 合并配置
-    ngx_conf_merge_str_value(conf->base_path, prev->base_path, "");
-    ngx_conf_merge_str_value(conf->template_path, prev->template_path, "");
-    ngx_conf_merge_value(conf->enable_cache, prev->enable_cache, 0);
-    ngx_conf_merge_uint_value(conf->cache_time, prev->cache_time, 60);
+    ngx_conf_merge_str_value(curr->base_path, prev->base_path, "");
+    ngx_conf_merge_str_value(curr->template_path, prev->template_path, "");
+    ngx_conf_merge_value(curr->enable_cache, prev->enable_cache, 0);
+    ngx_conf_merge_uint_value(curr->cache_time, prev->cache_time, 60);
 
     return NGX_CONF_OK;
 }
 
 // 创建位置配置
 void* BlogModule::createLocationConfig(ngx_conf_t* cf) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     // 分配内存
-    auto* conf = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(cf->pool, sizeof(BlogModuleConfig)));
+    auto* config = static_cast<BlogModuleConfig*>(
+        ngx_pcalloc(conf.pool(), sizeof(BlogModuleConfig)));
 
-    if (conf == nullptr) {
+    if (config == nullptr) {
         return nullptr;
     }
 
     // 设置默认值
-    conf->enable_cache = NGX_CONF_UNSET;
-    conf->cache_time = NGX_CONF_UNSET_UINT;
+    config->enable_cache = NGX_CONF_UNSET;
+    config->cache_time = NGX_CONF_UNSET_UINT;
 
-    return conf;
+    return config;
 }
 
 // 合并位置配置
 char* BlogModule::mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child) {
+    // 使用NgxConf封装原始指针
+    NgxConf conf(cf);
+    
     auto* prev = static_cast<BlogModuleConfig*>(parent);
-    auto* conf = static_cast<BlogModuleConfig*>(child);
+    auto* curr = static_cast<BlogModuleConfig*>(child);
 
     // 合并配置
-    ngx_conf_merge_str_value(conf->base_path, prev->base_path, "");
-    ngx_conf_merge_str_value(conf->template_path, prev->template_path, "");
-    ngx_conf_merge_value(conf->enable_cache, prev->enable_cache, 0);
-    ngx_conf_merge_uint_value(conf->cache_time, prev->cache_time, 60);
+    ngx_conf_merge_str_value(curr->base_path, prev->base_path, "");
+    ngx_conf_merge_str_value(curr->template_path, prev->template_path, "");
+    ngx_conf_merge_value(curr->enable_cache, prev->enable_cache, 0);
+    ngx_conf_merge_uint_value(curr->cache_time, prev->cache_time, 60);
 
     return NGX_CONF_OK;
 }
 
-// 处理博客请求
+// 博客请求处理函数
 ngx_int_t BlogModule::handleBlogRequest(ngx_http_request_t* r) {
-    // 获取位置配置
-    auto* conf = static_cast<BlogModuleConfig*>(
-        ngx_http_get_module_loc_conf(r, ngx_http_core_module));
-
-    // 移除特定路径前缀检查，处理所有请求
-    // 或者，如果您希望保留某些检查逻辑，可以修改为更宽松的条件
-    
-    /*
-    // 原来的检查代码
-    if (r->uri.len < 6 || ngx_strncmp(r->uri.data, "/blog/", 6) != 0) {
-        return NGX_DECLINED;
-    }
-    */
-    
-    // 新的检查逻辑 - 例如可以排除某些路径
-    if (r->uri.len > 8 && ngx_strncmp(r->uri.data, "/static/", 8) == 0) {
-        return NGX_DECLINED;  // 静态资源路径交给其他处理器
-    }
-
-    // 只接受GET和HEAD方法
+    // 确认请求方法
     if (!(r->method & (NGX_HTTP_GET|NGX_HTTP_HEAD))) {
         return NGX_HTTP_NOT_ALLOWED;
     }
 
-    // 忽略请求体
+    // 丢弃请求体
     ngx_int_t rc = ngx_http_discard_request_body(r);
     if (rc != NGX_OK) {
         return rc;
     }
 
-    // 设置响应头
+    // 设置响应头类型
     r->headers_out.content_type_len = sizeof("text/html") - 1;
-    ngx_str_set(&r->headers_out.content_type, "text/html");
+    r->headers_out.content_type.len = sizeof("text/html") - 1;
+    r->headers_out.content_type.data = (u_char *) "text/html";
+
+    // 设置响应码
     r->headers_out.status = NGX_HTTP_OK;
 
-    // 示例响应
+    // 创建响应内容
     ngx_str_t response = ngx_string("<html><body><h1>Blog Module</h1>"
                                    "<p>This is a placeholder for the blog module.</p>"
                                    "</body></html>");
@@ -264,42 +273,62 @@ ngx_int_t BlogModule::handleBlogRequest(ngx_http_request_t* r) {
 
 // 博客路径指令处理函数
 char* BlogModule::setBlogPath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
+    // 使用NgxConf封装原始指针
+    NgxConf ctx(cf);
+    
     auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    ngx_str_t* value = static_cast<ngx_str_t*>(cf->args->elts);
+    
+    // 使用NgxConf提供的方法获取参数
+    NgxString arg = ctx.get_arg(1);
+    if (!arg.valid()) {
+        return ctx.error("Invalid blog path");
+    }
 
     // 设置博客路径
-    bmconf->base_path = value[1];
+    bmconf->base_path = *arg.get();
 
     return NGX_CONF_OK;
 }
 
 // 模板路径指令处理函数
 char* BlogModule::setTemplatePath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
+    // 使用NgxConf封装原始指针
+    NgxConf ctx(cf);
+    
     auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    ngx_str_t* value = static_cast<ngx_str_t*>(cf->args->elts);
+    
+    // 使用NgxConf提供的方法获取参数
+    NgxString arg = ctx.get_arg(1);
+    if (!arg.valid()) {
+        return ctx.error("Invalid template path");
+    }
 
     // 设置模板路径
-    bmconf->template_path = value[1];
+    bmconf->template_path = *arg.get();
 
     return NGX_CONF_OK;
 }
 
 // 启用缓存指令处理函数
 char* BlogModule::setEnableCache(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
-    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    ngx_str_t* value = static_cast<ngx_str_t*>(cf->args->elts);
-
-    // 创建临时ngx_str_t来存储比较字符串
-    ngx_str_t on_str = ngx_string("on");
-    ngx_str_t off_str = ngx_string("off");
+    // 使用NgxConf封装原始指针
+    NgxConf ctx(cf);
     
-    // 处理启用/禁用缓存
-    if (ngx_strcasecmp(value[1].data, on_str.data) == 0) {
+    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
+    
+    // 使用NgxConf提供的方法获取参数
+    NgxString arg = ctx.get_arg(1);
+    if (!arg.valid()) {
+        return ctx.error("Invalid cache setting (on/off expected)");
+    }
+
+    // 使用NgxString的方法进行比较，而不是直接使用C函数
+    if (arg.equals("on")) {
         bmconf->enable_cache = 1;
-    } else if (ngx_strcasecmp(value[1].data, off_str.data) == 0) {
+    } else if (arg.equals("off")) {
         bmconf->enable_cache = 0;
     } else {
-        return const_cast<char*>("Invalid value (on/off expected)");
+        return ctx.error("Invalid value (on/off expected)");
     }
 
     return NGX_CONF_OK;
@@ -307,14 +336,24 @@ char* BlogModule::setEnableCache(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
 
 // 缓存时间指令处理函数
 char* BlogModule::setCacheTime(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
+    // 使用NgxConf封装原始指针
+    NgxConf ctx(cf);
+    
     auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    ngx_str_t* value = static_cast<ngx_str_t*>(cf->args->elts);
+    
+    // 使用NgxConf提供的方法获取参数
+    NgxString arg = ctx.get_arg(1);
+    if (!arg.valid()) {
+        return ctx.error("Invalid cache time");
+    }
 
     // 设置缓存时间
-    bmconf->cache_time = ngx_atoi(value[1].data, value[1].len);
-    if (bmconf->cache_time == NGX_ERROR) {
-        return const_cast<char*>("Invalid cache time value");
+    ngx_int_t value = ngx_atoi(arg->data, arg->len);
+    if (value == NGX_ERROR) {
+        return ctx.error("Invalid cache time value");
     }
+    
+    bmconf->cache_time = value;
 
     return NGX_CONF_OK;
 }
@@ -336,5 +375,4 @@ extern "C" {
         NULL,                       /* exit master */
         NGX_MODULE_V1_PADDING
     };
-
 }
