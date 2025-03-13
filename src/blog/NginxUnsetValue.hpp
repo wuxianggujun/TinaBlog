@@ -5,6 +5,8 @@
 #ifndef TINA_BLOG_NGINX_UNSET_VALUE_HPP
 #define TINA_BLOG_NGINX_UNSET_VALUE_HPP
 
+#include "Nginx.hpp"
+
 /**
  * 相当于Nginx里的NGX_CONF_UNSET_XXX宏
  */

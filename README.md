@@ -1,83 +1,130 @@
-# NGINX CMake 构建项目
+# TinaBlog - Nginx博客模块
 
-<div align="right">
-  <a href="README-EN.md">English</a> | <a href="README.md">中文</a>
-</div>
+TinaBlog是一个轻量级的基于Nginx的博客模块，可以直接集成到Nginx服务器中，提供简单高效的博客功能。
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/9335b488-ffcc-4157-8364-2370a0b70ad0">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/3a7eeb08-1133-47f5-859c-fad4f5a6a013">
-  <img alt="NGINX Banner">
-</picture>
+## 功能特点
 
-## 项目简介
+- 直接集成到Nginx，无需额外的应用服务器
+- 高性能、低资源占用
+- 支持Markdown格式的博客文章
+- 简单的分类和标签系统
+- 文章评论功能
+- 缓存系统提高性能
+- 跨平台支持（Windows、Linux）
 
-本项目提供了使用CMake在Windows平台下构建和调试Nginx的解决方案。通过使用CMake，无需复杂的依赖安装处理和相关三方库配置，直接构建工程并进行调试。
+## 系统要求
 
-## 参考资源
+- Nginx 1.18+
+- C++14 兼容的编译器
+- CMake 3.10+
+- SQLite 3
 
-本项目参考了 [LiYoumu/nginx-cmake](https://github.com/LiYoumu/nginx-cmake) 项目的实现方式，在此基础上进行了一些改进和调整。
+## 编译安装
 
-## 特性
+### 在Windows上编译
 
-- 使用CMake构建系统，简化Windows平台下的编译过程
-- 自动处理PCRE、ZLIB和OpenSSL依赖
-- 已在conf/nginx.conf中添加了`daemon off;`和`master_process off;`配置，便于调试
-- 自动创建Nginx运行所需的临时目录和日志文件夹
-
-## 支持平台
-
-目前仅在Windows平台下测试通过，推荐使用Visual Studio 2019及以上版本。
-
-## 构建步骤
-
-1. 克隆仓库
-```bash
-git clone https://github.com/your-username/nginx-cmake.git
-cd nginx-cmake
-```
-
-2. 创建构建目录
 ```bash
 mkdir build
 cd build
-```
-
-3. 配置项目
-```bash
-cmake .. -G "Visual Studio 16 2019" -A x64
-```
-
-4. 构建项目
-```bash
+cmake ..
 cmake --build . --config Release
 ```
-或者直接在Visual Studio中打开生成的解决方案文件并构建。
 
-## 调试说明
+### 在Linux上编译
 
-由于在conf/nginx.conf中已添加了`daemon off;`和`master_process off;`配置，可以直接在Visual Studio中设置nginx为启动项目，然后启动调试。
-
-## 目录结构
-```text
-nginx-cmake/
-├── CMakeLists.txt # 主CMake配置文件
-├── cmake/ # CMake模块和工具
-│ ├── CMakeLists.txt
-│ └── auto_group_files.cmake
-├── src/ # 源代码
-│ └── CMakeLists.txt # src目录的构建配置
-├── third_party/ # 第三方依赖库
-│ ├── pcre/
-│ ├── zlib/
-│ ├── openssl-3.4/
-│ └── CMakeLists.txt # 第三方库配置
-└── conf/ # 配置文件目录
-└── nginx.conf # 已配置daemon off和master_process off
-
+```bash
+mkdir build
+cd build
+cmake ..
+make
 ```
 
-## 相关链接
+## 配置使用
 
-- [NGINX官方网站](https://nginx.org/)
-- [LiYoumu/nginx-cmake](https://github.com/LiYoumu/nginx-cmake)
+1. 将编译好的模块复制到Nginx的模块目录：
+   - Windows: `copy build\blog\ngx_http_blog_module.dll C:\nginx\modules\`
+   - Linux: `cp build/blog/ngx_http_blog_module.so /usr/local/nginx/modules/`
+
+2. 在Nginx配置文件中添加模块配置：
+
+```nginx
+# 全局配置
+load_module modules/ngx_http_blog_module.so;  # 或 .dll (Windows)
+
+# http 块内配置
+blog_root html/blog;
+blog_db_path html/blog/data/blog.db;
+blog_cache_time 3600;
+blog_enable_comment on;
+
+# server 块内配置
+server {
+    # ...
+
+    location /blog {
+        blog_enable on;
+        blog_template_path html/blog/templates;
+    }
+}
+```
+
+3. 创建必要的目录结构：
+
+```
+html/
+  ├── blog/
+  │    ├── templates/  # 模板文件
+  │    ├── data/       # 数据存储
+  │    └── static/     # 静态资源
+```
+
+4. 使用提供的测试脚本生成测试数据：
+
+```bash
+# Windows
+scripts\generate_test_data.bat
+
+# Linux
+./scripts/generate_test_data.sh
+```
+
+## 测试
+
+项目包含测试脚本，可以快速测试模块功能：
+
+```bash
+# Windows
+scripts\test_module.bat
+
+# Linux
+./scripts/test_module.sh
+```
+
+测试默认在 http://localhost:8088/blog 上运行。
+
+## 目录结构
+
+```
+TinaBlog/
+  ├── src/             # 源代码
+  │    ├── blog/       # 博客模块主要代码
+  │    └── utils/      # 工具函数和辅助类
+  ├── include/         # 头文件
+  ├── scripts/         # 脚本工具
+  ├── tests/           # 测试文件
+  │    └── templates/  # 测试用模板
+  ├── conf/            # 配置文件
+  └── build/           # 构建目录（自动生成）
+```
+
+## 开发计划
+
+- [ ] 支持用户认证系统
+- [ ] 添加更多模板主题
+- [ ] 支持更多数据库后端
+- [ ] 实现插件系统
+- [ ] 添加RSS/Atom订阅支持
+
+## 许可证
+
+本项目采用MIT许可证，详见LICENSE文件。

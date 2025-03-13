@@ -5,18 +5,8 @@
 #ifndef TINA_BLOG_NGINX_DATETIME_HPP
 #define TINA_BLOG_NGINX_DATETIME_HPP
 
-extern "C" {
-#include <ngx_config.h>
-#include <ngx_core.h>
-}
-
-#include <ctime>
-
-#ifdef _WIN32
-// Windows系统库
-#include <Windows.h>
-#endif
-
+// 包含统一的Nginx头文件
+#include "Nginx.hpp"
 #include "NginxException.hpp"
 #include "NginxString.hpp"
 

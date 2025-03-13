@@ -5,16 +5,11 @@
 #ifndef TINA_BLOG_NGINX_EXCEPTION_HPP
 #define TINA_BLOG_NGINX_EXCEPTION_HPP
 
-// 首先包含Nginx核心头文件
-extern "C" {
-#include <ngx_config.h>
-#include <ngx_core.h>
-}
+// 包含统一的Nginx头文件
+#include "Nginx.hpp"
 
-#include <string>
-#include <exception>
+// Boost库相关包含
 #include <boost/exception/all.hpp>
-// 使用boost::string_ref替代boost::utility/string_ref
 #include <boost/utility/string_ref.hpp>
 
 class NginxException final : public virtual std::exception, public virtual boost::exception
