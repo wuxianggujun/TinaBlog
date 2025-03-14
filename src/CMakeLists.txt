@@ -249,8 +249,10 @@ set(common_SOURCES
     # Blog模块
     blog/Nginx.cpp
     blog/HttpConfigHelper.cpp
+    blog/BlogConfig.cpp
     blog/BlogModule.cpp
     blog/BlogRouter.cpp
+    blog/TemplateCacheManager.cpp
         
 )
 

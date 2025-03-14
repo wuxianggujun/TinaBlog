@@ -81,6 +81,7 @@ endif()
 
 # 添加编译选项
 if(MSVC)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE NOMINMAX)
     # 直接设置/MD或/MDd
     target_compile_options(${PROJECT_NAME} PRIVATE
         $<$<CONFIG:Debug>:/MDd>
