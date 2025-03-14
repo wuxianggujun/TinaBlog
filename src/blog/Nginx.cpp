@@ -6,3 +6,4 @@
 // #include "Nginx.hpp"
 #include "NginxContext.hpp"
 #include "NgxList.hpp"
+#include "NgxAllocator.hpp"
