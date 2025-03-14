@@ -3,9 +3,6 @@
 //
 
 #include "BlogModule.hpp"
-
-#include <BlogConfig.hpp>
-
 #include "NgxConf.hpp"
 #include "BlogRouter.hpp"
 #include "BlogTemplate.hpp"
@@ -119,7 +116,7 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
     }
 
     // 设置处理器为BlogModule的请求处理函数
-    *h = handleBlogRequest;
+    *h = handleRequest;
 
     // 初始化路由
     initBlogRoutes();
@@ -231,30 +228,58 @@ char* BlogModule::mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child)
 }
 
 // 博客请求处理函数
-ngx_int_t BlogModule::handleBlogRequest(ngx_http_request_t* r) {
-    // 确认请求方法
-    if (!(r->method & (NGX_HTTP_GET|NGX_HTTP_HEAD|NGX_HTTP_POST))) {
-        return NGX_HTTP_NOT_ALLOWED;
-    }
-
-    // 丢弃请求体 (对于GET和HEAD请求)
-    if (r->method & (NGX_HTTP_GET|NGX_HTTP_HEAD)) {
-        ngx_int_t rc = ngx_http_discard_request_body(r);
-        if (rc != NGX_OK) {
-            return rc;
+ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
+    try {
+        // 封装Nginx请求
+        NgxRequest request(r);
+        
+        // 创建日志对象
+        NgxLog logger(r);
+        
+        // 获取请求URI
+        std::string uri = request.getUri();
+        logger.info("处理请求: %s", uri.c_str());
+        
+        // 获取模块配置
+        auto conf = static_cast<BlogModuleConfig*>(
+            ngx_http_get_module_loc_conf(r, ngx_http_blog_module));
+        if (!conf) {
+            logger.error("获取模块配置失败");
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        
+        // 从配置中获取前缀
+        std::string prefix;
+        if (conf->prefix.data) {
+            prefix = std::string((char*)conf->prefix.data, conf->prefix.len);
+            logger.info("配置的前缀路径: %s", prefix.c_str());
+        }
+        
+        // 使用博客配置对象提供额外信息 - 但不检查前缀
+        // 因为我们的路由可以处理多种路径格式
+        BlogConfig config(request);
+        logger.info("博客基础路径: %s", config.getBasePath().c_str());
+        
+        // 调用路由处理请求
+        auto& router = getBlogRouter();
+        RouteParams params;
+        
+        logger.info("尝试匹配路由: %s", uri.c_str());
+        auto handler = router.match(r, uri, params);
+        
+        if (handler) {
+            logger.info("找到路由处理器，执行处理");
+            return handler(r, params);
+        } else {
+            logger.error("未找到路由处理器: %s", uri.c_str());
+            return NGX_HTTP_NOT_FOUND;
         }
     }
-    
-    // 对于POST请求，需要读取请求体
-    if (r->method == NGX_HTTP_POST) {
-        ngx_int_t rc = ngx_http_read_client_request_body(r, nullptr);
-        if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
-            return rc;
-        }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                     "处理请求异常: %s", e.what());
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-
-    // 使用路由系统分发请求
-    return getBlogRouter().dispatch(r);
 }
 
 // 博客路径指令处理函数
@@ -495,161 +520,242 @@ ngx_int_t BlogModule::serveTemplate(ngx_http_request_t* r, const char* templateN
 }
 
 ngx_int_t BlogModule::serveTemplateWithVariables(ngx_http_request_t* r, 
-                                              const char* templateName,
-                                              const std::unordered_map<std::string, std::string>& variables) {
-    try {
-        // 使用NgxRequest封装请求
-        NgxRequest request(r);
-        
-        // 通过NgxRequest构造BlogConfig
-        BlogConfig config(request);
-        
-        // 获取完整模板路径
-        std::string fullPath = config.getFullTemplatePath(templateName);
-        if (fullPath.empty()) {
-            config.log(NGX_LOG_ERR, "模板路径无效或未配置");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        
-        // 记录日志
-        config.log(NGX_LOG_INFO, "加载模板文件: %s", fullPath.c_str());
-        
-        // 读取模板文件内容
-        std::ifstream templateFile(fullPath);
-        if (!templateFile.is_open()) {
-            config.log(NGX_LOG_ERR, "无法打开模板文件: %s", fullPath.c_str());
-            return NGX_HTTP_NOT_FOUND;
-        }
-        
-        std::stringstream buffer;
-        buffer << templateFile.rdbuf();
-        std::string templateContent = buffer.str();
-        templateFile.close();
-        
-        // 替换模板变量
-        std::string renderedContent = templateContent;
-        for (const auto& [key, value] : variables) {
-            std::string placeholder = "{{" + key + "}}";
-            size_t pos = 0;
-            while ((pos = renderedContent.find(placeholder, pos)) != std::string::npos) {
-                renderedContent.replace(pos, placeholder.length(), value);
-                pos += value.length();
-            }
-        }
-        
-        // 设置响应头
-        r->headers_out.status = NGX_HTTP_OK;
-        r->headers_out.content_type.len = sizeof("text/html") - 1;
-        r->headers_out.content_type.data = reinterpret_cast<u_char*>(const_cast<char*>("text/html"));
-        r->headers_out.content_length_n = renderedContent.length();
-        
-        // 如果启用了缓存，设置缓存控制头
-        if (config.isEnableCache()) {
-            // 设置过期时间
-            ngx_time_t* time = ngx_timeofday();
-            ngx_uint_t expires_time = ngx_exiting ? ngx_time() : time->sec + config.getCacheTime();
-            
-            // 创建并设置 Expires 头
-            ngx_table_elt_t* expires = static_cast<ngx_table_elt_t*>(
-                ngx_list_push(&r->headers_out.headers));
-                
-            if (expires) {
-                expires->hash = 1;
-                expires->key.len = sizeof("Expires") - 1;
-                expires->key.data = reinterpret_cast<u_char*>(const_cast<char*>("Expires"));
-                
-                // 将过期时间格式化为 HTTP 日期
-                char expires_buf[80];
-                time_t expires_time_t = static_cast<time_t>(expires_time);
-                struct tm gm_time;
-                
-#ifdef _WIN32
-                // Windows 平台使用 gmtime_s
-                gmtime_s(&gm_time, &expires_time_t);
-#else
-                // POSIX 平台使用 gmtime_r
-                gmtime_r(&expires_time_t, &gm_time);
-#endif
-                
-                strftime(expires_buf, sizeof(expires_buf), "%a, %d %b %Y %H:%M:%S GMT", &gm_time);
-                
-                expires->value.len = strlen(expires_buf);
-                expires->value.data = static_cast<u_char*>(ngx_palloc(r->pool, expires->value.len));
-                
-                if (expires->value.data) {
-                    ngx_memcpy(expires->value.data, expires_buf, expires->value.len);
-                }
-                
-                // 设置 headers_out.expires 指针
-                r->headers_out.expires = expires;
-            }
-            
-            // 设置 Cache-Control 头
-            ngx_table_elt_t* cc = static_cast<ngx_table_elt_t*>(
-                ngx_list_push(&r->headers_out.headers));
-                
-            if (cc) {
-                cc->hash = 1;
-                cc->key.len = sizeof("Cache-Control") - 1;
-                cc->key.data = reinterpret_cast<u_char*>(const_cast<char*>("Cache-Control"));
-                
-                std::string cacheValue = "max-age=" + std::to_string(config.getCacheTime());
-                cc->value.len = cacheValue.length();
-                cc->value.data = static_cast<u_char*>(
-                    ngx_palloc(r->pool, cacheValue.length()));
-                    
-                if (cc->value.data) {
-                    ngx_memcpy(cc->value.data, cacheValue.c_str(), cacheValue.length());
-                }
-            }
-        }
-        
-        // 如果是HEAD请求，只发送头部
-        if (r->method == NGX_HTTP_HEAD) {
-            return ngx_http_send_header(r);
-        }
-        
-        // 创建输出缓冲区
-        ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-        if (b == nullptr) {
-            config.log(NGX_LOG_ERR, "分配响应缓冲区失败");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        
-        // 分配输出内容内存
-        b->pos = static_cast<u_char*>(ngx_palloc(r->pool, renderedContent.length()));
-        if (b->pos == nullptr) {
-            config.log(NGX_LOG_ERR, "分配响应内容内存失败");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        
-        // 复制渲染后的内容到缓冲区
-        ngx_memcpy(b->pos, renderedContent.c_str(), renderedContent.length());
-        b->last = b->pos + renderedContent.length();
-        b->memory = 1;    // 内容在内存中
-        b->last_buf = 1;  // 这是最后一个缓冲区
-        
-        // 创建输出链
-        ngx_chain_t out;
-        out.buf = b;
-        out.next = nullptr;
-        
-        // 发送响应头和主体
-        r->headers_out.status = NGX_HTTP_OK;
-        ngx_int_t rc = ngx_http_send_header(r);
-        if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
-            return rc;
-        }
-        
-        // 发送响应主体
-        return ngx_http_output_filter(r, &out);
-    }
-    catch (const std::exception& e) {
-        // 发生异常时记录日志
+                                                const std::string& templateName,
+                                                const std::unordered_map<std::string, std::string>& variables) {
+    // 获取模块配置
+    auto conf = static_cast<BlogModuleConfig*>(
+        ngx_http_get_module_loc_conf(r, ngx_http_blog_module));
+    if (conf == NULL) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "模板处理异常: %s", e.what());
+                      "获取博客模块配置失败");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+
+    // 创建日志对象
+    NgxLog logger(r);
+
+    // 检查模板路径
+    if (conf->template_path.len == 0) {
+        logger.error("模板路径未配置");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 构建完整的模板路径
+    std::string templatePath = std::string((char*)conf->template_path.data, conf->template_path.len);
+    if (templatePath.back() != '/' && templatePath.back() != '\\') {
+        templatePath += '/';
+    }
+    templatePath += templateName;
+
+    logger.info("使用模板: %s", templatePath.c_str());
+
+    // 读取模板文件
+    std::ifstream file(templatePath);
+    if (!file.is_open()) {
+        logger.error("无法打开模板文件: %s", templatePath.c_str());
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 读取文件内容
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    std::string content = buffer.str();
+    file.close();
+
+    // 增强的模板变量替换处理
+    std::string processedContent = processTemplate(content, variables);
+
+    // 设置响应
+    r->headers_out.content_type_len = sizeof("text/html") - 1;
+    r->headers_out.content_type.data = (u_char*)"text/html";
+    r->headers_out.status = NGX_HTTP_OK;
+
+    // 设置缓存控制
+    if (conf->enable_cache) {
+        u_char timeStr[128];
+        time_t now = ngx_time();
+        time_t expires = now + conf->cache_time;
+
+        // 创建expires头
+        ngx_table_elt_t* expires_header = static_cast<ngx_table_elt_t*>(
+            ngx_list_push(&r->headers_out.headers));
+        if (expires_header != nullptr) {
+            expires_header->hash = 1;
+            expires_header->key.data = (u_char*)"Expires";
+            expires_header->key.len = sizeof("Expires") - 1;
+
+            // 格式化时间
+            ngx_tm_t tm;
+#if _WIN32
+            // 转换时间到tm结构体
+            struct tm winTm;
+            gmtime_s(&winTm, &expires);
+            
+            // 复制到nginx的tm结构体
+            tm.ngx_tm_sec = winTm.tm_sec;
+            tm.ngx_tm_min = winTm.tm_min;
+            tm.ngx_tm_hour = winTm.tm_hour;
+            tm.ngx_tm_mday = winTm.tm_mday;
+            tm.ngx_tm_mon = winTm.tm_mon;
+            tm.ngx_tm_year = winTm.tm_year;
+            tm.ngx_tm_wday = winTm.tm_wday;
+#else
+            ngx_libc_gmtime(expires, &tm);
+#endif
+            // 调用ngx_http_time处理正确类型
+            expires_header->value.len = ngx_http_time(timeStr, expires) - timeStr;
+            expires_header->value.data = static_cast<u_char*>(
+                ngx_pnalloc(r->pool, expires_header->value.len));
+            
+            if (expires_header->value.data != nullptr) {
+                ngx_memcpy(expires_header->value.data, timeStr, expires_header->value.len);
+            }
+        }
+
+        // 添加Cache-Control头
+        ngx_table_elt_t* cache_control = static_cast<ngx_table_elt_t*>(
+            ngx_list_push(&r->headers_out.headers));
+        if (cache_control != nullptr) {
+            cache_control->hash = 1;
+            cache_control->key.data = (u_char*)"Cache-Control";
+            cache_control->key.len = sizeof("Cache-Control") - 1;
+
+            std::string cacheValue = "max-age=" + std::to_string(conf->cache_time);
+            cache_control->value.len = cacheValue.length();
+            cache_control->value.data = static_cast<u_char*>(
+                ngx_pnalloc(r->pool, cache_control->value.len));
+            
+            if (cache_control->value.data != nullptr) {
+                ngx_memcpy(cache_control->value.data, cacheValue.c_str(), cache_control->value.len);
+            }
+        }
+    } else {
+        // 无缓存设置
+        ngx_table_elt_t* cache_control = static_cast<ngx_table_elt_t*>(
+            ngx_list_push(&r->headers_out.headers));
+        if (cache_control != nullptr) {
+            cache_control->hash = 1;
+            cache_control->key.data = (u_char*)"Cache-Control";
+            cache_control->key.len = sizeof("Cache-Control") - 1;
+            cache_control->value.data = (u_char*)"no-cache, no-store, must-revalidate";
+            cache_control->value.len = sizeof("no-cache, no-store, must-revalidate") - 1;
+        }
+    }
+
+    // 分配响应缓冲区
+    ngx_str_t response;
+    response.len = processedContent.length();
+    response.data = static_cast<u_char*>(ngx_pnalloc(r->pool, response.len));
+    if (response.data == nullptr) {
+        logger.error("分配响应内存失败");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 复制响应内容
+    ngx_memcpy(response.data, processedContent.c_str(), response.len);
+
+    // 设置响应长度
+    r->headers_out.content_length_n = response.len;
+
+    // 发送HTTP头
+    ngx_int_t rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
+
+    // 创建并初始化缓冲链
+    ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
+    if (b == nullptr) {
+        logger.error("分配缓冲区失败");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    b->pos = response.data;
+    b->last = response.data + response.len;
+    b->memory = 1;
+    b->last_buf = 1;
+
+    ngx_chain_t out;
+    out.buf = b;
+    out.next = nullptr;
+
+    // 发送响应体
+    return ngx_http_output_filter(r, &out);
+}
+
+// 增强的模板处理函数
+std::string BlogModule::processTemplate(
+    const std::string& content, 
+    const std::unordered_map<std::string, std::string>& variables) {
+    
+    std::string result = content;
+    
+    // 1. 处理条件段落: {{#section}}...{{/section}}
+    for (const auto& var : variables) {
+        if (var.first[0] == '#') {  // 找到以#开头的特殊变量
+            std::string sectionName = var.first.substr(1);  // 去掉#
+            std::string startTag = "{{#" + sectionName + "}}";
+            std::string endTag = "{{/" + sectionName + "}}";
+            
+            size_t startPos = result.find(startTag);
+            while (startPos != std::string::npos) {
+                size_t endPos = result.find(endTag, startPos);
+                if (endPos != std::string::npos) {
+                    // 获取段落内容
+                    size_t contentStart = startPos + startTag.length();
+                    std::string sectionContent = result.substr(contentStart, endPos - contentStart);
+                    
+                    // 用变量值替换整个段落（包括标签）
+                    result.replace(startPos, endPos + endTag.length() - startPos, var.second);
+                    
+                    // 查找下一个匹配
+                    startPos = result.find(startTag, startPos + var.second.length());
+                } else {
+                    break;  // 找不到结束标签
+                }
+            }
+        }
+        else if (var.first[0] == '^') {  // 处理反向条件段落 {{^section}}...{{/section}}
+            std::string sectionName = var.first.substr(1);  // 去掉^
+            std::string startTag = "{{^" + sectionName + "}}";
+            std::string endTag = "{{/" + sectionName + "}}";
+            
+            size_t startPos = result.find(startTag);
+            while (startPos != std::string::npos) {
+                size_t endPos = result.find(endTag, startPos);
+                if (endPos != std::string::npos) {
+                    // 获取段落内容
+                    size_t contentStart = startPos + startTag.length();
+                    std::string sectionContent = result.substr(contentStart, endPos - contentStart);
+                    
+                    // 用变量值替换整个段落（包括标签）
+                    result.replace(startPos, endPos + endTag.length() - startPos, var.second);
+                    
+                    // 查找下一个匹配
+                    startPos = result.find(startTag, startPos + var.second.length());
+                } else {
+                    break;  // 找不到结束标签
+                }
+            }
+        }
+    }
+    
+    // 2. 处理普通变量替换 {{var}}
+    for (const auto& var : variables) {
+        // 跳过特殊变量（已在上面处理）
+        if (var.first[0] == '#' || var.first[0] == '^') {
+            continue;
+        }
+        
+        std::string placeholder = "{{" + var.first + "}}";
+        size_t pos = result.find(placeholder);
+        while (pos != std::string::npos) {
+            result.replace(pos, placeholder.length(), var.second);
+            pos = result.find(placeholder, pos + var.second.length());
+        }
+    }
+    
+    return result;
 }
 
 // 在命名空间外部定义全局可见的模块结构

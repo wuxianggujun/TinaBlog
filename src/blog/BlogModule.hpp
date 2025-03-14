@@ -8,21 +8,12 @@
 #include "Nginx.hpp"
 #include <string>
 #include <unordered_map>
+#include "BlogConfig.hpp"
 
 // 前向声明
 class NgxString;
 class NgxConf;
 class NgxRequest;
-
-/**
- * @brief Blog模块配置结构体
- */
-struct BlogModuleConfig {
-    ngx_str_t base_path;    // 博客基础路径
-    ngx_str_t template_path; // 模板路径
-    ngx_flag_t enable_cache; // 是否启用缓存
-    ngx_uint_t cache_time;   // 缓存时间（秒）
-};
 
 /**
  * @brief 博客模块处理器
@@ -62,10 +53,30 @@ public:
      */
     static ngx_int_t serveTemplate(ngx_http_request_t* r, const char* templateName);
 
+    /**
+     * @brief 使用模板变量渲染并发送响应
+     * 
+     * @param r HTTP请求对象
+     * @param templateName 模板文件名
+     * @param variables 模板变量
+     * @return ngx_int_t Nginx状态码
+     */
+    static ngx_int_t serveTemplateWithVariables(
+        ngx_http_request_t* r,
+        const std::string& templateName, 
+        const std::unordered_map<std::string, std::string>& variables);
 
-    static ngx_int_t serveTemplateWithVariables(ngx_http_request_t* r, 
-                                          const char* templateName,
-                                          const std::unordered_map<std::string, std::string>& variables);
+    /**
+     * @brief 处理模板，替换变量
+     * 
+     * @param content 模板内容
+     * @param variables 模板变量
+     * @return std::string 处理后的模板内容
+     */
+    static std::string processTemplate(
+        const std::string& content, 
+        const std::unordered_map<std::string, std::string>& variables);
+
     // Nginx模块回调函数 - 保持签名不变以兼容Nginx API
     
     /**
@@ -115,6 +126,12 @@ public:
      * 内部使用NgxConf封装类处理配置
      */
     static char* mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child);
+    
+    /**
+     * @brief 处理HTTP请求
+     * 内部可使用NgxRequest封装类处理请求
+     */
+    static ngx_int_t handleRequest(ngx_http_request_t* r);
     
     /**
      * @brief 处理博客请求

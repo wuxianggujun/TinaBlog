@@ -1,0 +1,23 @@
+2025/03/14 16:54:49 [notice] 6592#12352: using the "select" event method
+2025/03/14 16:54:49 [notice] 6592#12352: nginx/1.27.5
+2025/03/14 16:54:49 [info] 6592#12352: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/14 16:54:49 [notice] 6592#12352: create thread 16272
+2025/03/14 16:54:51 [info] 6592#16272: *1 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [info] 6592#16272: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [info] 6592#16272: *1 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [debug] 6592#16272: *1 尝试匹配路由: /blog/
+2025/03/14 16:54:51 [debug] 6592#16272: *1 检查路由模式: /
+2025/03/14 16:54:51 [debug] 6592#16272: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 16:54:51 [debug] 6592#16272: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 16:54:51 [debug] 6592#16272: *1 检查路由模式: /index.html
+2025/03/14 16:54:51 [debug] 6592#16272: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 16:54:51 [debug] 6592#16272: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 16:54:51 [debug] 6592#16272: *1 检查路由模式: /blog
+2025/03/14 16:54:51 [debug] 6592#16272: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 16:54:51 [debug] 6592#16272: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 16:54:51 [info] 6592#16272: *1 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [info] 6592#16272: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [info] 6592#16272: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [info] 6592#16272: *1 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:54:51 [info] 6592#16272: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 16:55:32 [notice] 6592#23160: console closing, exiting

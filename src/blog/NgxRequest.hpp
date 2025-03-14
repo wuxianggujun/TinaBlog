@@ -96,6 +96,17 @@ public:
     }
 
     /**
+     * @brief 获取请求URI的字符串形式
+     * @return URI字符串
+     */
+    [[nodiscard]] inline std::string getUri() const noexcept {
+        if (!valid() || !ptr_->uri.data) {
+            return "";
+        }
+        return std::string(reinterpret_cast<char*>(ptr_->uri.data), ptr_->uri.len);
+    }
+
+    /**
      * @brief 获取请求查询参数
      * @return 查询参数字符串
      */
