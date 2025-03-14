@@ -52,6 +52,15 @@ public:
      */
     static const char* getModuleVersion();
 
+    /**
+     * @brief 加载并提供模板文件
+     * 
+     * @param r HTTP请求对象
+     * @param templateName 模板文件名
+     * @return ngx_int_t Nginx状态码
+     */
+    static ngx_int_t serveTemplate(ngx_http_request_t* r, const char* templateName);
+
     // Nginx模块回调函数 - 保持签名不变以兼容Nginx API
     
     /**

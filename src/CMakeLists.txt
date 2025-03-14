@@ -250,6 +250,8 @@ set(common_SOURCES
     blog/Nginx.cpp
     blog/HttpConfigHelper.cpp
     blog/BlogModule.cpp
+    blog/BlogRouter.cpp
+        
 )
 
 # 设置平台特定的源文件

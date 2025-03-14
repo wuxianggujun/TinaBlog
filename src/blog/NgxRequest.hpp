@@ -167,24 +167,28 @@ public:
         header_name.data = reinterpret_cast<u_char*>(const_cast<char*>(name.c_str()));
         header_name.len = name.length();
         
-        ngx_table_elt_t* header = static_cast<ngx_table_elt_t*>(
-            ngx_list_find(&ptr_->headers_in.headers, 
-                         [](void* item, void* data) {
-                             ngx_table_elt_t* h = static_cast<ngx_table_elt_t*>(item);
-                             ngx_str_t* name = static_cast<ngx_str_t*>(data);
-                             
-                             if (h->key.len != name->len) {
-                                 return 0;
-                             }
-                             
-                             return ngx_strncasecmp(h->key.data, name->data, name->len) == 0;
-                         },
-                         &header_name));
+        // 遍历请求头部列表查找匹配项
+        ngx_list_part_t* part = &ptr_->headers_in.headers.part;
+        ngx_table_elt_t* headers = static_cast<ngx_table_elt_t*>(part->elts);
         
-        if (header) {
-            return std::string(
-                reinterpret_cast<char*>(header->value.data),
-                header->value.len);
+        for (ngx_uint_t i = 0; /* void */; i++) {
+            if (i >= part->nelts) {
+                if (part->next == nullptr) {
+                    break;
+                }
+                
+                part = part->next;
+                headers = static_cast<ngx_table_elt_t*>(part->elts);
+                i = 0;
+            }
+            
+            if (headers[i].key.len == header_name.len &&
+                ngx_strncasecmp(headers[i].key.data, header_name.data, header_name.len) == 0) {
+                // 找到匹配的头部
+                return std::string(
+                    reinterpret_cast<char*>(headers[i].value.data),
+                    headers[i].value.len);
+            }
         }
         
         return std::nullopt;
