@@ -9,7 +9,17 @@
 
 // 处理博客首页
 static ngx_int_t handleBlogIndex(ngx_http_request_t* r, const RouteParams& params) {
-    return BlogModule::serveTemplate(r, "blog_index.html");
+
+    // 构建模板变量
+    std::unordered_map<std::string, std::string> variables;
+    variables["title"] = "博客文章 #";
+    variables["author"] = "管理员";
+    variables["publish_date"] = "2023-05-15";
+    variables["category"] = "技术";
+    variables["content"] = "这是博客主页的介绍。\n\n这是一个示例博客文章，展示了模板引擎的功能。";
+    variables["view_count"] = "42";
+    
+    return BlogModule::serveTemplateWithVariables(r, "blog_index.html", variables);
 }
 
 // 处理博客文章页
@@ -22,11 +32,18 @@ static ngx_int_t handleBlogPost(ngx_http_request_t* r, const RouteParams& params
     
     std::string postId = it->second;
     
-    // 这里可以根据ID加载文章内容
-    // ...
+    // 构建模板变量
+    std::unordered_map<std::string, std::string> variables;
+    variables["id"] = postId;
+    variables["title"] = "博客文章 #" + postId;
+    variables["author"] = "管理员";
+    variables["publish_date"] = "2023-05-15";
+    variables["category"] = "技术";
+    variables["content"] = "这是博客文章 #" + postId + " 的内容。";
+    variables["view_count"] = "42";
     
-    // 加载文章模板
-    return BlogModule::serveTemplate(r, "blog_post.html");
+    // 加载并渲染模板
+    return BlogModule::serveTemplateWithVariables(r, "blog_post.html", variables);
 }
 
 // 处理分类页面

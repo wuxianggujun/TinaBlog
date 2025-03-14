@@ -5,6 +5,7 @@
 #include "BlogModule.hpp"
 #include "NgxConf.hpp"
 #include "BlogRouter.hpp"
+#include "BlogTemplate.hpp"
 #include <iostream>
 #include <cstring>
 
@@ -490,6 +491,106 @@ ngx_int_t BlogModule::serveTemplate(ngx_http_request_t* r, const char* templateN
     return ngx_http_output_filter(r, &out);
 }
 
+ngx_int_t BlogModule::serveTemplateWithVariables(ngx_http_request_t* r, 
+                                               const char* templateName,
+                                               const std::unordered_map<std::string, std::string>& variables) {
+    // 获取模块配置
+    BlogModuleConfig* bmcf = static_cast<BlogModuleConfig*>(
+        ngx_http_get_module_loc_conf(r, ngx_http_blog_module));
+    
+    if (bmcf == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to get blog module configuration");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 检查模板路径是否配置
+    if (bmcf->template_path.len == 0 || bmcf->template_path.data == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Template path is not set");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    // 构建模板文件路径
+    std::string pathStr(reinterpret_cast<char*>(bmcf->template_path.data), bmcf->template_path.len);
+    if (pathStr.back() != '/' && pathStr.back() != '\\') {
+        pathStr += '/';
+    }
+    pathStr += templateName;
+    
+    ngx_log_error(NGX_LOG_INFO, r->connection->log, 0, "Opening template file: %s", pathStr.c_str());
+    
+    // 读取模板文件内容
+    std::ifstream templateFile(pathStr);
+    if (!templateFile.is_open()) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to open template file: %s", pathStr.c_str());
+        return NGX_HTTP_NOT_FOUND;
+    }
+    
+    std::stringstream buffer;
+    buffer << templateFile.rdbuf();
+    std::string templateContent = buffer.str();
+    templateFile.close();
+    
+    // 替换模板变量
+    std::string renderedContent = templateContent;
+    for (const auto& [key, value] : variables) {
+        std::string placeholder = "{{" + key + "}}";
+        size_t pos = 0;
+        while ((pos = renderedContent.find(placeholder, pos)) != std::string::npos) {
+            renderedContent.replace(pos, placeholder.length(), value);
+            pos += value.length();
+        }
+    }
+    
+    // 设置响应头
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_type.len = sizeof("text/html") - 1;
+    r->headers_out.content_type.data = reinterpret_cast<u_char*>(const_cast<char*>("text/html"));
+    r->headers_out.content_length_n = renderedContent.length();
+    
+    // 如果是HEAD请求，只发送头部
+    if (r->method == NGX_HTTP_HEAD) {
+        ngx_int_t rc = ngx_http_send_header(r);
+        if (rc == NGX_ERROR || rc > NGX_OK) {
+            return rc;
+        }
+        return NGX_OK;
+    }
+    
+    // 发送响应头
+    ngx_int_t rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK) {
+        return rc;
+    }
+    
+    // 创建缓冲区
+    ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
+    if (b == nullptr) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    // 复制内容到Nginx内存池
+    u_char* content_data = static_cast<u_char*>(
+        ngx_pcalloc(r->pool, renderedContent.length()));
+    if (content_data == nullptr) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    ngx_memcpy(content_data, renderedContent.c_str(), renderedContent.length());
+    
+    // 设置缓冲区属性
+    b->pos = content_data;
+    b->last = content_data + renderedContent.length();
+    b->memory = 1;    // 内存缓冲区
+    b->last_buf = 1;  // 最后一个缓冲区
+    
+    // 创建缓冲区链
+    ngx_chain_t out;
+    out.buf = b;
+    out.next = nullptr;
+    
+    // 发送响应体
+    return ngx_http_output_filter(r, &out);
+}
 
 // 在命名空间外部定义全局可见的模块结构
 extern "C" {

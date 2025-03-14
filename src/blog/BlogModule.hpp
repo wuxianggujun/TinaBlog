@@ -7,6 +7,7 @@
 
 #include "Nginx.hpp"
 #include <string>
+#include <unordered_map>
 
 // 前向声明
 class NgxString;
@@ -61,6 +62,10 @@ public:
      */
     static ngx_int_t serveTemplate(ngx_http_request_t* r, const char* templateName);
 
+
+    static ngx_int_t serveTemplateWithVariables(ngx_http_request_t* r, 
+                                          const char* templateName,
+                                          const std::unordered_map<std::string, std::string>& variables);
     // Nginx模块回调函数 - 保持签名不变以兼容Nginx API
     
     /**
