@@ -1,23 +1,691 @@
-2025/03/14 16:54:49 [notice] 6592#12352: using the "select" event method
-2025/03/14 16:54:49 [notice] 6592#12352: nginx/1.27.5
-2025/03/14 16:54:49 [info] 6592#12352: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/14 16:54:49 [notice] 6592#12352: create thread 16272
-2025/03/14 16:54:51 [info] 6592#16272: *1 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [info] 6592#16272: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [info] 6592#16272: *1 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [debug] 6592#16272: *1 尝试匹配路由: /blog/
-2025/03/14 16:54:51 [debug] 6592#16272: *1 检查路由模式: /
-2025/03/14 16:54:51 [debug] 6592#16272: 尝试匹配: URI=/blog/ 与模式=/
-2025/03/14 16:54:51 [debug] 6592#16272: 匹配失败: URI=/blog/ 与模式=/
-2025/03/14 16:54:51 [debug] 6592#16272: *1 检查路由模式: /index.html
-2025/03/14 16:54:51 [debug] 6592#16272: 尝试匹配: URI=/blog/ 与模式=/index.html
-2025/03/14 16:54:51 [debug] 6592#16272: 匹配失败: URI=/blog/ 与模式=/index.html
-2025/03/14 16:54:51 [debug] 6592#16272: *1 检查路由模式: /blog
-2025/03/14 16:54:51 [debug] 6592#16272: 尝试匹配: URI=/blog/ 与模式=/blog
-2025/03/14 16:54:51 [debug] 6592#16272: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
-2025/03/14 16:54:51 [info] 6592#16272: *1 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [info] 6592#16272: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [info] 6592#16272: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [info] 6592#16272: *1 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:54:51 [info] 6592#16272: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
-2025/03/14 16:55:32 [notice] 6592#23160: console closing, exiting
+2025/03/14 22:25:25 [notice] 10596#13860: using the "select" event method
+2025/03/14 22:25:25 [notice] 10596#13860: nginx/1.27.5
+2025/03/14 22:25:25 [info] 10596#13860: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/14 22:25:25 [notice] 10596#13860: create thread 144
+2025/03/14 22:25:29 [info] 10596#144: *1 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:25:29 [info] 10596#144: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:25:29 [info] 10596#144: *1 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:25:29 [debug] 10596#144: *1 尝试匹配路由: /blog/
+2025/03/14 22:25:29 [debug] 10596#144: *1 检查路由模式: /
+2025/03/14 22:25:29 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:25:29 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:25:29 [debug] 10596#144: *1 检查路由模式: /index.html
+2025/03/14 22:25:29 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:29 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:29 [debug] 10596#144: *1 检查路由模式: /blog
+2025/03/14 22:25:29 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:29 [debug] 10596#144: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:29 [info] 10596#144: *1 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:25:29 [info] 10596#144: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:25:29 [info] 10596#144: *1 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *1 client 127.0.0.1 closed keepalive connection
+2025/03/14 22:25:39 [info] 10596#144: *2 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *2 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [debug] 10596#144: *2 尝试匹配路由: /
+2025/03/14 22:25:39 [debug] 10596#144: *2 检查路由模式: /
+2025/03/14 22:25:39 [debug] 10596#144: 尝试匹配: URI=/ 与模式=/
+2025/03/14 22:25:39 [debug] 10596#144: 完全匹配成功: URI=/ 与模式=/
+2025/03/14 22:25:39 [info] 10596#144: *2 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *2 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *2 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:39 [info] 10596#144: *2 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [debug] 10596#144: *2 尝试匹配路由: /
+2025/03/14 22:25:42 [debug] 10596#144: *2 检查路由模式: /
+2025/03/14 22:25:42 [debug] 10596#144: 尝试匹配: URI=/ 与模式=/
+2025/03/14 22:25:42 [debug] 10596#144: 完全匹配成功: URI=/ 与模式=/
+2025/03/14 22:25:42 [info] 10596#144: *2 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:42 [info] 10596#144: *2 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:25:45 [info] 10596#144: *2 处理请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [info] 10596#144: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [info] 10596#144: *2 尝试匹配路由: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [debug] 10596#144: *2 尝试匹配路由: /blog/post/1
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/
+2025/03/14 22:25:45 [debug] 10596#144: 匹配失败: URI=/blog/post/1 与模式=/
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /index.html
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/index.html
+2025/03/14 22:25:45 [debug] 10596#144: 匹配失败: URI=/blog/post/1 与模式=/index.html
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /blog
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/blog
+2025/03/14 22:25:45 [debug] 10596#144: 匹配失败: URI=/blog/post/1 与模式=/blog
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /blog/
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/blog/
+2025/03/14 22:25:45 [debug] 10596#144: 匹配失败: URI=/blog/post/1 与模式=/blog/
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /blog/index
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/blog/index
+2025/03/14 22:25:45 [debug] 10596#144: 匹配失败: URI=/blog/post/1 与模式=/blog/index
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /blog/index.html
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/14 22:25:45 [debug] 10596#144: 匹配失败: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/14 22:25:45 [debug] 10596#144: *2 检查路由模式: /blog/post/:id
+2025/03/14 22:25:45 [debug] 10596#144: 尝试匹配: URI=/blog/post/1 与模式=/blog/post/:id
+2025/03/14 22:25:45 [debug] 10596#144: 提取参数: id=1
+2025/03/14 22:25:45 [debug] 10596#144: 完整匹配成功: 剩余URI= 剩余模式=
+2025/03/14 22:25:45 [info] 10596#144: *2 路由匹配成功: /blog/post/:id, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [debug] 10596#144: *2 参数: id = 1
+2025/03/14 22:25:45 [info] 10596#144: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [info] 10596#144: *2 处理博客文章请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [warn] 10596#144: *2 文章不存在或未初始化，使用示例数据: 1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [info] 10596#144: *2 使用模板渲染文章页面, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:45 [info] 10596#144: *2 使用模板: html/blog/templates/blog_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:25:51 [info] 10596#144: *2 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:51 [info] 10596#144: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:51 [info] 10596#144: *2 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:51 [debug] 10596#144: *2 尝试匹配路由: /blog/
+2025/03/14 22:25:51 [debug] 10596#144: *2 检查路由模式: /
+2025/03/14 22:25:51 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:25:51 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:25:51 [debug] 10596#144: *2 检查路由模式: /index.html
+2025/03/14 22:25:51 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:51 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:51 [debug] 10596#144: *2 检查路由模式: /blog
+2025/03/14 22:25:51 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:51 [debug] 10596#144: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:51 [info] 10596#144: *2 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:51 [info] 10596#144: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:51 [info] 10596#144: *2 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *2 client 127.0.0.1 closed keepalive connection
+2025/03/14 22:25:52 [info] 10596#144: *3 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *3 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *3 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [debug] 10596#144: *3 尝试匹配路由: /blog/
+2025/03/14 22:25:52 [debug] 10596#144: *3 检查路由模式: /
+2025/03/14 22:25:52 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:25:52 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:25:52 [debug] 10596#144: *3 检查路由模式: /index.html
+2025/03/14 22:25:52 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:52 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:52 [debug] 10596#144: *3 检查路由模式: /blog
+2025/03/14 22:25:52 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:52 [debug] 10596#144: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:52 [info] 10596#144: *3 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *3 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *3 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *3 client 127.0.0.1 closed keepalive connection
+2025/03/14 22:25:52 [info] 10596#144: *4 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *4 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *4 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [debug] 10596#144: *4 尝试匹配路由: /blog/
+2025/03/14 22:25:52 [debug] 10596#144: *4 检查路由模式: /
+2025/03/14 22:25:52 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:25:52 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:25:52 [debug] 10596#144: *4 检查路由模式: /index.html
+2025/03/14 22:25:52 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:52 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:52 [debug] 10596#144: *4 检查路由模式: /blog
+2025/03/14 22:25:52 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:52 [debug] 10596#144: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:52 [info] 10596#144: *4 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *4 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:52 [info] 10596#144: *4 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:53 [info] 10596#144: *4 client 127.0.0.1 closed keepalive connection
+2025/03/14 22:25:57 [info] 10596#144: *5 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:57 [info] 10596#144: *5 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:57 [info] 10596#144: *5 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:57 [debug] 10596#144: *5 尝试匹配路由: /blog/
+2025/03/14 22:25:57 [debug] 10596#144: *5 检查路由模式: /
+2025/03/14 22:25:57 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:25:57 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:25:57 [debug] 10596#144: *5 检查路由模式: /index.html
+2025/03/14 22:25:57 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:57 [debug] 10596#144: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:25:57 [debug] 10596#144: *5 检查路由模式: /blog
+2025/03/14 22:25:57 [debug] 10596#144: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:57 [debug] 10596#144: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:25:57 [info] 10596#144: *5 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:57 [info] 10596#144: *5 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:57 [info] 10596#144: *5 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/14 22:25:58 [info] 10596#144: *5 client 127.0.0.1 closed keepalive connection
+2025/03/14 22:26:13 [notice] 10596#15060: console closing, exiting
+2025/03/14 22:27:44 [notice] 13476#464: using the "select" event method
+2025/03/14 22:27:44 [notice] 13476#464: nginx/1.27.5
+2025/03/14 22:27:44 [info] 13476#464: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/14 22:27:44 [notice] 13476#464: create thread 7016
+2025/03/14 22:27:46 [info] 13476#7016: *1 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [info] 13476#7016: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [info] 13476#7016: *1 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [debug] 13476#7016: *1 尝试匹配路由: /
+2025/03/14 22:27:46 [debug] 13476#7016: *1 检查路由模式: /
+2025/03/14 22:27:46 [debug] 13476#7016: 尝试匹配: URI=/ 与模式=/
+2025/03/14 22:27:46 [debug] 13476#7016: 完全匹配成功: URI=/ 与模式=/
+2025/03/14 22:27:46 [info] 13476#7016: *1 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [info] 13476#7016: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [info] 13476#7016: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [info] 13476#7016: *1 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:46 [info] 13476#7016: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *1 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *1 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [debug] 13476#7016: *1 尝试匹配路由: /blog/
+2025/03/14 22:27:49 [debug] 13476#7016: *1 检查路由模式: /
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:49 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:49 [debug] 13476#7016: *1 检查路由模式: /index.html
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:49 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:49 [debug] 13476#7016: *1 检查路由模式: /blog
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:49 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:49 [info] 13476#7016: *1 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *1 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [alert] 13476#7016: *1 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *2 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *2 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [debug] 13476#7016: *2 尝试匹配路由: /blog/
+2025/03/14 22:27:49 [debug] 13476#7016: *2 检查路由模式: /
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:49 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:49 [debug] 13476#7016: *2 检查路由模式: /index.html
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:49 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:49 [debug] 13476#7016: *2 检查路由模式: /blog
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:49 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:49 [info] 13476#7016: *2 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *2 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [alert] 13476#7016: *2 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *3 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *3 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *3 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [debug] 13476#7016: *3 尝试匹配路由: /blog/
+2025/03/14 22:27:49 [debug] 13476#7016: *3 检查路由模式: /
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:49 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:49 [debug] 13476#7016: *3 检查路由模式: /index.html
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:49 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:49 [debug] 13476#7016: *3 检查路由模式: /blog
+2025/03/14 22:27:49 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:49 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:49 [info] 13476#7016: *3 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *3 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [info] 13476#7016: *3 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:49 [alert] 13476#7016: *3 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [info] 13476#7016: *4 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [info] 13476#7016: *4 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [info] 13476#7016: *4 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [debug] 13476#7016: *4 尝试匹配路由: /blog/
+2025/03/14 22:27:50 [debug] 13476#7016: *4 检查路由模式: /
+2025/03/14 22:27:50 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:50 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:50 [debug] 13476#7016: *4 检查路由模式: /index.html
+2025/03/14 22:27:50 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:50 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:50 [debug] 13476#7016: *4 检查路由模式: /blog
+2025/03/14 22:27:50 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:50 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:50 [info] 13476#7016: *4 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [info] 13476#7016: *4 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [info] 13476#7016: *4 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:50 [alert] 13476#7016: *4 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *5 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *5 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *5 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [debug] 13476#7016: *5 尝试匹配路由: /blog/
+2025/03/14 22:27:51 [debug] 13476#7016: *5 检查路由模式: /
+2025/03/14 22:27:51 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:51 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:51 [debug] 13476#7016: *5 检查路由模式: /index.html
+2025/03/14 22:27:51 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:51 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:51 [debug] 13476#7016: *5 检查路由模式: /blog
+2025/03/14 22:27:51 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:51 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:51 [info] 13476#7016: *5 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *5 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *5 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [alert] 13476#7016: *5 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *6 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *6 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *6 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [debug] 13476#7016: *6 尝试匹配路由: /blog/
+2025/03/14 22:27:51 [debug] 13476#7016: *6 检查路由模式: /
+2025/03/14 22:27:51 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:51 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:51 [debug] 13476#7016: *6 检查路由模式: /index.html
+2025/03/14 22:27:51 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:51 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:51 [debug] 13476#7016: *6 检查路由模式: /blog
+2025/03/14 22:27:51 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:51 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:51 [info] 13476#7016: *6 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *6 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [info] 13476#7016: *6 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:51 [alert] 13476#7016: *6 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [info] 13476#7016: *7 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [info] 13476#7016: *7 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [info] 13476#7016: *7 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [debug] 13476#7016: *7 尝试匹配路由: /blog/
+2025/03/14 22:27:52 [debug] 13476#7016: *7 检查路由模式: /
+2025/03/14 22:27:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:52 [debug] 13476#7016: *7 检查路由模式: /index.html
+2025/03/14 22:27:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:52 [debug] 13476#7016: *7 检查路由模式: /blog
+2025/03/14 22:27:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:52 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:52 [info] 13476#7016: *7 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [info] 13476#7016: *7 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [info] 13476#7016: *7 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:52 [alert] 13476#7016: *7 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *8 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *8 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *8 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [debug] 13476#7016: *8 尝试匹配路由: /blog/
+2025/03/14 22:27:53 [debug] 13476#7016: *8 检查路由模式: /
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:53 [debug] 13476#7016: *8 检查路由模式: /index.html
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:53 [debug] 13476#7016: *8 检查路由模式: /blog
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:53 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:53 [info] 13476#7016: *8 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *8 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *8 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [alert] 13476#7016: *8 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *9 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *9 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *9 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [debug] 13476#7016: *9 尝试匹配路由: /blog/
+2025/03/14 22:27:53 [debug] 13476#7016: *9 检查路由模式: /
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:53 [debug] 13476#7016: *9 检查路由模式: /index.html
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:53 [debug] 13476#7016: *9 检查路由模式: /blog
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:53 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:53 [info] 13476#7016: *9 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *9 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *9 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [alert] 13476#7016: *9 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *10 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *10 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *10 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [debug] 13476#7016: *10 尝试匹配路由: /blog/
+2025/03/14 22:27:53 [debug] 13476#7016: *10 检查路由模式: /
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:27:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:27:53 [debug] 13476#7016: *10 检查路由模式: /index.html
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:27:53 [debug] 13476#7016: *10 检查路由模式: /blog
+2025/03/14 22:27:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:53 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:27:53 [info] 13476#7016: *10 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *10 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *10 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [alert] 13476#7016: *10 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *11 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *11 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:27:53 [info] 13476#7016: *11 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [info] 13476#7016: *14 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [info] 13476#7016: *14 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [info] 13476#7016: *14 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [debug] 13476#7016: *14 尝试匹配路由: /blog/
+2025/03/14 22:28:29 [debug] 13476#7016: *14 检查路由模式: /
+2025/03/14 22:28:29 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:29 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:29 [debug] 13476#7016: *14 检查路由模式: /index.html
+2025/03/14 22:28:29 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:29 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:29 [debug] 13476#7016: *14 检查路由模式: /blog
+2025/03/14 22:28:29 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:29 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:29 [info] 13476#7016: *14 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [info] 13476#7016: *14 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [info] 13476#7016: *14 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:29 [alert] 13476#7016: *14 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:31 [info] 13476#7016: *15 处理请求: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:28:31 [info] 13476#7016: *15 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:28:31 [info] 13476#7016: *15 尝试匹配路由: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:28:31 [debug] 13476#7016: *15 尝试匹配路由: /blog/admin/add
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/
+2025/03/14 22:28:31 [debug] 13476#7016: 匹配失败: URI=/blog/admin/add 与模式=/
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /index.html
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:28:31 [debug] 13476#7016: 匹配失败: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:28:31 [debug] 13476#7016: 匹配失败: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog/
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:28:31 [debug] 13476#7016: 匹配失败: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog/index
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:28:31 [debug] 13476#7016: 匹配失败: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog/index.html
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:28:31 [debug] 13476#7016: 匹配失败: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog/post/:id
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog/post/:id
+2025/03/14 22:28:31 [debug] 13476#7016: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog/category/:category
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog/category/:category
+2025/03/14 22:28:31 [debug] 13476#7016: 静态部分不匹配: URI=/blog/admin/add 部分=/blog/category/
+2025/03/14 22:28:31 [debug] 13476#7016: *15 检查路由模式: /blog/admin/add
+2025/03/14 22:28:31 [debug] 13476#7016: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:28:31 [debug] 13476#7016: 完全匹配成功: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:28:31 [info] 13476#7016: *15 路由匹配成功: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:28:31 [info] 13476#7016: *15 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:28:31 [info] 13476#7016: *15 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:28:40 [info] 13476#7016: *15 处理请求: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:28:40 [info] 13476#7016: *15 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:28:40 [info] 13476#7016: *15 尝试匹配路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:28:40 [debug] 13476#7016: *15 尝试匹配路由: /blog/admin
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /index.html
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/blog
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog/
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog/index
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog/index.html
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog/post/:id
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog/post/:id
+2025/03/14 22:28:40 [debug] 13476#7016: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog/category/:category
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog/category/:category
+2025/03/14 22:28:40 [debug] 13476#7016: 静态部分不匹配: URI=/blog/admin 部分=/blog/category/
+2025/03/14 22:28:40 [debug] 13476#7016: *15 检查路由模式: /blog/admin/add
+2025/03/14 22:28:40 [debug] 13476#7016: 尝试匹配: URI=/blog/admin 与模式=/blog/admin/add
+2025/03/14 22:28:40 [debug] 13476#7016: 匹配失败: URI=/blog/admin 与模式=/blog/admin/add
+2025/03/14 22:28:40 [debug] 13476#7016: *15 路由方法不匹配: 8 vs 2
+2025/03/14 22:28:40 [warn] 13476#7016: *15 没有找到匹配的路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:28:40 [error] 13476#7016: *15 未找到路由处理器: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:28:52 [info] 13476#7016: *15 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *15 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *15 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [debug] 13476#7016: *15 尝试匹配路由: /blog/
+2025/03/14 22:28:52 [debug] 13476#7016: *15 检查路由模式: /
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:52 [debug] 13476#7016: *15 检查路由模式: /index.html
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:52 [debug] 13476#7016: *15 检查路由模式: /blog
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:52 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:52 [info] 13476#7016: *15 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *15 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *15 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [alert] 13476#7016: *15 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *16 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *16 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *16 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [debug] 13476#7016: *16 尝试匹配路由: /blog/
+2025/03/14 22:28:52 [debug] 13476#7016: *16 检查路由模式: /
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:52 [debug] 13476#7016: *16 检查路由模式: /index.html
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:52 [debug] 13476#7016: *16 检查路由模式: /blog
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:52 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:52 [info] 13476#7016: *16 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *16 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *16 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [alert] 13476#7016: *16 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *17 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *17 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *17 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [debug] 13476#7016: *17 尝试匹配路由: /blog/
+2025/03/14 22:28:52 [debug] 13476#7016: *17 检查路由模式: /
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:52 [debug] 13476#7016: *17 检查路由模式: /index.html
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:52 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:52 [debug] 13476#7016: *17 检查路由模式: /blog
+2025/03/14 22:28:52 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:52 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:52 [info] 13476#7016: *17 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *17 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [info] 13476#7016: *17 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:52 [alert] 13476#7016: *17 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [info] 13476#7016: *18 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [info] 13476#7016: *18 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [info] 13476#7016: *18 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [debug] 13476#7016: *18 尝试匹配路由: /blog/
+2025/03/14 22:28:53 [debug] 13476#7016: *18 检查路由模式: /
+2025/03/14 22:28:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:53 [debug] 13476#7016: *18 检查路由模式: /index.html
+2025/03/14 22:28:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:53 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:53 [debug] 13476#7016: *18 检查路由模式: /blog
+2025/03/14 22:28:53 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:53 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:53 [info] 13476#7016: *18 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [info] 13476#7016: *18 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [info] 13476#7016: *18 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:53 [alert] 13476#7016: *18 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [info] 13476#7016: *19 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [info] 13476#7016: *19 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [info] 13476#7016: *19 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [debug] 13476#7016: *19 尝试匹配路由: /blog/
+2025/03/14 22:28:54 [debug] 13476#7016: *19 检查路由模式: /
+2025/03/14 22:28:54 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:54 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:54 [debug] 13476#7016: *19 检查路由模式: /index.html
+2025/03/14 22:28:54 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:54 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:54 [debug] 13476#7016: *19 检查路由模式: /blog
+2025/03/14 22:28:54 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:54 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:54 [info] 13476#7016: *19 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [info] 13476#7016: *19 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [info] 13476#7016: *19 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:54 [alert] 13476#7016: *19 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [info] 13476#7016: *20 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [info] 13476#7016: *20 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [info] 13476#7016: *20 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [debug] 13476#7016: *20 尝试匹配路由: /blog/
+2025/03/14 22:28:59 [debug] 13476#7016: *20 检查路由模式: /
+2025/03/14 22:28:59 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:28:59 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:28:59 [debug] 13476#7016: *20 检查路由模式: /index.html
+2025/03/14 22:28:59 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:59 [debug] 13476#7016: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:28:59 [debug] 13476#7016: *20 检查路由模式: /blog
+2025/03/14 22:28:59 [debug] 13476#7016: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:59 [debug] 13476#7016: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:28:59 [info] 13476#7016: *20 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [info] 13476#7016: *20 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [info] 13476#7016: *20 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:28:59 [alert] 13476#7016: *20 zero size buf in writer t:0 r:0 f:0 0000000000000000 0000000000000000-0000000000000000 0000000000000000 0-0, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:40 [notice] 13476#16748: console closing, exiting
+2025/03/14 22:29:47 [notice] 8808#18944: using the "select" event method
+2025/03/14 22:29:47 [notice] 8808#18944: nginx/1.27.5
+2025/03/14 22:29:47 [info] 8808#18944: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/14 22:29:47 [notice] 8808#18944: create thread 19000
+2025/03/14 22:29:52 [info] 8808#19000: *1 处理请求: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 尝试匹配路由: /blog/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [debug] 8808#19000: *1 尝试匹配路由: /blog/
+2025/03/14 22:29:52 [debug] 8808#19000: *1 检查路由模式: /
+2025/03/14 22:29:52 [debug] 8808#19000: 尝试匹配: URI=/blog/ 与模式=/
+2025/03/14 22:29:52 [debug] 8808#19000: 匹配失败: URI=/blog/ 与模式=/
+2025/03/14 22:29:52 [debug] 8808#19000: *1 检查路由模式: /index.html
+2025/03/14 22:29:52 [debug] 8808#19000: 尝试匹配: URI=/blog/ 与模式=/index.html
+2025/03/14 22:29:52 [debug] 8808#19000: 匹配失败: URI=/blog/ 与模式=/index.html
+2025/03/14 22:29:52 [debug] 8808#19000: *1 检查路由模式: /blog
+2025/03/14 22:29:52 [debug] 8808#19000: 尝试匹配: URI=/blog/ 与模式=/blog
+2025/03/14 22:29:52 [debug] 8808#19000: 尾部斜杠匹配成功: URI=/blog/ 与模式=/blog
+2025/03/14 22:29:52 [info] 8808#19000: *1 路由匹配成功: /blog, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 从/blog/重定向到/, client: 127.0.0.1, server: localhost, request: "GET /blog/ HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [debug] 8808#19000: *1 尝试匹配路由: /
+2025/03/14 22:29:52 [debug] 8808#19000: *1 检查路由模式: /
+2025/03/14 22:29:52 [debug] 8808#19000: 尝试匹配: URI=/ 与模式=/
+2025/03/14 22:29:52 [debug] 8808#19000: 完全匹配成功: URI=/ 与模式=/
+2025/03/14 22:29:52 [info] 8808#19000: *1 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:29:52 [info] 8808#19000: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/14 22:30:10 [info] 8808#19000: *1 处理请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [info] 8808#19000: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [info] 8808#19000: *1 尝试匹配路由: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [debug] 8808#19000: *1 尝试匹配路由: /blog/post/1
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/
+2025/03/14 22:30:10 [debug] 8808#19000: 匹配失败: URI=/blog/post/1 与模式=/
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /index.html
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/index.html
+2025/03/14 22:30:10 [debug] 8808#19000: 匹配失败: URI=/blog/post/1 与模式=/index.html
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /blog
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/blog
+2025/03/14 22:30:10 [debug] 8808#19000: 匹配失败: URI=/blog/post/1 与模式=/blog
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /blog/
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/blog/
+2025/03/14 22:30:10 [debug] 8808#19000: 匹配失败: URI=/blog/post/1 与模式=/blog/
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /blog/index
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/blog/index
+2025/03/14 22:30:10 [debug] 8808#19000: 匹配失败: URI=/blog/post/1 与模式=/blog/index
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /blog/index.html
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/14 22:30:10 [debug] 8808#19000: 匹配失败: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/14 22:30:10 [debug] 8808#19000: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:30:10 [debug] 8808#19000: 尝试匹配: URI=/blog/post/1 与模式=/blog/post/:id
+2025/03/14 22:30:10 [debug] 8808#19000: 提取参数: id=1
+2025/03/14 22:30:10 [debug] 8808#19000: 完整匹配成功: 剩余URI= 剩余模式=
+2025/03/14 22:30:10 [info] 8808#19000: *1 路由匹配成功: /blog/post/:id, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [debug] 8808#19000: *1 参数: id = 1
+2025/03/14 22:30:10 [info] 8808#19000: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [info] 8808#19000: *1 处理博客文章请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [warn] 8808#19000: *1 文章不存在或未初始化，使用示例数据: 1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [info] 8808#19000: *1 使用模板渲染文章页面, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:10 [info] 8808#19000: *1 使用模板: html/blog/templates/blog_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [info] 8808#19000: *1 处理请求: /blog/post/2, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [info] 8808#19000: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [info] 8808#19000: *1 尝试匹配路由: /blog/post/2, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [debug] 8808#19000: *1 尝试匹配路由: /blog/post/2
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/
+2025/03/14 22:30:25 [debug] 8808#19000: 匹配失败: URI=/blog/post/2 与模式=/
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /index.html
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/index.html
+2025/03/14 22:30:25 [debug] 8808#19000: 匹配失败: URI=/blog/post/2 与模式=/index.html
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /blog
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/blog
+2025/03/14 22:30:25 [debug] 8808#19000: 匹配失败: URI=/blog/post/2 与模式=/blog
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /blog/
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/blog/
+2025/03/14 22:30:25 [debug] 8808#19000: 匹配失败: URI=/blog/post/2 与模式=/blog/
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /blog/index
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/blog/index
+2025/03/14 22:30:25 [debug] 8808#19000: 匹配失败: URI=/blog/post/2 与模式=/blog/index
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /blog/index.html
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/blog/index.html
+2025/03/14 22:30:25 [debug] 8808#19000: 匹配失败: URI=/blog/post/2 与模式=/blog/index.html
+2025/03/14 22:30:25 [debug] 8808#19000: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:30:25 [debug] 8808#19000: 尝试匹配: URI=/blog/post/2 与模式=/blog/post/:id
+2025/03/14 22:30:25 [debug] 8808#19000: 提取参数: id=2
+2025/03/14 22:30:25 [debug] 8808#19000: 完整匹配成功: 剩余URI= 剩余模式=
+2025/03/14 22:30:25 [info] 8808#19000: *1 路由匹配成功: /blog/post/:id, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [debug] 8808#19000: *1 参数: id = 2
+2025/03/14 22:30:25 [info] 8808#19000: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [info] 8808#19000: *1 处理博客文章请求: /blog/post/2, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [warn] 8808#19000: *1 文章不存在或未初始化，使用示例数据: 2, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [info] 8808#19000: *1 使用模板渲染文章页面, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:25 [info] 8808#19000: *1 使用模板: html/blog/templates/blog_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/2 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:30:32 [info] 8808#19000: *1 处理请求: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:30:32 [info] 8808#19000: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:30:32 [info] 8808#19000: *1 尝试匹配路由: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:30:32 [debug] 8808#19000: *1 尝试匹配路由: /blog/admin/add
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/
+2025/03/14 22:30:32 [debug] 8808#19000: 匹配失败: URI=/blog/admin/add 与模式=/
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /index.html
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:30:32 [debug] 8808#19000: 匹配失败: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:30:32 [debug] 8808#19000: 匹配失败: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog/
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:30:32 [debug] 8808#19000: 匹配失败: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog/index
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:30:32 [debug] 8808#19000: 匹配失败: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog/index.html
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:30:32 [debug] 8808#19000: 匹配失败: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog/post/:id
+2025/03/14 22:30:32 [debug] 8808#19000: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog/category/:category
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog/category/:category
+2025/03/14 22:30:32 [debug] 8808#19000: 静态部分不匹配: URI=/blog/admin/add 部分=/blog/category/
+2025/03/14 22:30:32 [debug] 8808#19000: *1 检查路由模式: /blog/admin/add
+2025/03/14 22:30:32 [debug] 8808#19000: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:30:32 [debug] 8808#19000: 完全匹配成功: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:30:32 [info] 8808#19000: *1 路由匹配成功: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:30:32 [info] 8808#19000: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:30:32 [info] 8808#19000: *1 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:30:38 [info] 8808#19000: *1 处理请求: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:30:38 [info] 8808#19000: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:30:38 [info] 8808#19000: *1 尝试匹配路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:30:38 [debug] 8808#19000: *1 尝试匹配路由: /blog/admin
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /index.html
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/blog
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog/
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog/index
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog/index.html
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog/post/:id
+2025/03/14 22:30:38 [debug] 8808#19000: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog/category/:category
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog/category/:category
+2025/03/14 22:30:38 [debug] 8808#19000: 静态部分不匹配: URI=/blog/admin 部分=/blog/category/
+2025/03/14 22:30:38 [debug] 8808#19000: *1 检查路由模式: /blog/admin/add
+2025/03/14 22:30:38 [debug] 8808#19000: 尝试匹配: URI=/blog/admin 与模式=/blog/admin/add
+2025/03/14 22:30:38 [debug] 8808#19000: 匹配失败: URI=/blog/admin 与模式=/blog/admin/add
+2025/03/14 22:30:38 [debug] 8808#19000: *1 路由方法不匹配: 8 vs 2
+2025/03/14 22:30:38 [warn] 8808#19000: *1 没有找到匹配的路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:30:38 [error] 8808#19000: *1 未找到路由处理器: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:30:49 [notice] 8808#10228: console closing, exiting

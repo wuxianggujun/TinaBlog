@@ -6,8 +6,10 @@
 #include "NgxConf.hpp"
 #include "BlogRouter.hpp"
 #include "BlogTemplate.hpp"
+#include "BlogPostManager.hpp"
 #include <iostream>
 #include <cstring>
+#include <thread>
 
 // 声明外部模块变量，这样代码中使用时编译器能识别它
 extern "C" {
@@ -117,6 +119,36 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
 
     // 设置处理器为BlogModule的请求处理函数
     *h = handleRequest;
+
+    // 获取全局配置中的博客路径设置
+    auto* config = static_cast<BlogModuleConfig*>(
+        ngx_http_conf_get_module_loc_conf(cf, ngx_http_blog_module));
+
+    if (config && config->base_path.len > 0) {
+        // 初始化文章管理器
+        std::string basePath((char*)config->base_path.data, config->base_path.len);
+        std::string postsPath = basePath + "/posts";
+        
+        // 使用日志记录进度
+        ngx_log_error(NGX_LOG_INFO, cf->log, 0, 
+                     "初始化博客文章管理器，文章目录: %s", postsPath.c_str());
+                     
+        // 异步初始化文章管理器
+        std::thread([postsPath]() {
+            try {
+                auto& manager = BlogPostManager::getInstance();
+                bool success = manager.initialize(postsPath);
+                
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
+                             "博客文章管理器初始化%s，加载了 %d 篇文章", 
+                             success ? "成功" : "失败",
+                             (int)manager.getPostCount());
+            } catch (const std::exception& e) {
+                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                             "初始化博客文章管理器异常: %s", e.what());
+            }
+        }).detach();
+    }
 
     // 初始化路由
     initBlogRoutes();
