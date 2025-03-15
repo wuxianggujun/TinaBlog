@@ -1,7 +1,6 @@
 # 在文件开头添加提示，建议使用Visual Studio生成器
 # 提示：推荐使用Visual Studio生成器而不是Ninja，以便正确处理Debug/Release配置
 # 示例：cmake -G "Visual Studio 17 2022" -A x64 ..
-# 注意：如果遇到库文件找不到的问题，请使用clean_and_configure.bat脚本重新配置项目
 
 cmake_minimum_required(VERSION 3.20)
 
@@ -100,4 +99,4 @@ message(STATUS "使用ZLIB: ${NGX_HAVE_ZLIB}")
 message(STATUS "使用OpenSSL: ${NGX_HAVE_OPENSSL}")
 
 # 提示如何运行
-message(STATUS "配置完成。如果遇到问题，请尝试运行clean_and_configure.bat脚本重新配置项目")
+message(STATUS "配置完成。")

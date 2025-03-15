@@ -24,13 +24,22 @@ DbManager& DbManager::getInstance() {
 DbManager::DbManager() 
 #if defined(HAVE_MYSQL) && HAVE_MYSQL
     : connection_(nullptr),
+      host_("localhost"),
+      user_("root"),
+      password_(""),
+      database_("blog"),
+      port_(3306),
+      connected_(false)
+#else
+    : host_("localhost"),
+      user_("root"),
+      password_(""),
+      database_("blog"),
+      port_(3306),
+      connected_(false)
 #endif
-    host_("localhost"),
-    user_("root"),
-    password_(""),
-    database_("blog"),
-    port_(3306),
-    connected_(false) {
+{
+    // 构造函数体为空
 }
 
 // 析构函数
