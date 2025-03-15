@@ -1,7 +1,7 @@
 # ThirdPartyLibs.cmake - 统一的第三方库配置
 # ===============================================================
 # 该文件将负责所有第三方库的配置和集成
-# 包括PCRE、ZLIB、OpenSSL、MySQL Connector C++、Protobuf等
+# 包括PCRE、ZLIB、OpenSSL、MySQL Connector C++等
 
 # 定义一个函数来配置所有第三方库
 function(configure_third_party_libs)
@@ -152,9 +152,62 @@ function(configure_third_party_libs)
         CACHE PATH "OpenSSL libraries"
     )
     
-    # 设置OpenSSL DLL路径 - 可以手动配置
-    set(OPENSSL_CRYPTO_DLL "" CACHE FILEPATH "OpenSSL libcrypto DLL文件路径")
-    set(OPENSSL_SSL_DLL "" CACHE FILEPATH "OpenSSL libssl DLL文件路径")
+    # 修改MySQL Connector C++ DLL搜索路径
+    set(POSSIBLE_CONNECTOR_DLL_PATHS
+        "${MYSQL_PREBUILT_DIR}/lib64/vs14/mysqlcppconn-9-vs14.dll"
+        "${MYSQL_PREBUILT_DIR}/lib64/vs14/mysqlcppconn.dll"
+        "${MYSQL_PREBUILT_DIR}/lib64/mysqlcppconn-9-vs14.dll"
+        "${MYSQL_PREBUILT_DIR}/lib64/mysqlcppconn.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/vs14/mysqlcppconn-9-vs14.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/vs14/mysqlcppconn.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/mysqlcppconn-9-vs14.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/mysqlcppconn.dll"
+        "${MYSQL_PREBUILT_DIR}/bin/mysqlcppconn-9-vs14.dll"
+        "${MYSQL_PREBUILT_DIR}/bin/mysqlcppconn.dll"
+    )
+
+    foreach(DLL_PATH ${POSSIBLE_CONNECTOR_DLL_PATHS})
+        file(TO_CMAKE_PATH "${DLL_PATH}" DLL_PATH_CMAKE)
+        if(EXISTS "${DLL_PATH_CMAKE}")
+            set(MySQL_DLL "${DLL_PATH_CMAKE}" CACHE PATH "MySQL Connector/C++ DLL" FORCE)
+            message(STATUS "找到MySQL Connector C++ DLL文件: ${DLL_PATH_CMAKE}")
+            set(COPY_MYSQL_DLL ON CACHE BOOL "复制MySQL DLL到输出目录" FORCE)
+            break()
+        endif()
+    endforeach()
+
+    # 修改OpenSSL DLL搜索路径
+    set(OPENSSL_DLL_PATHS
+        # 预编译库目录下的OpenSSL DLL
+        "${MYSQL_PREBUILT_DIR}/lib64/vs14/libcrypto-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib64/vs14/libssl-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib64/libcrypto-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib64/libssl-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/vs14/libcrypto-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/vs14/libssl-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/libcrypto-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/lib/libssl-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/bin/libcrypto-3-x64.dll"
+        "${MYSQL_PREBUILT_DIR}/bin/libssl-3-x64.dll"
+        
+        # 如果预编译库目录没有，再查找其他位置
+        "${CMAKE_SOURCE_DIR}/third_party/openssl-3.4/bin/libcrypto-3-x64.dll"
+        "${CMAKE_SOURCE_DIR}/third_party/openssl-3.4/bin/libssl-3-x64.dll"
+    )
+
+    # 设置OpenSSL DLL路径
+    foreach(DLL_PATH ${OPENSSL_DLL_PATHS})
+        file(TO_CMAKE_PATH "${DLL_PATH}" DLL_PATH_CMAKE)
+        if(EXISTS "${DLL_PATH_CMAKE}")
+            if(DLL_PATH_CMAKE MATCHES "libcrypto")
+                set(OPENSSL_CRYPTO_DLL "${DLL_PATH_CMAKE}" CACHE FILEPATH "OpenSSL libcrypto DLL文件路径" FORCE)
+                message(STATUS "找到OpenSSL Crypto DLL: ${DLL_PATH_CMAKE}")
+            elseif(DLL_PATH_CMAKE MATCHES "libssl")
+                set(OPENSSL_SSL_DLL "${DLL_PATH_CMAKE}" CACHE FILEPATH "OpenSSL libssl DLL文件路径" FORCE)
+                message(STATUS "找到OpenSSL SSL DLL: ${DLL_PATH_CMAKE}")
+            endif()
+        endif()
+    endforeach()
 
     # 为了确保其他组件能够找到OpenSSL，手动设置相关变量
     set(OPENSSL_FOUND TRUE CACHE BOOL "OpenSSL found")
@@ -167,35 +220,12 @@ function(configure_third_party_libs)
     set(NGX_HAVE_OPENSSL ON CACHE BOOL "Enable OpenSSL support")
 
     # ==========================================================
-    # Protobuf 配置 - 优化配置，解决依赖问题
-    # ==========================================================
-    set(PROTOBUF_DIR "${CMAKE_SOURCE_DIR}/third_party/protobuf")
-    set(PROTOC_DIR "${CMAKE_SOURCE_DIR}/third_party/protoc")
-
-    # 设置Protobuf包含目录 - 不再设置PROTOBUF_INCLUDE_DIR变量，避免冲突
-    # 创建Protobuf导入目标，用于MySQL Connector C++
-    if(NOT TARGET Protobuf::protobuf)
-        add_library(Protobuf::protobuf INTERFACE IMPORTED)
-    endif()
-
-    if(NOT TARGET Protobuf::libprotobuf)
-        add_library(Protobuf::libprotobuf INTERFACE IMPORTED)
-    endif()
-
-    # 设置Protoc可执行文件路径
-    set(PROTOC_EXECUTABLE "${PROTOC_DIR}/win64/bin/protoc.exe" CACHE PATH "protoc executable path")
-
-    # 强制设置Protobuf为已找到，绕过依赖检查
-    set(PROTOBUF_FOUND TRUE CACHE BOOL "Protobuf found")
-    set(Protobuf_FOUND TRUE CACHE BOOL "Protobuf found")
-
-    # ==========================================================
     # MySQL Connector/C++ 和 MySQL C API 配置
     # ==========================================================
     # 设置MySQL相关路径选项
     set(MYSQL_PREBUILT_DIR "${CMAKE_SOURCE_DIR}/third_party/mysql-connector-c++-9.2.0-winx64" CACHE PATH "预编译MySQL Connector/C++路径")
-    set(MYSQL_SERVER_DIR "D:/Program Files/MySQL/MySQL Server 9.2" CACHE PATH "MySQL Server安装路径")
-    set(MYSQL_CONNECTOR_DIR "D:/Program Files/MySQL/MySQL Connector C++ 9.2" CACHE PATH "MySQL Connector C++安装路径")
+    set(MYSQL_SERVER_DIR "${CMAKE_SOURCE_DIR}/third_party/mysql-connector-c++-9.2.0-winx64" CACHE PATH "MySQL Server安装路径")
+    set(MYSQL_CONNECTOR_DIR "${CMAKE_SOURCE_DIR}/third_party/mysql-connector-c++-9.2.0-winx64" CACHE PATH "MySQL Connector C++安装路径")
 
     # 选项控制是否从源码构建 - 默认关闭，使用预编译库
     option(BUILD_MYSQL_CONNECTOR "构建MySQL Connector而不是使用预编译的" OFF)
@@ -246,12 +276,13 @@ function(configure_third_party_libs)
                         endif()
                     endforeach()
                     
-                    # 设置DLL路径
+                    # 修改DLL路径搜索顺序，优先使用预编译库目录
                     set(POSSIBLE_C_API_DLL_PATHS
-                        "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
-                        "${MYSQL_SERVER_DIR}/bin/libmysql.dll"
-                        "${MYSQL_SERVER_DIR}/lib64/libmysql.dll"
-                        "${MYSQL_SERVER_DIR}/bin/libmariadb.dll"
+                        "${MYSQL_PREBUILT_DIR}/lib64/vs14/libmysql.dll"
+                        "${MYSQL_PREBUILT_DIR}/lib64/libmysql.dll"
+                        "${MYSQL_PREBUILT_DIR}/lib/vs14/libmysql.dll"
+                        "${MYSQL_PREBUILT_DIR}/lib/libmysql.dll"
+                        "${MYSQL_PREBUILT_DIR}/bin/libmysql.dll"
                     )
                     
                     foreach(DLL_PATH ${POSSIBLE_C_API_DLL_PATHS})
@@ -302,18 +333,20 @@ function(configure_third_party_libs)
                                 endif()
                             endforeach()
                             
-                            # 设置DLL路径 - 检查不同可能的DLL文件名
-                            set(POSSIBLE_DLL_NAMES 
-                                "mysqlcppconn-9-vs14.dll"
-                                "mysqlcppconn.dll"
-                                "mysqlcppconn8-2-vs14.dll"
+                            # 修改DLL路径搜索顺序，优先使用预编译库目录
+                            set(POSSIBLE_C_API_DLL_PATHS
+                                "${MYSQL_PREBUILT_DIR}/lib64/vs14/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/lib64/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/lib/vs14/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/lib/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/bin/libmysql.dll"
                             )
                             
-                            foreach(DLL_NAME ${POSSIBLE_DLL_NAMES})
-                                set(DLL_PATH "${MYSQL_PREBUILT_DIR}/lib64/vs14/${DLL_NAME}")
-                                if(EXISTS "${DLL_PATH}")
-                                    set(MySQL_DLL "${DLL_PATH}" CACHE PATH "MySQL Connector/C++ DLL" FORCE)
-                                    message(STATUS "找到MySQL DLL文件: ${DLL_PATH}")
+                            foreach(DLL_PATH ${POSSIBLE_C_API_DLL_PATHS})
+                                file(TO_CMAKE_PATH "${DLL_PATH}" DLL_PATH_CMAKE)
+                                if(EXISTS "${DLL_PATH_CMAKE}")
+                                    set(MySQL_DLL "${DLL_PATH_CMAKE}" CACHE PATH "MySQL Connector/C++ DLL" FORCE)
+                                    message(STATUS "找到MySQL DLL文件: ${DLL_PATH_CMAKE}")
                                     set(COPY_MYSQL_DLL ON CACHE BOOL "复制MySQL DLL到输出目录" FORCE)
                                     break()
                                 endif()
@@ -366,23 +399,16 @@ function(configure_third_party_libs)
                                 endif()
                             endforeach()
                             
-                            # 设置DLL路径 - 首先在Connector目录查找
-                            set(POSSIBLE_DLL_PATHS
-                                "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconn-9-vs14.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconn.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconn-9-vs14.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconn.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib/vs14/mysqlcppconn-9-vs14.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib/vs14/mysqlcppconn.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib/mysqlcppconn-9-vs14.dll"
-                                "${MYSQL_CONNECTOR_DIR}/lib/mysqlcppconn.dll"
-                                "${MYSQL_SERVER_DIR}/lib64/vs14/mysqlcppconn-9-vs14.dll"
-                                "${MYSQL_SERVER_DIR}/lib64/vs14/mysqlcppconn.dll"
-                                "${MYSQL_SERVER_DIR}/lib/vs14/mysqlcppconn-9-vs14.dll"
-                                "${MYSQL_SERVER_DIR}/lib/vs14/mysqlcppconn.dll"
+                            # 修改DLL路径搜索顺序，优先使用预编译库目录
+                            set(POSSIBLE_C_API_DLL_PATHS
+                                "${MYSQL_PREBUILT_DIR}/lib64/vs14/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/lib64/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/lib/vs14/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/lib/libmysql.dll"
+                                "${MYSQL_PREBUILT_DIR}/bin/libmysql.dll"
                             )
                             
-                            foreach(DLL_PATH ${POSSIBLE_DLL_PATHS})
+                            foreach(DLL_PATH ${POSSIBLE_C_API_DLL_PATHS})
                                 file(TO_CMAKE_PATH "${DLL_PATH}" DLL_PATH_CMAKE)
                                 if(EXISTS "${DLL_PATH_CMAKE}")
                                     set(MySQL_DLL "${DLL_PATH_CMAKE}" CACHE PATH "MySQL Connector/C++ DLL" FORCE)
@@ -467,13 +493,6 @@ function(configure_third_party_libs)
     set(OPENSSL_CRYPTO_DLL ${OPENSSL_CRYPTO_DLL} PARENT_SCOPE)
     set(OPENSSL_SSL_DLL ${OPENSSL_SSL_DLL} PARENT_SCOPE)
 
-    set(PROTOBUF_DIR ${PROTOBUF_DIR} PARENT_SCOPE)
-    set(PROTOC_DIR ${PROTOC_DIR} PARENT_SCOPE)
-    set(PROTOC_EXECUTABLE ${PROTOC_EXECUTABLE} PARENT_SCOPE)
-    set(PROTOBUF_FOUND ${PROTOBUF_FOUND} PARENT_SCOPE)
-    set(Protobuf_FOUND ${Protobuf_FOUND} PARENT_SCOPE)
-    set(PROTOBUF_PROTOC_EXECUTABLE ${PROTOC_EXECUTABLE} PARENT_SCOPE)
-
     set(MYSQL_DIR ${CMAKE_SOURCE_DIR}/third_party/mysql-connector-cpp PARENT_SCOPE)
     set(MySQL_INCLUDE_DIRS ${MySQL_INCLUDE_DIRS} PARENT_SCOPE)
     set(MySQL_LIBRARIES ${MySQL_LIBRARIES} PARENT_SCOPE)
@@ -482,6 +501,11 @@ function(configure_third_party_libs)
     endif()
     set(MYSQL_FOUND ${MYSQL_FOUND} PARENT_SCOPE)
     set(BUILD_MYSQL_CONNECTOR ${BUILD_MYSQL_CONNECTOR} PARENT_SCOPE)
+
+    # 导出所有变量到父作用域
+    foreach(var ${EXPORTED_VARS})
+        set(${var} ${${var}} PARENT_SCOPE)
+    endforeach()
 endfunction()
 
 # 立即调用函数设置所有第三方库
