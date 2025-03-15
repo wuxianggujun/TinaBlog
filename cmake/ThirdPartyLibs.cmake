@@ -152,7 +152,7 @@ function(configure_third_party_libs)
         CACHE PATH "OpenSSL libraries"
     )
     
-    # 修改MySQL Connector C++ DLL搜索路径
+    # 修改MySQL Connector C++ DLL搜索路径 - 仅保留实际存在的路径
     set(POSSIBLE_CONNECTOR_DLL_PATHS
         "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconn-10-vs14.dll"
         "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconnx-2-vs14.dll"
@@ -165,15 +165,15 @@ function(configure_third_party_libs)
     foreach(DLL_PATH ${POSSIBLE_CONNECTOR_DLL_PATHS})
         file(TO_CMAKE_PATH "${DLL_PATH}" DLL_PATH_CMAKE)
         if(EXISTS "${DLL_PATH_CMAKE}")
-            set(MySQL_DLL "${DLL_PATH_CMAKE}" CACHE PATH "MySQL Connector/C++ DLL" FORCE)
+            set(MySQL_CONNECTOR_DLL "${DLL_PATH_CMAKE}" CACHE PATH "MySQL Connector/C++ DLL" FORCE)
             message(STATUS "找到MySQL Connector C++ DLL文件: ${DLL_PATH_CMAKE}")
-            set(COPY_MYSQL_DLL ON CACHE BOOL "复制MySQL DLL到输出目录" FORCE)
+            set(COPY_MYSQL_CONNECTOR_DLL ON CACHE BOOL "复制MySQL Connector DLL到输出目录" FORCE)
             break()
         endif()
     endforeach()
 
-    # 设置OpenSSL DLL搜索路径
-    set(OPENSSL_DLL_PATHS        
+    # 设置OpenSSL DLL搜索路径 - 仅保留实际存在的路径
+    set(OPENSSL_DLL_PATHS
         # MySQL Connector中的OpenSSL DLL
         "${MYSQL_CONNECTOR_DIR}/lib64/libcrypto-3-x64.dll"
         "${MYSQL_CONNECTOR_DIR}/lib64/libssl-3-x64.dll"
@@ -296,6 +296,8 @@ function(configure_third_party_libs)
     set(MySQL_INCLUDE_DIRS ${MySQL_INCLUDE_DIRS} PARENT_SCOPE)
     set(MySQL_LIBRARIES ${MySQL_LIBRARIES} PARENT_SCOPE)
     set(MySQL_DLL ${MySQL_DLL} PARENT_SCOPE)
+    set(MySQL_CONNECTOR_DLL ${MySQL_CONNECTOR_DLL} PARENT_SCOPE)
+    set(COPY_MYSQL_CONNECTOR_DLL ${COPY_MYSQL_CONNECTOR_DLL} PARENT_SCOPE)
     set(MYSQL_FOUND ${MYSQL_FOUND} PARENT_SCOPE)
     set(OPENSSL_CRYPTO_DLL ${OPENSSL_CRYPTO_DLL} PARENT_SCOPE)
     set(OPENSSL_SSL_DLL ${OPENSSL_SSL_DLL} PARENT_SCOPE)

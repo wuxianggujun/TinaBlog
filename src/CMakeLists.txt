@@ -523,3 +523,24 @@ foreach(DLL_PATH ${OPENSSL_DLL_PATHS})
         )
     endif()
 endforeach()
+
+# 添加MySQL Connector C++ DLL复制命令
+if(EXISTS "${MySQL_CONNECTOR_DLL}")
+    add_custom_command(TARGET nginx PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MySQL_CONNECTOR_DLL}"
+        "$<TARGET_FILE_DIR:nginx>"
+        COMMENT "复制MySQL Connector C++ DLL到输出目录: ${MySQL_CONNECTOR_DLL}"
+    )
+    message(STATUS "已设置MySQL Connector C++ DLL复制命令: ${MySQL_CONNECTOR_DLL}")
+    
+    # 同时添加到copy_all_dlls目标
+    add_custom_command(TARGET copy_all_dlls POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MySQL_CONNECTOR_DLL}"
+        "${CMAKE_SOURCE_DIR}"
+        COMMENT "复制MySQL Connector C++ DLL到项目根目录"
+    )
+else()
+    message(WARNING "MySQL Connector C++ DLL文件不存在，无法设置复制命令")
+endif()
