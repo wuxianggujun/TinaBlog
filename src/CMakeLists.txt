@@ -73,13 +73,6 @@ else()
     )
 endif()
 
-# 如果找到MySQL，添加相应的编译定义
-if(MYSQL_FOUND)
-    add_definitions(-DHAVE_MYSQL=1)
-else()
-    add_definitions(-DHAVE_MYSQL=0)
-endif()
-
 # 收集平台无关的头文件
 file(GLOB_RECURSE common_HEADERS 
     "core/*.h"
@@ -359,11 +352,8 @@ target_link_libraries(nginx
     Boost::utility
     Boost::tti
 
-    # MySQL库 - 使用条件链接
-    "$<$<BOOL:${MYSQL_FOUND}>:${MySQL_LIBRARIES}>"
-    
-    # 直接链接MySQL库文件 - 使用MySQL Server安装目录
-    "$<$<BOOL:${MYSQL_FOUND}>:${MYSQL_SERVER_DIR}/lib/libmysql.lib>"
+    # 直接链接MySQL库，不使用条件链接
+    "${MYSQL_SERVER_DIR}/lib/libmysql.lib"
 )
 
 # 链接选项
@@ -429,33 +419,19 @@ else()
     message(WARNING "找不到ZLIB目标，无法复制DLL")
 endif()
 
-# 如果启用了MySQL DLL复制并找到了DLL文件，复制到输出目录
-if(MYSQL_FOUND)
-    # 设置MySQL DLL搜索路径，包含预编译库目录和MySQL Server安装目录
-    set(POSSIBLE_MYSQL_DLL_PATHS
-        # 预编译库目录
-        "${MYSQL_CONNECTOR_DIR}/lib64/vs14/libmysql.dll"
-        "${MYSQL_CONNECTOR_DIR}/lib64/libmysql.dll"
-        "${MYSQL_CONNECTOR_DIR}/lib/vs14/libmysql.dll"
-        "${MYSQL_CONNECTOR_DIR}/lib/libmysql.dll"
-        "${MYSQL_CONNECTOR_DIR}/bin/libmysql.dll"
-        
-        # MySQL Server安装目录
-        "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
+# 确保复制MySQL DLL到输出目录
+# 直接指定MySQL Server安装目录中的libmysql.dll文件
+set(MYSQL_DLL_PATH "${MYSQL_SERVER_DIR}/lib/libmysql.dll")
+if(EXISTS "${MYSQL_DLL_PATH}")
+    add_custom_command(TARGET nginx PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MYSQL_DLL_PATH}"
+        "$<TARGET_FILE_DIR:nginx>"
+        COMMENT "复制MySQL运行时DLL到输出目录: ${MYSQL_DLL_PATH}"
     )
-    
-    foreach(DLL_PATH ${POSSIBLE_MYSQL_DLL_PATHS})
-        if(EXISTS "${DLL_PATH}")
-            add_custom_command(TARGET nginx PRE_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${DLL_PATH}"
-                "$<TARGET_FILE_DIR:nginx>"
-                COMMENT "复制MySQL运行时DLL到输出目录: ${DLL_PATH}"
-            )
-            message(STATUS "已设置MySQL DLL复制命令: ${DLL_PATH}")
-            break()
-        endif()
-    endforeach()
+    message(STATUS "已设置MySQL DLL复制命令: ${MYSQL_DLL_PATH}")
+else()
+    message(WARNING "MySQL DLL文件不存在: ${MYSQL_DLL_PATH}")
 endif()
 
 # 检查常见位置的OpenSSL DLL
@@ -507,27 +483,15 @@ if(TARGET zlib)
 endif()
 
 # 添加MySQL DLL复制
-if(MYSQL_FOUND)
-    if(DEFINED MySQL_DLL AND EXISTS "${MySQL_DLL}")
-        add_custom_command(TARGET copy_all_dlls POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${MySQL_DLL}"
-            "${CMAKE_SOURCE_DIR}"
-            COMMENT "复制MySQL动态库到输出目录"
-        )
-    else()
-        foreach(DLL_PATH ${POSSIBLE_MYSQL_DLL_PATHS})
-            if(EXISTS "${DLL_PATH}")
-                add_custom_command(TARGET copy_all_dlls POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${DLL_PATH}"
-                    "${CMAKE_SOURCE_DIR}"
-                    COMMENT "复制MySQL动态库到输出目录"
-                )
-                break()
-            endif()
-        endforeach()
-    endif()
+if(EXISTS "${MYSQL_DLL_PATH}")
+    add_custom_command(TARGET copy_all_dlls POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${MYSQL_DLL_PATH}"
+        "${CMAKE_SOURCE_DIR}"
+        COMMENT "复制MySQL动态库到输出目录"
+    )
+else()
+    message(WARNING "无法为copy_all_dlls目标设置MySQL DLL复制命令，文件不存在: ${MYSQL_DLL_PATH}")
 endif()
 
 # 添加OpenSSL DLL复制

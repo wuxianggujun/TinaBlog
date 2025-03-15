@@ -3,16 +3,15 @@
 #include <ngx_core.h>
 #include <sstream>
 #include <vector>
+#include <mutex>
 
-// JDBC API只在需要时包含
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
+// 直接包含MySQL相关头文件
 #include <jdbc/mysql_connection.h>
 #include <jdbc/mysql_driver.h>
 #include <jdbc/cppconn/statement.h>
 #include <jdbc/cppconn/resultset.h>
 #include <jdbc/cppconn/prepared_statement.h>
 #include <jdbc/cppconn/exception.h>
-#endif
 
 // 单例实例
 DbManager& DbManager::getInstance() {
@@ -22,7 +21,6 @@ DbManager& DbManager::getInstance() {
 
 // 构造函数
 DbManager::DbManager() 
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     : connection_(nullptr),
       host_("localhost"),
       user_("root"),
@@ -30,14 +28,6 @@ DbManager::DbManager()
       database_("blog"),
       port_(3306),
       connected_(false)
-#else
-    : host_("localhost"),
-      user_("root"),
-      password_(""),
-      database_("blog"),
-      port_(3306),
-      connected_(false)
-#endif
 {
     // 构造函数体为空
 }
@@ -49,7 +39,6 @@ DbManager::~DbManager() {
 
 // 初始化数据库连接
 bool DbManager::initialize(const std::string& connStr, bool autoInit) {
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     std::lock_guard<std::mutex> lock(mutex_);
     
     // 如果已连接，先关闭
@@ -99,14 +88,9 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
     }
     
     return true;
-#else
-    ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, "MySQL support is not enabled");
-    return false;
-#endif
 }
 
 // 获取数据库连接
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
 MYSQL* DbManager::getConnection() {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!connected_ || !connection_) {
@@ -114,19 +98,13 @@ MYSQL* DbManager::getConnection() {
     }
     return connection_;
 }
-#endif
 
 // 检查数据库连接是否有效
 bool DbManager::isConnected() const {
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     return connected_ && connection_ && mysql_ping(connection_) == 0;
-#else
-    return false;
-#endif
 }
 
 // 执行SQL查询
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
 MYSQL_RES* DbManager::executeQuery(const std::string& sql) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!connected_ || !connection_) {
@@ -141,11 +119,9 @@ MYSQL_RES* DbManager::executeQuery(const std::string& sql) {
     
     return mysql_store_result(connection_);
 }
-#endif
 
 // 执行SQL更新
 int DbManager::executeUpdate(const std::string& sql) {
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     std::lock_guard<std::mutex> lock(mutex_);
     if (!connected_ || !connection_) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Cannot execute update: not connected to database");
@@ -158,39 +134,28 @@ int DbManager::executeUpdate(const std::string& sql) {
     }
     
     return (int)mysql_affected_rows(connection_);
-#else
-    ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, "MySQL support is not enabled, cannot execute: %s", sql.c_str());
-    return -1;
-#endif
 }
 
 // 获取最后一次插入操作的ID
 unsigned long long DbManager::getLastInsertId() {
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     if (!connected_ || !connection_) {
         return 0;
     }
     return mysql_insert_id(connection_);
-#else
-    return 0;
-#endif
 }
 
 // 关闭数据库连接
 void DbManager::close() {
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     std::lock_guard<std::mutex> lock(mutex_);
     if (connection_) {
         mysql_close(connection_);
         connection_ = nullptr;
     }
     connected_ = false;
-#endif
 }
 
 // 创建数据库表
 bool DbManager::createTables() {
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
     // 博文表
     std::string createPostsTable = 
         "CREATE TABLE IF NOT EXISTS posts ("
@@ -250,10 +215,6 @@ bool DbManager::createTables() {
             executeUpdate(createTagsTable) != -1 &&
             executeUpdate(createPostCategoriesTable) != -1 &&
             executeUpdate(createPostTagsTable) != -1;
-#else
-    ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, "Cannot create tables: MySQL support is not enabled");
-    return false;
-#endif
 }
 
 // 解析连接字符串

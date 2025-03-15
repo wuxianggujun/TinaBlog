@@ -5,15 +5,8 @@
 #include <memory>
 #include <mutex>
 
-// 根据是否启用MySQL进行条件定义
-#if defined(HAVE_MYSQL) && HAVE_MYSQL
 // 直接包含MySQL头文件
 #include <mysql.h>
-#else
-// 在没有MySQL时的替代定义
-typedef void MYSQL;
-typedef void MYSQL_RES;
-#endif
 
 /**
  * 数据库连接管理器
@@ -38,9 +31,7 @@ public:
      * 获取数据库连接
      * @return 数据库连接指针
      */
-    #if defined(HAVE_MYSQL) && HAVE_MYSQL
     MYSQL* getConnection();
-    #endif
 
     /**
      * 检查数据库连接是否有效
@@ -53,9 +44,7 @@ public:
      * @param sql SQL语句
      * @return 查询结果集指针，失败时返回nullptr
      */
-    #if defined(HAVE_MYSQL) && HAVE_MYSQL
     MYSQL_RES* executeQuery(const std::string& sql);
-    #endif
 
     /**
      * 执行SQL更新（INSERT, UPDATE, DELETE等）
@@ -92,9 +81,7 @@ private:
 
 private:
     // 数据库连接
-    #if defined(HAVE_MYSQL) && HAVE_MYSQL
     MYSQL* connection_;
-    #endif
     
     // 连接参数
     std::string host_;
