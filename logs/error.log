@@ -1108,3 +1108,18 @@
 2025/03/15 23:42:31 [info] 17652#19324: OS: 260200 build:9200, "", suite:100, type:1
 2025/03/15 23:42:31 [notice] 17652#19324: create thread 15044
 2025/03/15 23:42:32 [notice] 17652#22636: console closing, exiting
+2025/03/15 23:46:21 [notice] 12208#20068: using the "select" event method
+2025/03/15 23:46:21 [notice] 12208#20068: nginx/1.27.5
+2025/03/15 23:46:21 [info] 12208#20068: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 23:46:21 [notice] 12208#20068: create thread 26132
+2025/03/15 23:46:23 [notice] 12208#2324: console closing, exiting
+2025/03/15 23:47:09 [notice] 20404#21044: using the "select" event method
+2025/03/15 23:47:09 [notice] 20404#21044: nginx/1.27.5
+2025/03/15 23:47:09 [info] 20404#21044: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 23:47:09 [notice] 20404#21044: create thread 11952
+2025/03/15 23:47:11 [notice] 20404#14992: console closing, exiting
+2025/03/15 23:50:41 [notice] 9784#24616: using the "select" event method
+2025/03/15 23:50:41 [notice] 9784#24616: nginx/1.27.5
+2025/03/15 23:50:41 [info] 9784#24616: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 23:50:41 [notice] 9784#24616: create thread 8752
+2025/03/15 23:50:46 [notice] 9784#17476: console closing, exiting

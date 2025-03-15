@@ -152,7 +152,7 @@ function(configure_third_party_libs)
         CACHE PATH "OpenSSL libraries"
     )
     
-    # 修改MySQL Connector C++ DLL搜索路径 - 仅保留实际存在的路径
+    # 修改MySQL Connector C++ DLL搜索路径 - 仅保留实际存在的文件路径
     set(POSSIBLE_CONNECTOR_DLL_PATHS
         "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconn-10-vs14.dll"
         "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconnx-2-vs14.dll"
@@ -220,10 +220,7 @@ function(configure_third_party_libs)
     set(MYSQL_FOUND FALSE CACHE BOOL "MySQL has been found" FORCE)
 
     if(NOT MYSQL_DISABLE)
-        if(BUILD_MYSQL_CONNECTOR AND EXISTS "${CMAKE_SOURCE_DIR}/third_party/mysql-connector-cpp/CMakeLists.txt")
-            message(STATUS "从源码构建MySQL Connector/C++")
-            # ... 原有从源码构建的代码 ...
-        else()
+        if(BUILD_MYSQL_CONNECTOR)
             message(STATUS "配置MySQL库...")
             
             # 设置MySQL Server的包含目录
@@ -239,16 +236,10 @@ function(configure_third_party_libs)
                 CACHE PATH "MySQL库文件"
             )
             
-            # 设置DLL搜索路径
+            # 设置DLL搜索路径 - 只保留MySQL Server DLL，移除重复的Connector DLL
             set(POSSIBLE_MYSQL_DLL_PATHS
                 # MySQL Server DLL
                 "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
-                
-                # MySQL Connector DLL
-                "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconn-9-vs14.dll"
-                "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconn-9-vs14.dll"
-                "${MYSQL_CONNECTOR_DIR}/lib/vs14/mysqlcppconn-9-vs14.dll"
-                "${MYSQL_CONNECTOR_DIR}/lib/mysqlcppconn-9-vs14.dll"
             )
             
             # 检查文件是否存在并设置相应变量
