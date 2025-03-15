@@ -3,6 +3,9 @@ include(CheckIncludeFile)
 include(CheckSymbolExists)
 include(CheckTypeSize)
 
+# 设置CMAKE_MODULE_PATH以包含我们自定义的CMake模块
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # 设置基础包含目录 - 平台无关部分
 include_directories(
     ${CMAKE_SOURCE_DIR}
@@ -17,12 +20,22 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/stream 
     # 自己的模块
     ${CMAKE_CURRENT_SOURCE_DIR}/blog
+    ${CMAKE_CURRENT_SOURCE_DIR}/blog/db  # 添加数据库相关目录
     
     # 第三方库包含目录 - 确保包含正确的路径
     ${CMAKE_SOURCE_DIR}/third_party/pcre/include
     ${CMAKE_SOURCE_DIR}/third_party/zlib
     ${CMAKE_BINARY_DIR}/third_party/zlib    # zconf.h的生成路径
     ${CMAKE_SOURCE_DIR}/third_party/openssl-3.4/include
+    
+    # 添加MySQL包含目录 - 使用配置好的变量
+    ${MySQL_INCLUDE_DIRS}
+    # 添加MySQL Server包含目录
+    "D:/Program Files/MySQL/MySQL Server 9.2/include"
+    
+    # 添加libpqxx的包含目录 - 统一使用标准目录结构
+    ${CMAKE_SOURCE_DIR}/third_party/libpqxx/include
+    ${CMAKE_BINARY_DIR}/third_party/libpqxx/include
 )
 
 # 平台特定包含目录
@@ -253,7 +266,8 @@ set(common_SOURCES
     blog/BlogModule.cpp
     blog/BlogRouter.cpp
     blog/TemplateCacheManager.cpp
-        
+    blog/db/DbManager.cpp
+    blog/db/BlogPostDao.cpp
 )
 
 # 设置平台特定的源文件
@@ -316,7 +330,11 @@ target_link_libraries(nginx
     
     # 直接使用变量
     "$<$<CONFIG:Debug>:${PCRE_LIBRARIES_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${PCRE_LIBRARIES_RELEASE}>"
-    "$<$<CONFIG:Debug>:${ZLIB_LIBRARIES_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${ZLIB_LIBRARIES_RELEASE}>"
+    
+    # ZLIB库 - 使用从父作用域传来的变量
+    ${ZLIB_LIBRARIES}
+    
+    # 使用OpenSSL变量
     ${OPENSSL_LIBRARIES}
     
     # Boost库
@@ -324,6 +342,12 @@ target_link_libraries(nginx
     Boost::exception
     Boost::utility
     Boost::tti
+
+    # MySQL库 - 使用条件链接
+    "$<$<BOOL:${MYSQL_FOUND}>:${MySQL_LIBRARIES}>"
+    
+    # 直接链接MySQL库文件 - 确保即使条件链接失败也能找到库
+    "$<$<BOOL:${MYSQL_FOUND}>:${MYSQL_SERVER_DIR}/lib/libmysql.lib>"
 )
 
 # 链接选项
@@ -361,6 +385,117 @@ set_target_properties(nginx PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_SOURCE_DIR}
     VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
+
+# 添加复制ZLIB DLL到输出目录的命令
+if(TARGET zlib)
+    add_custom_command(TARGET nginx POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:zlib>"
+        "$<TARGET_FILE_DIR:nginx>"
+        COMMENT "复制ZLIB动态库到输出目录: $<TARGET_FILE:zlib>"
+    )
+    message(STATUS "已设置ZLIB DLL复制命令")
+else()
+    message(WARNING "找不到ZLIB目标，无法复制DLL")
+endif()
+
+# 如果启用了MySQL DLL复制并找到了DLL文件，复制到输出目录
+if(MYSQL_FOUND)
+    # 首先尝试使用配置的MySQL_DLL
+    if(DEFINED MySQL_DLL AND EXISTS "${MySQL_DLL}")
+        add_custom_command(TARGET nginx POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MySQL_DLL}"
+            "$<TARGET_FILE_DIR:nginx>"
+            COMMENT "复制MySQL运行时DLL到输出目录: ${MySQL_DLL}"
+        )
+        message(STATUS "已设置MySQL DLL复制命令: ${MySQL_DLL}")
+    else()
+        # 如果没有找到配置的DLL，尝试直接从MySQL Server目录复制常见的DLL文件
+        set(POSSIBLE_MYSQL_DLL_PATHS
+            "${MYSQL_SERVER_DIR}/bin/libmysql.dll"
+            "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
+        )
+        
+        foreach(DLL_PATH ${POSSIBLE_MYSQL_DLL_PATHS})
+            if(EXISTS "${DLL_PATH}")
+                add_custom_command(TARGET nginx POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL_PATH}"
+                    "$<TARGET_FILE_DIR:nginx>"
+                    COMMENT "复制MySQL运行时DLL到输出目录: ${DLL_PATH}"
+                )
+                message(STATUS "已设置MySQL DLL复制命令: ${DLL_PATH}")
+                break()
+            endif()
+        endforeach()
+    endif()
+endif()
+
+# 添加复制OpenSSL DLL到输出目录的命令
+# 首先检查是否手动指定了DLL路径
+if(EXISTS "${OPENSSL_CRYPTO_DLL}")
+    add_custom_command(TARGET nginx POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${OPENSSL_CRYPTO_DLL}"
+        "$<TARGET_FILE_DIR:nginx>"
+        COMMENT "复制OpenSSL Crypto DLL到输出目录: ${OPENSSL_CRYPTO_DLL}"
+    )
+    message(STATUS "使用手动指定的OpenSSL Crypto DLL: ${OPENSSL_CRYPTO_DLL}")
+endif()
+
+if(EXISTS "${OPENSSL_SSL_DLL}")
+    add_custom_command(TARGET nginx POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${OPENSSL_SSL_DLL}"
+        "$<TARGET_FILE_DIR:nginx>"
+        COMMENT "复制OpenSSL SSL DLL到输出目录: ${OPENSSL_SSL_DLL}"
+    )
+    message(STATUS "使用手动指定的OpenSSL SSL DLL: ${OPENSSL_SSL_DLL}")
+endif()
+
+# 检查常见位置的OpenSSL DLL
+set(OPENSSL_DLL_PATHS
+    # MySQL Connector C++目录下的OpenSSL DLL
+    "${MYSQL_CONNECTOR_DIR}/lib64/libcrypto-3-x64.dll"
+    "${MYSQL_CONNECTOR_DIR}/lib64/libssl-3-x64.dll"
+    "${MYSQL_CONNECTOR_DIR}/bin/libcrypto-3-x64.dll"
+    "${MYSQL_CONNECTOR_DIR}/bin/libssl-3-x64.dll"
+    
+    # MySQL Server目录下的OpenSSL DLL 
+    "${MYSQL_SERVER_DIR}/lib/libcrypto-3-x64.dll"
+    "${MYSQL_SERVER_DIR}/lib/libssl-3-x64.dll"
+    "${MYSQL_SERVER_DIR}/bin/libcrypto-3-x64.dll"
+    "${MYSQL_SERVER_DIR}/bin/libssl-3-x64.dll"
+    
+    # 项目OpenSSL目录
+    "${OPENSSL_DIR}/bin/libcrypto-3-x64.dll"
+    "${OPENSSL_DIR}/bin/libssl-3-x64.dll"
+    "${OPENSSL_DIR}/lib/libcrypto-3-x64.dll"
+    "${OPENSSL_DIR}/lib/libssl-3-x64.dll"
+    "${CMAKE_SOURCE_DIR}/third_party/openssl-3.4/bin/libcrypto-3-x64.dll"
+    "${CMAKE_SOURCE_DIR}/third_party/openssl-3.4/bin/libssl-3-x64.dll"
+    
+    # 预编译库目录
+    "${MYSQL_PREBUILT_DIR}/lib64/vs14/libcrypto-3-x64.dll"
+    "${MYSQL_PREBUILT_DIR}/lib64/vs14/libssl-3-x64.dll"
+    
+    # 如果需要可以手动复制这些DLL文件到项目目录
+    "${CMAKE_SOURCE_DIR}/third_party/libssl-3-x64.dll"
+    "${CMAKE_SOURCE_DIR}/third_party/libcrypto-3-x64.dll"
+)
+
+foreach(DLL_PATH ${OPENSSL_DLL_PATHS})
+    if(EXISTS "${DLL_PATH}")
+        add_custom_command(TARGET nginx POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${DLL_PATH}"
+            "$<TARGET_FILE_DIR:nginx>"
+            COMMENT "复制OpenSSL DLL到输出目录: ${DLL_PATH}"
+        )
+        message(STATUS "已设置OpenSSL DLL复制命令: ${DLL_PATH}")
+    endif()
+endforeach()
 
 # 拷贝nginx原始html文件（如果有）
 if(EXISTS "${CMAKE_SOURCE_DIR}/docs/html")

@@ -157,3 +157,18 @@ void BlogConfig::log(ngx_uint_t level, const char* fmt, ...) const {
 
     va_end(args);
 }
+
+// 获取数据库连接字符串
+std::string BlogConfig::getDbConnectionString() const {
+    if (!valid() || !config_->db_conn_str.data || config_->db_conn_str.len == 0) {
+        return "";
+    }
+    
+    return std::string(reinterpret_cast<char*>(config_->db_conn_str.data), 
+                     config_->db_conn_str.len);
+}
+
+// 是否自动连接数据库
+bool BlogConfig::isDbAutoConnect() const noexcept {
+    return valid() && config_->db_auto_connect;
+}

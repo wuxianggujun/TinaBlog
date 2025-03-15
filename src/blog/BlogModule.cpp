@@ -7,6 +7,7 @@
 #include "BlogRouter.hpp"
 #include "BlogTemplate.hpp"
 #include "BlogPostManager.hpp"
+#include "db/DbManager.hpp"
 #include <iostream>
 #include <cstring>
 #include <thread>
@@ -55,6 +56,20 @@ static ngx_command_t blog_commands[] = {
       BlogModule::setCacheTime,
       NGX_HTTP_LOC_CONF_OFFSET,
       offsetof(BlogModuleConfig, cache_time),
+      NULL },
+    
+    { ngx_string("blog_db_connection"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_TAKE1,
+      BlogModule::setDbConnectionString,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(BlogModuleConfig, db_conn_str),
+      NULL },
+    
+    { ngx_string("blog_db_auto_connect"),
+      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_LOC_CONF|NGX_CONF_FLAG,
+      BlogModule::setDbAutoConnect,
+      NGX_HTTP_LOC_CONF_OFFSET,
+      offsetof(BlogModuleConfig, db_auto_connect),
       NULL },
     
     ngx_null_command
@@ -223,39 +238,57 @@ char* BlogModule::mergeServerConfig(ngx_conf_t* cf, void* parent, void* child) {
 }
 
 // 创建位置配置
-void* BlogModule::createLocationConfig(ngx_conf_t* cf) {
-    // 使用NgxConf封装原始指针
-    NgxConf conf(cf);
-    
-    // 分配内存
-    auto* config = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(conf.pool(), sizeof(BlogModuleConfig)));
-
-    if (config == nullptr) {
-        return nullptr;
+void* BlogModule::createLocationConfig(ngx_conf_t* cf)
+{
+    // 创建配置结构体
+    BlogModuleConfig* conf = static_cast<BlogModuleConfig*>(
+        ngx_pcalloc(cf->pool, sizeof(BlogModuleConfig)));
+        
+    if (conf == nullptr) {
+        return NGX_CONF_ERROR;
     }
-
+    
     // 设置默认值
-    config->enable_cache = NGX_CONF_UNSET;
-    config->cache_time = NGX_CONF_UNSET_UINT;
-
-    return config;
+    conf->enable_cache = NGX_CONF_UNSET;  // 未设置标记
+    conf->cache_time = NGX_CONF_UNSET_UINT;  // 未设置标记
+    conf->db_auto_connect = NGX_CONF_UNSET; // 未设置标记
+    
+    return conf;
 }
 
 // 合并位置配置
-char* BlogModule::mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child) {
-    // 使用NgxConf封装原始指针
-    NgxConf conf(cf);
+char* BlogModule::mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child)
+{
+    // 转换父子配置为模块配置类型
+    BlogModuleConfig* prev = static_cast<BlogModuleConfig*>(parent);
+    BlogModuleConfig* conf = static_cast<BlogModuleConfig*>(child);
     
-    auto* prev = static_cast<BlogModuleConfig*>(parent);
-    auto* curr = static_cast<BlogModuleConfig*>(child);
-
-    // 合并配置
-    ngx_conf_merge_str_value(curr->base_path, prev->base_path, "");
-    ngx_conf_merge_str_value(curr->template_path, prev->template_path, "");
-    ngx_conf_merge_value(curr->enable_cache, prev->enable_cache, 0);
-    ngx_conf_merge_uint_value(curr->cache_time, prev->cache_time, 60);
-
+    // 合并配置，优先使用子配置（就近原则）
+    
+    // 处理base_path（未设置则继承）
+    if (conf->base_path.data == nullptr) {
+        conf->base_path = prev->base_path;
+    }
+    
+    // 处理template_path（未设置则继承）
+    if (conf->template_path.data == nullptr) {
+        conf->template_path = prev->template_path;
+    }
+    
+    // 处理enable_cache（未设置则继承，如果父级也未设置则默认为0）
+    ngx_conf_merge_value(conf->enable_cache, prev->enable_cache, 0);
+    
+    // 处理cache_time（未设置则继承，如果父级也未设置则默认为60秒）
+    ngx_conf_merge_uint_value(conf->cache_time, prev->cache_time, 60);
+    
+    // 处理数据库连接字符串（未设置则继承）
+    if (conf->db_conn_str.data == nullptr) {
+        conf->db_conn_str = prev->db_conn_str;
+    }
+    
+    // 处理自动连接数据库标志（未设置则继承，如果父级也未设置则默认为0）
+    ngx_conf_merge_value(conf->db_auto_connect, prev->db_auto_connect, 0);
+    
     return NGX_CONF_OK;
 }
 
@@ -315,90 +348,108 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
 }
 
 // 博客路径指令处理函数
-char* BlogModule::setBlogPath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
-    // 使用NgxConf封装原始指针
-    NgxConf ctx(cf);
+char* BlogModule::setBlogPath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
+{
+    // 包装NgxConf类方便处理，同时记录方法入口日志
+    NgxConf ngxConf(cf);
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cf->log, 0, "Enter BlogModule::setBlogPath");
     
-    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    
-    // 使用NgxConf提供的方法获取参数
-    NgxString arg = ctx.get_arg(1);
-    if (!arg.valid()) {
-        return ctx.error("Invalid blog path");
+    // 使用NgxConf包装类处理复杂配置逻辑
+    try {
+        // 获取配置参数
+        NgxString value = ngxConf.getValue(1);
+        
+        // 调试输出
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cf->log, 0, 
+                    "Setting blog_path to: %V", &value.get());
+        
+        // 设置配置
+        BlogModuleConfig* config = static_cast<BlogModuleConfig*>(conf);
+        config->base_path = value.get();
+        
+        return NGX_CONF_OK;
     }
-
-    // 设置博客路径
-    bmconf->base_path = *arg.get();
-
-    return NGX_CONF_OK;
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, cf->log, 0, "Error in setBlogPath: %s", e.what());
+        return const_cast<char*>("failed to set blog_path directive");
+    }
 }
 
 // 模板路径指令处理函数
-char* BlogModule::setTemplatePath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
-    // 使用NgxConf封装原始指针
-    NgxConf ctx(cf);
+char* BlogModule::setTemplatePath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
+{
+    // 包装NgxConf类方便处理，同时记录方法入口日志
+    NgxConf ngxConf(cf);
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cf->log, 0, "Enter BlogModule::setTemplatePath");
     
-    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    
-    // 使用NgxConf提供的方法获取参数
-    NgxString arg = ctx.get_arg(1);
-    if (!arg.valid()) {
-        return ctx.error("Invalid template path");
+    // 使用NgxConf包装类处理复杂配置逻辑
+    try {
+        // 获取配置参数
+        NgxString value = ngxConf.getValue(1);
+        
+        // 调试输出
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cf->log, 0, 
+                    "Setting blog_template_path to: %V", &value.get());
+        
+        // 设置配置
+        BlogModuleConfig* config = static_cast<BlogModuleConfig*>(conf);
+        config->template_path = value.get();
+        
+        return NGX_CONF_OK;
     }
-
-    // 设置模板路径
-    bmconf->template_path = *arg.get();
-
-    return NGX_CONF_OK;
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, cf->log, 0, "Error in setTemplatePath: %s", e.what());
+        return const_cast<char*>("failed to set blog_template_path directive");
+    }
 }
 
 // 启用缓存指令处理函数
-char* BlogModule::setEnableCache(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
-    // 使用NgxConf封装原始指针
-    NgxConf ctx(cf);
-    
-    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    
-    // 使用NgxConf提供的方法获取参数
-    NgxString arg = ctx.get_arg(1);
-    if (!arg.valid()) {
-        return ctx.error("Invalid cache setting (on/off expected)");
-    }
-
-    // 使用NgxString的方法进行比较，而不是直接使用C函数
-    if (arg.equals("on")) {
-        bmconf->enable_cache = 1;
-    } else if (arg.equals("off")) {
-        bmconf->enable_cache = 0;
-    } else {
-        return ctx.error("Invalid value (on/off expected)");
-    }
-
-    return NGX_CONF_OK;
+char* BlogModule::setEnableCache(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
+{
+    // 使用Nginx内置函数处理bool值
+    return ngx_conf_set_flag_slot(cf, cmd, conf);
 }
 
 // 缓存时间指令处理函数
-char* BlogModule::setCacheTime(ngx_conf_t* cf, ngx_command_t* cmd, void* conf) {
-    // 使用NgxConf封装原始指针
-    NgxConf ctx(cf);
-    
-    auto* bmconf = static_cast<BlogModuleConfig*>(conf);
-    
-    // 使用NgxConf提供的方法获取参数
-    NgxString arg = ctx.get_arg(1);
-    if (!arg.valid()) {
-        return ctx.error("Invalid cache time");
-    }
+char* BlogModule::setCacheTime(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
+{
+    // 使用Nginx内置函数处理数值
+    return ngx_conf_set_num_slot(cf, cmd, conf);
+}
 
-    // 设置缓存时间
-    ngx_int_t value = ngx_atoi(arg->data, arg->len);
-    if (value == NGX_ERROR) {
-        return ctx.error("Invalid cache time value");
-    }
+// 数据库连接字符串指令处理函数
+char* BlogModule::setDbConnectionString(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
+{
+    // 包装NgxConf类方便处理，同时记录方法入口日志
+    NgxConf ngxConf(cf);
+    ngx_log_debug0(NGX_LOG_DEBUG_HTTP, cf->log, 0, "Enter BlogModule::setDbConnectionString");
     
-    bmconf->cache_time = value;
+    // 使用NgxConf包装类处理复杂配置逻辑
+    try {
+        // 获取配置参数
+        NgxString value = ngxConf.getValue(1);
+        
+        // 调试输出
+        ngx_log_debug1(NGX_LOG_DEBUG_HTTP, cf->log, 0, 
+                    "Setting blog_db_connection to: %V", &value.get());
+        
+        // 设置配置
+        BlogModuleConfig* config = static_cast<BlogModuleConfig*>(conf);
+        config->db_conn_str = value.get();
+        
+        return NGX_CONF_OK;
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, cf->log, 0, "Error in setDbConnectionString: %s", e.what());
+        return const_cast<char*>("failed to set blog_db_connection directive");
+    }
+}
 
-    return NGX_CONF_OK;
+// 自动连接数据库指令处理函数
+char* BlogModule::setDbAutoConnect(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
+{
+    // 使用Nginx内置函数处理bool值
+    return ngx_conf_set_flag_slot(cf, cmd, conf);
 }
 
 // 实现模板服务函数

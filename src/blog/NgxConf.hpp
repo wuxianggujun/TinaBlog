@@ -215,6 +215,16 @@ public:
         return true;
     }
 
+    /**
+     * @brief 获取指定索引的参数值
+     * 这是get_arg方法的别名，提供更直观的接口
+     * @param index 参数索引，0是指令名称
+     * @return 参数值，如果索引无效则返回空字符串
+     */
+    [[nodiscard]] inline NgxString getValue(ngx_uint_t index) const {
+        return get_arg(index);
+    }
+
     // 友元声明，允许基类访问派生类的私有方法
     friend class NginxContextBase<ngx_conf_t, NginxContext<ngx_conf_t>>;
 

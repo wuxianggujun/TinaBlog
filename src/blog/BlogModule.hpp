@@ -162,6 +162,18 @@ public:
      * 内部使用NgxConf和NgxString封装类处理配置和字符串
      */
     static char* setCacheTime(ngx_conf_t* cf, ngx_command_t* cmd, void* conf);
+    
+    /**
+     * @brief 处理数据库连接字符串指令
+     * 内部使用NgxConf和NgxString封装类处理配置和字符串
+     */
+    static char* setDbConnectionString(ngx_conf_t* cf, ngx_command_t* cmd, void* conf);
+    
+    /**
+     * @brief 处理自动连接数据库指令
+     * 内部使用NgxConf和NgxString封装类处理配置和字符串
+     */
+    static char* setDbAutoConnect(ngx_conf_t* cf, ngx_command_t* cmd, void* conf);
 
 private:
     // 静态成员，防止多次创建

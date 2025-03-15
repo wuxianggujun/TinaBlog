@@ -10,7 +10,7 @@
 #include "NgxRequest.hpp"
 #include "NgxConf.hpp"
 #include <string>
-#include <stdexcept>
+// #include <stdexcept>
 
 // 前向声明，避免循环依赖
 extern "C" {
@@ -25,6 +25,8 @@ struct BlogModuleConfig {
     ngx_str_t prefix;          // URL前缀
     ngx_flag_t enable_cache;   // 是否启用缓存
     ngx_uint_t cache_time;     // 缓存时间（秒）
+    ngx_str_t db_conn_str;     // MySQL数据库连接字符串
+    ngx_flag_t db_auto_connect; // 是否自动连接数据库
 };
 
 /**
@@ -124,6 +126,20 @@ public:
      * @return std::string 完整的模板文件路径
      */
     std::string getFullTemplatePath(const std::string& templateName) const;
+    
+    /**
+     * @brief 获取数据库连接字符串
+     * 
+     * @return std::string 数据库连接字符串
+     */
+    std::string getDbConnectionString() const;
+    
+    /**
+     * @brief 检查是否自动连接数据库
+     * 
+     * @return bool 是否自动连接数据库
+     */
+    bool isDbAutoConnect() const noexcept;
     
     /**
      * @brief 检查是否有关联的请求

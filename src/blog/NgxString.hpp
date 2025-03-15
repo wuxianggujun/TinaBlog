@@ -276,6 +276,14 @@ public:
     }
 
     /**
+     * @brief 获取原始的ngx_str_t结构
+     * @return 原始的ngx_str_t结构
+     */
+    [[nodiscard]] inline ngx_str_t& get() const noexcept {
+        return *ptr_;
+    }
+
+    /**
      * @brief 转换为std::string
      * @return 标准库字符串
      */

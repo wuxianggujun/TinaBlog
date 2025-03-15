@@ -1,115 +1,17 @@
-# 在文件开头设置全局编译选项
-if(MSVC)
-    # 统一所有库使用动态运行时库/MD，匹配OpenSSL的编译方式
-    foreach(flag_var
-        CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE)
-        string(REGEX REPLACE "/MT" "/MD" ${flag_var} "${${flag_var}}")
-    endforeach()
-    
-    # 确保在Debug模式中使用/MDd
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /MDd")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MDd")
-endif()
+# third_party/CMakeLists.txt
+# 第三方库的集中配置入口点
 
-# 设置PCRE目录 - 从主项目传递或使用默认值
-if(NOT DEFINED PCRE_DIR AND DEFINED NGINX_PCRE_DIR)
-    set(PCRE_DIR ${NGINX_PCRE_DIR})
-endif()
+# 所有第三方库的配置都集中在ThirdPartyLibs.cmake中
+# 这个文件只是一个转发文件，确保所有库的配置都是集中管理的
+
+message(STATUS "加载第三方库配置 - 使用统一的ThirdPartyLibs.cmake")
+
+# 如果有特殊的编译选项设置，应该在ThirdPartyLibs.cmake中设置
+# 这里不再重复设置全局编译选项
 
 # 设置子项目输出位置
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# PCRE配置
-if(EXISTS "${PCRE_DIR}/CMakeLists.txt")
-    set(PCRE_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
-    set(PCRE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(PCRE_BUILD_PCREGREP OFF CACHE BOOL "" FORCE)
-    set(PCRE_BUILD_PCRECPP OFF CACHE BOOL "" FORCE)
-    set(PCRE_STATIC ON CACHE BOOL "" FORCE)
-    set(PCRE_SUPPORT_UTF ON CACHE BOOL "" FORCE)
-    set(PCRE_SUPPORT_UNICODE_PROPERTIES ON CACHE BOOL "" FORCE)
-    set(PCRE_BUILD_PCRE8 ON CACHE BOOL "" FORCE)
-    set(PCRE_BUILD_PCRE16 OFF CACHE BOOL "" FORCE)
-    set(PCRE_BUILD_PCRE32 OFF CACHE BOOL "" FORCE)
-    
-    # 添加PCRE子项目
-    add_subdirectory(${PCRE_DIR} ${CMAKE_BINARY_DIR}/third_party/pcre)
-    
-    # 简化PCRE库设置
-    set(PCRE_INCLUDE_DIRS ${PCRE_DIR}/include CACHE PATH "PCRE include directory")
-    
-    # 设置正确的库名称和路径
-    set(PCRE_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/lib/pcred${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE STRING "PCRE debug library")
-    set(PCRE_LIBRARIES_RELEASE "${CMAKE_BINARY_DIR}/lib/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE STRING "PCRE release library")
-    
-    # 使用生成器表达式设置正确的库
-    set(PCRE_LIBRARIES "$<$<CONFIG:Debug>:${PCRE_LIBRARIES_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${PCRE_LIBRARIES_RELEASE}>" CACHE STRING "PCRE libraries")
-endif()
-
-# 设置ZLIB目录 - 从主项目传递或使用默认值
-if(NOT DEFINED ZLIB_DIR AND DEFINED NGINX_ZLIB_DIR)
-    set(ZLIB_DIR ${NGINX_ZLIB_DIR})
-endif()
-
-# ZLIB配置
-if(EXISTS "${ZLIB_DIR}")
-    # 确保静态库构建
-    set(ZLIB_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-    set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
-    
-    # 设置输出目录，确保库文件生成在可预测的位置
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-    
-    # 添加ZLIB子项目
-    add_subdirectory(${ZLIB_DIR} ${CMAKE_BINARY_DIR}/third_party/zlib)
-    
-    # 设置包含目录
-    set(ZLIB_INCLUDE_DIRS 
-        ${ZLIB_DIR}
-        ${CMAKE_BINARY_DIR}/third_party/zlib
-        CACHE PATH "ZLIB include directories"
-    )
-    
-    # 设置正确的库文件路径
-    set(ZLIB_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/lib/zlibstaticd${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE STRING "ZLIB debug library")
-    set(ZLIB_LIBRARIES_RELEASE "${CMAKE_BINARY_DIR}/lib/zlibstatic${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE STRING "ZLIB release library")
-    
-    # 使用生成器表达式设置正确的库
-    set(ZLIB_LIBRARIES "$<$<CONFIG:Debug>:${ZLIB_LIBRARIES_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${ZLIB_LIBRARIES_RELEASE}>" CACHE STRING "ZLIB libraries")
-endif()
-
-# OpenSSL配置 - 简化
-set(OPENSSL_INCLUDE_DIRS "${OPENSSL_DIR}/include" CACHE PATH "OpenSSL include directory")
-set(OPENSSL_LIBRARIES 
-    "${OPENSSL_DIR}/lib/libssl.lib"
-    "${OPENSSL_DIR}/lib/libcrypto.lib"
-    CACHE PATH "OpenSSL libraries"
-)
-
-# 设置全局的第三方库变量
-set(NGX_HAVE_PCRE ON CACHE BOOL "Enable PCRE support")
-set(NGX_HAVE_ZLIB ON CACHE BOOL "Enable ZLIB support")
-set(NGX_HAVE_OPENSSL ON CACHE BOOL "Enable OpenSSL support")
-
-# 确保变量传递到父作用域
-set(PCRE_INCLUDE_DIRS ${PCRE_INCLUDE_DIRS} PARENT_SCOPE)
-set(PCRE_LIBRARIES_DEBUG ${PCRE_LIBRARIES_DEBUG} PARENT_SCOPE)
-set(PCRE_LIBRARIES_RELEASE ${PCRE_LIBRARIES_RELEASE} PARENT_SCOPE)
-set(PCRE_LIBRARIES ${PCRE_LIBRARIES} PARENT_SCOPE)
-set(NGX_HAVE_PCRE ON PARENT_SCOPE)
-
-set(ZLIB_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS} PARENT_SCOPE)
-set(ZLIB_LIBRARIES_DEBUG ${ZLIB_LIBRARIES_DEBUG} PARENT_SCOPE)
-set(ZLIB_LIBRARIES_RELEASE ${ZLIB_LIBRARIES_RELEASE} PARENT_SCOPE)
-set(ZLIB_LIBRARIES ${ZLIB_LIBRARIES} PARENT_SCOPE)
-
-set(OPENSSL_INCLUDE_DIRS ${OPENSSL_INCLUDE_DIRS} PARENT_SCOPE)
-set(OPENSSL_LIBRARIES ${OPENSSL_LIBRARIES} PARENT_SCOPE)
-
-set(NGX_HAVE_ZLIB ${NGX_HAVE_ZLIB} PARENT_SCOPE)
-set(NGX_HAVE_OPENSSL ${NGX_HAVE_OPENSSL} PARENT_SCOPE)
+# 第三方库的实际配置由ThirdPartyLibs.cmake完成

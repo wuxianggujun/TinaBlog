@@ -689,3 +689,362 @@
 2025/03/14 22:30:38 [warn] 8808#19000: *1 没有找到匹配的路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
 2025/03/14 22:30:38 [error] 8808#19000: *1 未找到路由处理器: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
 2025/03/14 22:30:49 [notice] 8808#10228: console closing, exiting
+2025/03/14 22:35:24 [notice] 1912#8640: using the "select" event method
+2025/03/14 22:35:24 [notice] 1912#8640: nginx/1.27.5
+2025/03/14 22:35:24 [info] 1912#8640: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/14 22:35:24 [notice] 1912#8640: create thread 16376
+2025/03/14 22:35:30 [info] 1912#16376: *1 处理请求: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:35:30 [info] 1912#16376: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:35:30 [info] 1912#16376: *1 尝试匹配路由: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:35:30 [debug] 1912#16376: *1 尝试匹配路由: /blog/admin/add
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /index.html
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/index
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/index.html
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/post/:id
+2025/03/14 22:35:30 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/category/:category
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/category/:category
+2025/03/14 22:35:30 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin/add 部分=/blog/category/
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/admin
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin
+2025/03/14 22:35:30 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/admin
+2025/03/14 22:35:30 [debug] 1912#16376: *1 检查路由模式: /blog/admin/add
+2025/03/14 22:35:30 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:35:30 [debug] 1912#16376: 完全匹配成功: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:35:30 [info] 1912#16376: *1 路由匹配成功: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:35:30 [info] 1912#16376: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:35:30 [info] 1912#16376: *1 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/14 22:35:33 [info] 1912#16376: *1 处理请求: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:33 [info] 1912#16376: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:33 [info] 1912#16376: *1 尝试匹配路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:33 [debug] 1912#16376: *1 尝试匹配路由: /blog/admin
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/
+2025/03/14 22:35:33 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /index.html
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:35:33 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog
+2025/03/14 22:35:33 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog/
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:35:33 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog/index
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:35:33 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog/index.html
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:35:33 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/post/:id
+2025/03/14 22:35:33 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog/category/:category
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/category/:category
+2025/03/14 22:35:33 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/category/
+2025/03/14 22:35:33 [debug] 1912#16376: *1 检查路由模式: /blog/admin
+2025/03/14 22:35:33 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/admin
+2025/03/14 22:35:33 [debug] 1912#16376: 完全匹配成功: URI=/blog/admin 与模式=/blog/admin
+2025/03/14 22:35:33 [info] 1912#16376: *1 路由匹配成功: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:33 [info] 1912#16376: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:33 [info] 1912#16376: *1 处理博客管理页面请求, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:33 [info] 1912#16376: *1 使用模板: html/blog/templates/blog_admin.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:35:37 [info] 1912#16376: *1 处理请求: /blog/admin/categories, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/categories HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:37 [info] 1912#16376: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/categories HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:37 [info] 1912#16376: *1 尝试匹配路由: /blog/admin/categories, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/categories HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:37 [debug] 1912#16376: *1 尝试匹配路由: /blog/admin/categories
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /index.html
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/index.html
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/index.html
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/blog
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/blog/
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/index
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/index
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/blog/index
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/index.html
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/index.html
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/blog/index.html
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/post/:id
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/post/:id
+2025/03/14 22:35:37 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/category/:category
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/category/:category
+2025/03/14 22:35:37 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin/cat 部分=/blog/category/
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/admin
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/admin
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/blog/admin
+2025/03/14 22:35:37 [debug] 1912#16376: *1 检查路由模式: /blog/admin/add
+2025/03/14 22:35:37 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/categories 与模式=/blog/admin/add
+2025/03/14 22:35:37 [debug] 1912#16376: 匹配失败: URI=/blog/admin/categories 与模式=/blog/admin/add
+2025/03/14 22:35:37 [debug] 1912#16376: *1 路由方法不匹配: 8 vs 2
+2025/03/14 22:35:37 [warn] 1912#16376: *1 没有找到匹配的路由: /blog/admin/categories, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/categories HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:37 [error] 1912#16376: *1 未找到路由处理器: /blog/admin/categories, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/categories HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [debug] 1912#16376: *1 尝试匹配路由: /
+2025/03/14 22:35:39 [debug] 1912#16376: *1 检查路由模式: /
+2025/03/14 22:35:39 [debug] 1912#16376: 尝试匹配: URI=/ 与模式=/
+2025/03/14 22:35:39 [debug] 1912#16376: 完全匹配成功: URI=/ 与模式=/
+2025/03/14 22:35:39 [info] 1912#16376: *1 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:35:39 [info] 1912#16376: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:36:30 [info] 1912#16376: *2 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
+2025/03/14 22:36:30 [info] 1912#16376: *3 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
+2025/03/14 22:36:55 [info] 1912#16376: *4 处理请求: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:36:55 [info] 1912#16376: *4 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:36:55 [info] 1912#16376: *4 尝试匹配路由: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:36:55 [debug] 1912#16376: *4 尝试匹配路由: /blog/admin/add
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /index.html
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/index.html
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/index
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/index
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/index.html
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/post/:id
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/post/:id
+2025/03/14 22:36:55 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/category/:category
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/category/:category
+2025/03/14 22:36:55 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin/add 部分=/blog/category/
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/admin
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin
+2025/03/14 22:36:55 [debug] 1912#16376: 匹配失败: URI=/blog/admin/add 与模式=/blog/admin
+2025/03/14 22:36:55 [debug] 1912#16376: *4 检查路由模式: /blog/admin/add
+2025/03/14 22:36:55 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:36:55 [debug] 1912#16376: 完全匹配成功: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:36:55 [info] 1912#16376: *4 路由匹配成功: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:36:55 [info] 1912#16376: *4 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:36:55 [info] 1912#16376: *4 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:37:16 [info] 1912#16376: *4 处理请求: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [info] 1912#16376: *4 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [info] 1912#16376: *4 尝试匹配路由: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [debug] 1912#16376: *4 尝试匹配路由: /blog/admin/add
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 路由方法不匹配: 2 vs 8
+2025/03/14 22:37:16 [debug] 1912#16376: *4 检查路由模式: /blog/admin/add
+2025/03/14 22:37:16 [debug] 1912#16376: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:37:16 [debug] 1912#16376: 完全匹配成功: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/14 22:37:16 [info] 1912#16376: *4 路由匹配成功: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [info] 1912#16376: *4 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [info] 1912#16376: *4 处理添加新文章请求, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [error] 1912#16376: *4 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [info] 1912#16376: *4 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /blog/admin/add HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:37:16 [info] 1912#16376: *4 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "title=hello&author=wuxianggujun&category=%E6%8A%80%E6%9C%AF&tags=c%2B%2B&content"
+2025/03/14 22:37:55 [info] 1912#16376: *5 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
+2025/03/14 22:37:55 [info] 1912#16376: *6 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
+2025/03/14 22:42:23 [info] 1912#16376: *7 处理请求: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:23 [info] 1912#16376: *7 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:23 [info] 1912#16376: *7 尝试匹配路由: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:23 [debug] 1912#16376: *7 尝试匹配路由: /blog/admin
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/
+2025/03/14 22:42:23 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /index.html
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:42:23 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/index.html
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog
+2025/03/14 22:42:23 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog/
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:42:23 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog/
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog/index
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:42:23 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog/index
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog/index.html
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:42:23 [debug] 1912#16376: 匹配失败: URI=/blog/admin 与模式=/blog/index.html
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog/post/:id
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/post/:id
+2025/03/14 22:42:23 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog/category/:category
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/category/:category
+2025/03/14 22:42:23 [debug] 1912#16376: 静态部分不匹配: URI=/blog/admin 部分=/blog/category/
+2025/03/14 22:42:23 [debug] 1912#16376: *7 检查路由模式: /blog/admin
+2025/03/14 22:42:23 [debug] 1912#16376: 尝试匹配: URI=/blog/admin 与模式=/blog/admin
+2025/03/14 22:42:23 [debug] 1912#16376: 完全匹配成功: URI=/blog/admin 与模式=/blog/admin
+2025/03/14 22:42:23 [info] 1912#16376: *7 路由匹配成功: /blog/admin, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:23 [info] 1912#16376: *7 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:23 [info] 1912#16376: *7 处理博客管理页面请求, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:23 [info] 1912#16376: *7 使用模板: html/blog/templates/blog_admin.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin/add"
+2025/03/14 22:42:30 [info] 1912#16376: *7 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [info] 1912#16376: *7 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [info] 1912#16376: *7 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [debug] 1912#16376: *7 尝试匹配路由: /
+2025/03/14 22:42:30 [debug] 1912#16376: *7 检查路由模式: /
+2025/03/14 22:42:30 [debug] 1912#16376: 尝试匹配: URI=/ 与模式=/
+2025/03/14 22:42:30 [debug] 1912#16376: 完全匹配成功: URI=/ 与模式=/
+2025/03/14 22:42:30 [info] 1912#16376: *7 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [info] 1912#16376: *7 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [info] 1912#16376: *7 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [info] 1912#16376: *7 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:30 [info] 1912#16376: *7 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/admin"
+2025/03/14 22:42:40 [info] 1912#16376: *7 处理请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [info] 1912#16376: *7 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [info] 1912#16376: *7 尝试匹配路由: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [debug] 1912#16376: *7 尝试匹配路由: /blog/post/1
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/
+2025/03/14 22:42:40 [debug] 1912#16376: 匹配失败: URI=/blog/post/1 与模式=/
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /index.html
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/index.html
+2025/03/14 22:42:40 [debug] 1912#16376: 匹配失败: URI=/blog/post/1 与模式=/index.html
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /blog
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/blog
+2025/03/14 22:42:40 [debug] 1912#16376: 匹配失败: URI=/blog/post/1 与模式=/blog
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /blog/
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/blog/
+2025/03/14 22:42:40 [debug] 1912#16376: 匹配失败: URI=/blog/post/1 与模式=/blog/
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /blog/index
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/blog/index
+2025/03/14 22:42:40 [debug] 1912#16376: 匹配失败: URI=/blog/post/1 与模式=/blog/index
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /blog/index.html
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/14 22:42:40 [debug] 1912#16376: 匹配失败: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/14 22:42:40 [debug] 1912#16376: *7 检查路由模式: /blog/post/:id
+2025/03/14 22:42:40 [debug] 1912#16376: 尝试匹配: URI=/blog/post/1 与模式=/blog/post/:id
+2025/03/14 22:42:40 [debug] 1912#16376: 提取参数: id=1
+2025/03/14 22:42:40 [debug] 1912#16376: 完整匹配成功: 剩余URI= 剩余模式=
+2025/03/14 22:42:40 [info] 1912#16376: *7 路由匹配成功: /blog/post/:id, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [debug] 1912#16376: *7 参数: id = 1
+2025/03/14 22:42:40 [info] 1912#16376: *7 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [info] 1912#16376: *7 处理博客文章请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [warn] 1912#16376: *7 文章不存在或未初始化，使用示例数据: 1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [info] 1912#16376: *7 使用模板渲染文章页面, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:42:40 [info] 1912#16376: *7 使用模板: html/blog/templates/blog_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/14 22:43:23 [info] 1912#16376: *8 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
+2025/03/14 22:43:23 [info] 1912#16376: *9 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
+2025/03/14 22:43:55 [notice] 1912#1844: console closing, exiting
+2025/03/15 18:42:34 [notice] 24980#2700: using the "select" event method
+2025/03/15 18:42:34 [notice] 24980#2700: nginx/1.27.5
+2025/03/15 18:42:34 [info] 24980#2700: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 18:42:34 [notice] 24980#2700: create thread 23744
+2025/03/15 18:42:43 [info] 24980#23744: *1 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [info] 24980#23744: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [info] 24980#23744: *1 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [debug] 24980#23744: *1 尝试匹配路由: /
+2025/03/15 18:42:43 [debug] 24980#23744: *1 检查路由模式: /
+2025/03/15 18:42:43 [debug] 24980#23744: 尝试匹配: URI=/ 与模式=/
+2025/03/15 18:42:43 [debug] 24980#23744: 完全匹配成功: URI=/ 与模式=/
+2025/03/15 18:42:43 [info] 24980#23744: *1 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [info] 24980#23744: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [info] 24980#23744: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [info] 24980#23744: *1 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:43 [info] 24980#23744: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
+2025/03/15 18:42:45 [info] 24980#23744: *1 处理请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [info] 24980#23744: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [info] 24980#23744: *1 尝试匹配路由: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [debug] 24980#23744: *1 尝试匹配路由: /blog/post/1
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/
+2025/03/15 18:42:45 [debug] 24980#23744: 匹配失败: URI=/blog/post/1 与模式=/
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /index.html
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/index.html
+2025/03/15 18:42:45 [debug] 24980#23744: 匹配失败: URI=/blog/post/1 与模式=/index.html
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /blog
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/blog
+2025/03/15 18:42:45 [debug] 24980#23744: 匹配失败: URI=/blog/post/1 与模式=/blog
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /blog/
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/blog/
+2025/03/15 18:42:45 [debug] 24980#23744: 匹配失败: URI=/blog/post/1 与模式=/blog/
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /blog/index
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/blog/index
+2025/03/15 18:42:45 [debug] 24980#23744: 匹配失败: URI=/blog/post/1 与模式=/blog/index
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /blog/index.html
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/15 18:42:45 [debug] 24980#23744: 匹配失败: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/15 18:42:45 [debug] 24980#23744: *1 检查路由模式: /blog/post/:id
+2025/03/15 18:42:45 [debug] 24980#23744: 尝试匹配: URI=/blog/post/1 与模式=/blog/post/:id
+2025/03/15 18:42:45 [debug] 24980#23744: 提取参数: id=1
+2025/03/15 18:42:45 [debug] 24980#23744: 完整匹配成功: 剩余URI= 剩余模式=
+2025/03/15 18:42:45 [info] 24980#23744: *1 路由匹配成功: /blog/post/:id, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [debug] 24980#23744: *1 参数: id = 1
+2025/03/15 18:42:45 [info] 24980#23744: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [info] 24980#23744: *1 处理博客文章请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [warn] 24980#23744: *1 文章不存在或未初始化，使用示例数据: 1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [info] 24980#23744: *1 使用模板渲染文章页面, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:42:45 [info] 24980#23744: *1 使用模板: html/blog/templates/blog_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/15 18:43:00 [info] 24980#23744: *1 处理请求: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/15 18:43:00 [info] 24980#23744: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/15 18:43:00 [info] 24980#23744: *1 尝试匹配路由: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/15 18:43:00 [debug] 24980#23744: *1 尝试匹配路由: /blog/admin/add
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /index.html
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/index.html
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/index.html
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/blog
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/blog/
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/index
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/blog/index
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/index.html
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/blog/index.html
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/post/:id
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/post/:id
+2025/03/15 18:43:00 [debug] 24980#23744: 静态部分不匹配: URI=/blog/admin 部分=/blog/post/
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/category/:category
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/category/:category
+2025/03/15 18:43:00 [debug] 24980#23744: 静态部分不匹配: URI=/blog/admin/add 部分=/blog/category/
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/admin
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin
+2025/03/15 18:43:00 [debug] 24980#23744: 匹配失败: URI=/blog/admin/add 与模式=/blog/admin
+2025/03/15 18:43:00 [debug] 24980#23744: *1 检查路由模式: /blog/admin/add
+2025/03/15 18:43:00 [debug] 24980#23744: 尝试匹配: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/15 18:43:00 [debug] 24980#23744: 完全匹配成功: URI=/blog/admin/add 与模式=/blog/admin/add
+2025/03/15 18:43:00 [info] 24980#23744: *1 路由匹配成功: /blog/admin/add, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/15 18:43:00 [info] 24980#23744: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/15 18:43:00 [info] 24980#23744: *1 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
+2025/03/15 18:43:33 [notice] 24980#8396: console closing, exiting

@@ -287,7 +287,9 @@ static ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params)
         // 显示添加文章的表单页面
         std::unordered_map<std::string, std::string> variables;
         variables["title"] = "添加新文章";
-        variables["error"] = "";
+        // 设置错误显示为隐藏
+        variables["error_display"] = "none";
+        variables["error_message"] = "";
         
         return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
     }
@@ -375,7 +377,8 @@ static ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params)
             // 返回错误页面
             std::unordered_map<std::string, std::string> variables;
             variables["title"] = "添加新文章";
-            variables["error"] = "创建文章失败，请稍后重试";
+            variables["error_display"] = "block";
+            variables["error_message"] = "创建文章失败，请稍后重试";
             
             return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
         }
@@ -443,6 +446,65 @@ static ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& pa
     return ngx_http_output_filter(r, &out);
 }
 
+// 处理博客管理页面
+static ngx_int_t handleAdmin(ngx_http_request_t* r, const RouteParams& params) {
+    try {
+        // 封装请求
+        NgxRequest request(r);
+        
+        // 创建配置对象
+        BlogConfig config(request);
+        
+        // 创建日志对象
+        NgxLog logger(r);
+        logger.info("处理博客管理页面请求");
+        
+        // 构建模板变量
+        std::unordered_map<std::string, std::string> variables;
+        
+        // 从文章管理器获取所有文章
+        auto& manager = BlogPostManager::getInstance();
+        const auto allPosts = manager.getAllPosts();
+        
+        if (!allPosts.empty()) {
+            std::stringstream postRows;
+            
+            for (const auto* post : allPosts) {
+                postRows << "<tr>\n";
+                postRows << "  <td>" << post->getId() << "</td>\n";
+                postRows << "  <td><a href=\"/blog/post/" << post->getId() << "\">" 
+                        << post->getTitle() << "</a></td>\n";
+                postRows << "  <td>" << post->getAuthor() << "</td>\n";
+                postRows << "  <td><a href=\"/blog/category/" << post->getCategory() << "\">" 
+                        << post->getCategory() << "</a></td>\n";
+                postRows << "  <td>" << post->getDate() << "</td>\n";
+                postRows << "  <td class=\"action-buttons\">\n";
+                postRows << "    <a href=\"/blog/admin/edit/" << post->getId() 
+                        << "\" class=\"btn\">编辑</a>\n";
+                postRows << "    <a href=\"/blog/admin/delete/" << post->getId() 
+                        << "\" class=\"btn btn-red\">删除</a>\n";
+                postRows << "  </td>\n";
+                postRows << "</tr>\n";
+            }
+            
+            variables["#posts"] = "true";
+            variables["posts"] = postRows.str();
+            variables["^posts"] = "";
+        } else {
+            variables["#posts"] = "";
+            variables["^posts"] = "true";
+        }
+        
+        // 使用模板引擎渲染响应
+        return BlogModule::serveTemplateWithVariables(r, "blog_admin.html", variables);
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                    "处理博客管理页面异常: %s", e.what());
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+}
+
 // 初始化所有路由
 void initBlogRoutes() {
     auto& router = getBlogRouter();
@@ -467,10 +529,9 @@ void initBlogRoutes() {
     router.get("/blog/category/:category", handleBlogCategory);
     
     // 文章管理路由
-    router.get("/blog/admin/add", handleAddPost);  // 显示添加文章表单
+    router.get("/blog/admin", handleAdmin);       // 管理首页
+    router.get("/blog/admin/add", handleAddPost); // 显示添加文章表单
     router.post("/blog/admin/add", handleAddPost); // 处理添加文章请求
-    
-    // 可以继续添加更多路由...
     
     // 使用NgxLog的静态方法记录日志
     NgxLog::log_static(ngx_cycle->log, NGX_LOG_INFO, "博客路由初始化完成，共注册 %d 个路由", router.getRouteCount());
