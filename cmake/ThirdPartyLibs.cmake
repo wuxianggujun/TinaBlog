@@ -38,92 +38,92 @@ function(configure_pcre)
         return()
     endif()
 
-    # 临时将BUILD_SHARED_LIBS设置为OFF，确保PCRE以静态库方式构建
+    # 临时保存原来的BUILD_SHARED_LIBS设置
     set(_SAVED_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+    # 强制设置为静态库构建，确保不会生成DLL
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
-    
-    set(PCRE_DIR "${CMAKE_SOURCE_DIR}/third_party/pcre" CACHE PATH "PCRE源码目录")
-    set(PCRE_DIR ${PCRE_DIR} PARENT_SCOPE)
 
-    # 检查PCRE库是否存在
-    set(PCRE_INCLUDE_DIRS ${PCRE_DIR}/include CACHE PATH "PCRE include directory")
+    # 设置PCRE源码目录路径
+    set(PCRE_DIR "${CMAKE_SOURCE_DIR}/third_party/pcre" CACHE PATH "PCRE源码目录路径")
+    set(PCRE_DIR ${PCRE_DIR} PARENT_SCOPE)
     
-    # 允许用户指定自定义的PCRE库路径
-    set(PCRE_LIB_CUSTOM_PATH "" CACHE PATH "自定义PCRE库路径（可选）")
+    # 检查源码目录是否存在
+    if(NOT EXISTS "${PCRE_DIR}")
+        message(WARNING "PCRE源码目录不存在: ${PCRE_DIR}")
+        message(STATUS "请在CMake GUI中设置正确的PCRE_DIR路径或使用命令行参数 -DPCRE_DIR=\"路径\"")
+        set(NGX_HAVE_PCRE OFF CACHE BOOL "Enable PCRE support" FORCE)
+        return()
+    endif()
+
+    # 检查是否有CMakeLists.txt文件，表明可以构建
+    if(NOT EXISTS "${PCRE_DIR}/CMakeLists.txt")
+        message(WARNING "PCRE源码目录中没有CMakeLists.txt文件: ${PCRE_DIR}")
+        message(STATUS "请确保PCRE源码是完整的，且包含CMakeLists.txt文件")
+        set(NGX_HAVE_PCRE OFF CACHE BOOL "Enable PCRE support" FORCE)
+        return()
+    endif()
     
-    # 尝试多个可能的路径
-    set(POSSIBLE_PCRE_DEBUG_PATHS
-        "${CMAKE_BINARY_DIR}/third_party/pcre/Debug/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        "${CMAKE_BINARY_DIR}/lib/Debug/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        "${PCRE_LIB_CUSTOM_PATH}/Debug/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        "${PCRE_LIB_CUSTOM_PATH}/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    )
+    # 设置包含目录
+    set(PCRE_INCLUDE_DIRS "${PCRE_DIR}/include" CACHE PATH "PCRE include directory")
     
-    set(POSSIBLE_PCRE_RELEASE_PATHS
-        "${CMAKE_BINARY_DIR}/third_party/pcre/Release/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        "${CMAKE_BINARY_DIR}/lib/Release/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        "${PCRE_LIB_CUSTOM_PATH}/Release/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        "${PCRE_LIB_CUSTOM_PATH}/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}"
-    )
-    
-    # 设置默认路径
-    set(PCRE_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/third_party/pcre/Debug/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE debug library")
-    set(PCRE_LIBRARIES_RELEASE "${CMAKE_BINARY_DIR}/third_party/pcre/Release/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE release library")
-    
-    # 查找Debug库
-    foreach(PATH ${POSSIBLE_PCRE_DEBUG_PATHS})
-        if(EXISTS "${PATH}")
-            set(PCRE_LIBRARIES_DEBUG "${PATH}" CACHE FILEPATH "PCRE debug library" FORCE)
-            message(STATUS "找到PCRE Debug库: ${PATH}")
-            break()
-        endif()
-    endforeach()
-    
-    # 查找Release库
-    foreach(PATH ${POSSIBLE_PCRE_RELEASE_PATHS})
-        if(EXISTS "${PATH}")
-            set(PCRE_LIBRARIES_RELEASE "${PATH}" CACHE FILEPATH "PCRE release library" FORCE)
-            message(STATUS "找到PCRE Release库: ${PATH}")
-            break()
-        endif()
-    endforeach()
-    
-    # 检查是否需要先构建PCRE
-    if((NOT EXISTS "${PCRE_LIBRARIES_DEBUG}" OR NOT EXISTS "${PCRE_LIBRARIES_RELEASE}") AND NOT TARGET pcre)
-        if(EXISTS "${PCRE_DIR}/CMakeLists.txt")
-            # 配置PCRE构建选项
-            set(PCRE_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_PCREGREP OFF CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_PCRECPP OFF CACHE BOOL "" FORCE)
-            set(PCRE_STATIC ON CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # 确保PCRE以静态库形式构建
-            set(PCRE_SUPPORT_UTF ON CACHE BOOL "" FORCE)
-            set(PCRE_SUPPORT_UNICODE_PROPERTIES ON CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_PCRE8 ON CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_PCRE16 OFF CACHE BOOL "" FORCE)
-            set(PCRE_BUILD_PCRE32 OFF CACHE BOOL "" FORCE)
+    # 尝试从源码构建PCRE
+    if(NOT TARGET pcre)
+        message(STATUS "尝试从源码构建PCRE静态库...")
+        
+        # 配置PCRE构建选项 - 确保所有与静态/动态库相关的选项都正确设置
+        set(PCRE_STATIC_RUNTIME OFF CACHE BOOL "" FORCE)
+        set(PCRE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+        set(PCRE_BUILD_PCREGREP OFF CACHE BOOL "" FORCE)
+        set(PCRE_BUILD_PCRECPP OFF CACHE BOOL "" FORCE)
+        set(PCRE_STATIC ON CACHE BOOL "" FORCE)  # 强制为静态库
+        set(PCRE_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)  # 明确禁用共享库
+        set(PCRE_SUPPORT_UTF ON CACHE BOOL "" FORCE)
+        set(PCRE_SUPPORT_UNICODE_PROPERTIES ON CACHE BOOL "" FORCE)
+        set(PCRE_BUILD_PCRE8 ON CACHE BOOL "" FORCE)
+        set(PCRE_BUILD_PCRE16 OFF CACHE BOOL "" FORCE)
+        set(PCRE_BUILD_PCRE32 OFF CACHE BOOL "" FORCE)
+        
+        # 清理可能存在的之前构建的文件
+        file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/third_party/pcre")
+        
+        # 添加PCRE子项目
+        add_subdirectory(${PCRE_DIR} ${CMAKE_BINARY_DIR}/third_party/pcre)
+        
+        # 检查是否成功创建目标
+        if(TARGET pcre)
+            message(STATUS "成功创建PCRE目标")
             
-            # 添加PCRE子项目
-            message(STATUS "添加PCRE子项目进行构建...")
-            add_subdirectory(${PCRE_DIR} ${CMAKE_BINARY_DIR}/third_party/pcre)
+            # 确保我们链接到静态库，但不设置IMPORTED_GLOBAL属性（因为这不是导入目标）
+            if(MSVC)
+                set_target_properties(pcre PROPERTIES 
+                    STATIC_LIBRARY_FLAGS "/IGNORE:4099"
+                )
+            endif()
             
-            # 设置库路径为目标路径
+            # 使用生成器表达式获取正确的库文件路径
             set(PCRE_LIBRARIES_DEBUG "$<TARGET_FILE:pcre>" CACHE FILEPATH "PCRE debug library" FORCE)
             set(PCRE_LIBRARIES_RELEASE "$<TARGET_FILE:pcre>" CACHE FILEPATH "PCRE release library" FORCE)
+            set(PCRE_LIBRARIES "$<TARGET_FILE:pcre>" CACHE FILEPATH "PCRE libraries" FORCE)
+            set(NGX_HAVE_PCRE ON CACHE BOOL "Enable PCRE support" FORCE)
         else()
-            message(WARNING "PCRE库文件未找到且无法构建PCRE。请检查third_party/pcre目录是否存在且包含CMakeLists.txt文件。")
-            message(STATUS "将继续构建，但某些功能可能不可用")
-            
-            # 设置PCRE状态为未找到
+            message(WARNING "从源码构建PCRE失败，未能创建pcre目标")
             set(NGX_HAVE_PCRE OFF CACHE BOOL "Enable PCRE support" FORCE)
         endif()
     else()
+        message(STATUS "PCRE目标已存在，直接使用")
+        
+        # 确保我们链接到静态库，但不设置IMPORTED_GLOBAL属性（因为这不是导入目标）
+        if(MSVC)
+            set_target_properties(pcre PROPERTIES 
+                STATIC_LIBRARY_FLAGS "/IGNORE:4099"
+            )
+        endif()
+        
+        set(PCRE_LIBRARIES_DEBUG "$<TARGET_FILE:pcre>" CACHE FILEPATH "PCRE debug library" FORCE)
+        set(PCRE_LIBRARIES_RELEASE "$<TARGET_FILE:pcre>" CACHE FILEPATH "PCRE release library" FORCE)
+        set(PCRE_LIBRARIES "$<TARGET_FILE:pcre>" CACHE FILEPATH "PCRE libraries" FORCE)
         set(NGX_HAVE_PCRE ON CACHE BOOL "Enable PCRE support" FORCE)
     endif()
-    
-    # 使用生成器表达式设置正确的库
-    set(PCRE_LIBRARIES "$<$<CONFIG:Debug>:${PCRE_LIBRARIES_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${PCRE_LIBRARIES_RELEASE}>" CACHE STRING "PCRE libraries")
     
     # 导出变量到父作用域
     set(PCRE_INCLUDE_DIRS ${PCRE_INCLUDE_DIRS} PARENT_SCOPE)
@@ -132,7 +132,7 @@ function(configure_pcre)
     set(PCRE_LIBRARIES ${PCRE_LIBRARIES} PARENT_SCOPE)
     set(NGX_HAVE_PCRE ${NGX_HAVE_PCRE} PARENT_SCOPE)
     
-    # 恢复BUILD_SHARED_LIBS的原始值
+    # 恢复原来的BUILD_SHARED_LIBS设置
     set(BUILD_SHARED_LIBS ${_SAVED_BUILD_SHARED_LIBS} CACHE BOOL "Build shared libraries" FORCE)
 endfunction()
 
