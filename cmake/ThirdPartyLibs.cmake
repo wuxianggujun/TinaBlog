@@ -154,16 +154,12 @@ function(configure_third_party_libs)
     
     # 修改MySQL Connector C++ DLL搜索路径
     set(POSSIBLE_CONNECTOR_DLL_PATHS
-        "${MYSQL_PREBUILT_DIR}/lib64/vs14/mysqlcppconn-9-vs14.dll"
-        "${MYSQL_PREBUILT_DIR}/lib64/vs14/mysqlcppconn.dll"
-        "${MYSQL_PREBUILT_DIR}/lib64/mysqlcppconn-9-vs14.dll"
-        "${MYSQL_PREBUILT_DIR}/lib64/mysqlcppconn.dll"
-        "${MYSQL_PREBUILT_DIR}/lib/vs14/mysqlcppconn-9-vs14.dll"
-        "${MYSQL_PREBUILT_DIR}/lib/vs14/mysqlcppconn.dll"
-        "${MYSQL_PREBUILT_DIR}/lib/mysqlcppconn-9-vs14.dll"
-        "${MYSQL_PREBUILT_DIR}/lib/mysqlcppconn.dll"
-        "${MYSQL_PREBUILT_DIR}/bin/mysqlcppconn-9-vs14.dll"
-        "${MYSQL_PREBUILT_DIR}/bin/mysqlcppconn.dll"
+        "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconn-10-vs14.dll"
+        "${MYSQL_CONNECTOR_DIR}/lib64/mysqlcppconnx-2-vs14.dll"
+        "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconn.lib"
+        "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconnx.lib"
+        "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconn-static.lib"
+        "${MYSQL_CONNECTOR_DIR}/lib64/vs14/mysqlcppconnx-static.lib"
     )
 
     foreach(DLL_PATH ${POSSIBLE_CONNECTOR_DLL_PATHS})
@@ -177,11 +173,7 @@ function(configure_third_party_libs)
     endforeach()
 
     # 设置OpenSSL DLL搜索路径
-    set(OPENSSL_DLL_PATHS
-        # MySQL Server中的OpenSSL DLL
-        "${MYSQL_SERVER_DIR}/bin/libcrypto-3-x64.dll"
-        "${MYSQL_SERVER_DIR}/bin/libssl-3-x64.dll"
-        
+    set(OPENSSL_DLL_PATHS        
         # MySQL Connector中的OpenSSL DLL
         "${MYSQL_CONNECTOR_DIR}/lib64/libcrypto-3-x64.dll"
         "${MYSQL_CONNECTOR_DIR}/lib64/libssl-3-x64.dll"
