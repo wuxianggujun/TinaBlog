@@ -8,6 +8,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # 引入自定义模块
 include(CopyDependencies)
+include(ThirdPartyLibs)  # 确保包含ThirdPartyLibs.cmake
 
 # 收集源文件和头文件
 # ==================================================
@@ -356,8 +357,8 @@ target_link_libraries(nginx
     Boost::utility
     Boost::tti
 
-    # MySQL库
-    "${MYSQL_SERVER_DIR}/lib/libmysql.lib"
+    # MySQL库 - 使用配置好的变量而不是硬编码路径
+    ${MySQL_LIBRARIES}
     ${MYSQL_CONNECTOR_LIBRARIES}
 )
 
