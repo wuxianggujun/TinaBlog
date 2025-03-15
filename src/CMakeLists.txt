@@ -386,9 +386,23 @@ set_target_properties(nginx PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 )
 
-# 添加复制ZLIB DLL到输出目录的命令
+# 创建清理动态库的自定义目标
+add_custom_target(clean_dll_files
+    COMMAND ${CMAKE_COMMAND} -E echo "清理项目根目录下的DLL文件..."
+    COMMAND ${CMAKE_COMMAND} -E remove -f 
+        ${CMAKE_SOURCE_DIR}/zlibd1.dll
+        ${CMAKE_SOURCE_DIR}/zlib1.dll
+        ${CMAKE_SOURCE_DIR}/libmysql.dll
+        ${CMAKE_SOURCE_DIR}/libcrypto-3-x64.dll
+        ${CMAKE_SOURCE_DIR}/libssl-3-x64.dll
+        ${CMAKE_SOURCE_DIR}/mysqlcppconn-9-vs14.dll
+        ${CMAKE_SOURCE_DIR}/mysqlcppconn.dll
+    COMMENT "清理项目根目录下的DLL文件"
+)
+
+# 添加复制ZLIB DLL到输出目录的命令 - 修改为每次都复制
 if(TARGET zlib)
-    add_custom_command(TARGET nginx POST_BUILD
+    add_custom_command(TARGET nginx PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "$<TARGET_FILE:zlib>"
         "$<TARGET_FILE_DIR:nginx>"
@@ -403,7 +417,7 @@ endif()
 if(MYSQL_FOUND)
     # 首先尝试使用配置的MySQL_DLL
     if(DEFINED MySQL_DLL AND EXISTS "${MySQL_DLL}")
-        add_custom_command(TARGET nginx POST_BUILD
+        add_custom_command(TARGET nginx PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${MySQL_DLL}"
             "$<TARGET_FILE_DIR:nginx>"
@@ -419,7 +433,7 @@ if(MYSQL_FOUND)
         
         foreach(DLL_PATH ${POSSIBLE_MYSQL_DLL_PATHS})
             if(EXISTS "${DLL_PATH}")
-                add_custom_command(TARGET nginx POST_BUILD
+                add_custom_command(TARGET nginx PRE_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${DLL_PATH}"
                     "$<TARGET_FILE_DIR:nginx>"
@@ -435,7 +449,7 @@ endif()
 # 添加复制OpenSSL DLL到输出目录的命令
 # 首先检查是否手动指定了DLL路径
 if(EXISTS "${OPENSSL_CRYPTO_DLL}")
-    add_custom_command(TARGET nginx POST_BUILD
+    add_custom_command(TARGET nginx PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${OPENSSL_CRYPTO_DLL}"
         "$<TARGET_FILE_DIR:nginx>"
@@ -445,7 +459,7 @@ if(EXISTS "${OPENSSL_CRYPTO_DLL}")
 endif()
 
 if(EXISTS "${OPENSSL_SSL_DLL}")
-    add_custom_command(TARGET nginx POST_BUILD
+    add_custom_command(TARGET nginx PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${OPENSSL_SSL_DLL}"
         "$<TARGET_FILE_DIR:nginx>"
@@ -487,7 +501,7 @@ set(OPENSSL_DLL_PATHS
 
 foreach(DLL_PATH ${OPENSSL_DLL_PATHS})
     if(EXISTS "${DLL_PATH}")
-        add_custom_command(TARGET nginx POST_BUILD
+        add_custom_command(TARGET nginx PRE_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${DLL_PATH}"
             "$<TARGET_FILE_DIR:nginx>"
@@ -499,9 +513,79 @@ endforeach()
 
 # 拷贝nginx原始html文件（如果有）
 if(EXISTS "${CMAKE_SOURCE_DIR}/docs/html")
-    add_custom_command(TARGET nginx POST_BUILD
+    add_custom_command(TARGET nginx PRE_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory 
         ${CMAKE_SOURCE_DIR}/docs/html ${CMAKE_SOURCE_DIR}/html
         COMMENT "Copying original nginx html files..."
     )
 endif()
+
+# 添加一个新的自定义目标，用于手动复制所有DLL文件
+# 如果DLL文件丢失，可以运行此目标来恢复
+add_custom_target(copy_all_dlls
+    COMMENT "手动复制所有需要的DLL文件到输出目录"
+)
+
+# 添加ZLIB DLL复制
+if(TARGET zlib)
+    add_custom_command(TARGET copy_all_dlls POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "$<TARGET_FILE:zlib>"
+        "${CMAKE_SOURCE_DIR}"
+        COMMENT "复制ZLIB动态库到输出目录"
+    )
+endif()
+
+# 添加MySQL DLL复制
+if(MYSQL_FOUND)
+    if(DEFINED MySQL_DLL AND EXISTS "${MySQL_DLL}")
+        add_custom_command(TARGET copy_all_dlls POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MySQL_DLL}"
+            "${CMAKE_SOURCE_DIR}"
+            COMMENT "复制MySQL动态库到输出目录"
+        )
+    else()
+        foreach(DLL_PATH ${POSSIBLE_MYSQL_DLL_PATHS})
+            if(EXISTS "${DLL_PATH}")
+                add_custom_command(TARGET copy_all_dlls POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL_PATH}"
+                    "${CMAKE_SOURCE_DIR}"
+                    COMMENT "复制MySQL动态库到输出目录"
+                )
+                break()
+            endif()
+        endforeach()
+    endif()
+endif()
+
+# 添加OpenSSL DLL复制
+if(EXISTS "${OPENSSL_CRYPTO_DLL}")
+    add_custom_command(TARGET copy_all_dlls POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${OPENSSL_CRYPTO_DLL}"
+        "${CMAKE_SOURCE_DIR}"
+        COMMENT "复制OpenSSL Crypto动态库到输出目录"
+    )
+endif()
+
+if(EXISTS "${OPENSSL_SSL_DLL}")
+    add_custom_command(TARGET copy_all_dlls POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${OPENSSL_SSL_DLL}"
+        "${CMAKE_SOURCE_DIR}"
+        COMMENT "复制OpenSSL SSL动态库到输出目录"
+    )
+endif()
+
+foreach(DLL_PATH ${OPENSSL_DLL_PATHS})
+    if(EXISTS "${DLL_PATH}")
+        add_custom_command(TARGET copy_all_dlls POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${DLL_PATH}"
+            "${CMAKE_SOURCE_DIR}"
+            COMMENT "复制OpenSSL动态库到输出目录"
+        )
+    endif()
+endforeach()

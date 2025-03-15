@@ -1048,3 +1048,18 @@
 2025/03/15 18:43:00 [info] 24980#23744: *1 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
 2025/03/15 18:43:00 [info] 24980#23744: *1 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/admin/add HTTP/1.1", host: "localhost"
 2025/03/15 18:43:33 [notice] 24980#8396: console closing, exiting
+2025/03/15 19:12:36 [notice] 25040#1396: using the "select" event method
+2025/03/15 19:12:36 [notice] 25040#1396: nginx/1.27.5
+2025/03/15 19:12:36 [info] 25040#1396: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 19:12:36 [notice] 25040#1396: create thread 25180
+2025/03/15 19:12:45 [notice] 25040#9628: console closing, exiting
+2025/03/15 19:16:15 [notice] 18996#22596: using the "select" event method
+2025/03/15 19:16:15 [notice] 18996#22596: nginx/1.27.5
+2025/03/15 19:16:15 [info] 18996#22596: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 19:16:15 [notice] 18996#22596: create thread 8000
+2025/03/15 19:16:19 [notice] 18996#24740: console closing, exiting
+2025/03/15 19:16:22 [notice] 5588#17976: using the "select" event method
+2025/03/15 19:16:22 [notice] 5588#17976: nginx/1.27.5
+2025/03/15 19:16:22 [info] 5588#17976: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/15 19:16:22 [notice] 5588#17976: create thread 15688
+2025/03/15 19:16:25 [notice] 5588#21236: console closing, exiting

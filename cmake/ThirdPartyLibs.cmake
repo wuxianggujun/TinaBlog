@@ -26,18 +26,22 @@ function(configure_third_party_libs)
     # ==========================================================
     # PCRE 配置
     # ==========================================================
+    # 临时将BUILD_SHARED_LIBS设置为OFF，确保PCRE以静态库方式构建
+    set(_SAVED_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+    
     set(PCRE_DIR "${CMAKE_SOURCE_DIR}/third_party/pcre")
 
     # 检查PCRE库是否存在
     set(PCRE_INCLUDE_DIRS ${PCRE_DIR}/include CACHE PATH "PCRE include directory")
     
     # 设置正确的库名称和路径 - 修改为绝对路径确保能找到
-    set(PCRE_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/third_party/pcre/Debug/pcred${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE debug library")
+    set(PCRE_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/third_party/pcre/Debug/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE debug library")
     set(PCRE_LIBRARIES_RELEASE "${CMAKE_BINARY_DIR}/third_party/pcre/Release/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE release library")
     
     # 另一种可能的路径
     if(NOT EXISTS "${PCRE_LIBRARIES_DEBUG}")
-        set(PCRE_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/lib/Debug/pcred${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE debug library" FORCE)
+        set(PCRE_LIBRARIES_DEBUG "${CMAKE_BINARY_DIR}/lib/Debug/pcre${CMAKE_STATIC_LIBRARY_SUFFIX}" CACHE FILEPATH "PCRE debug library" FORCE)
     endif()
     
     if(NOT EXISTS "${PCRE_LIBRARIES_RELEASE}")
@@ -53,6 +57,7 @@ function(configure_third_party_libs)
             set(PCRE_BUILD_PCREGREP OFF CACHE BOOL "" FORCE)
             set(PCRE_BUILD_PCRECPP OFF CACHE BOOL "" FORCE)
             set(PCRE_STATIC ON CACHE BOOL "" FORCE)
+            set(PCRE_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # 确保PCRE以静态库形式构建
             set(PCRE_SUPPORT_UTF ON CACHE BOOL "" FORCE)
             set(PCRE_SUPPORT_UNICODE_PROPERTIES ON CACHE BOOL "" FORCE)
             set(PCRE_BUILD_PCRE8 ON CACHE BOOL "" FORCE)
@@ -75,10 +80,17 @@ function(configure_third_party_libs)
     set(PCRE_LIBRARIES "$<$<CONFIG:Debug>:${PCRE_LIBRARIES_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${PCRE_LIBRARIES_RELEASE}>" CACHE STRING "PCRE libraries")
     
     set(NGX_HAVE_PCRE ON CACHE BOOL "Enable PCRE support")
+    
+    # 恢复BUILD_SHARED_LIBS的原始值
+    set(BUILD_SHARED_LIBS ${_SAVED_BUILD_SHARED_LIBS} CACHE BOOL "Build shared libraries" FORCE)
 
     # ==========================================================
     # ZLIB 配置 - 强制使用动态库
     # ==========================================================
+    # 确保为ZLIB动态库构建设置全局变量
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared libraries" FORCE)
+    set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
+    
     set(ZLIB_DIR "${CMAKE_SOURCE_DIR}/third_party/zlib")
 
     # 设置包含目录
@@ -90,8 +102,6 @@ function(configure_third_party_libs)
 
     # 强制设置为动态库构建
     set(ZLIB_BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library" FORCE)
-    set(BUILD_SHARED_LIBS ON CACHE BOOL "Build shared library" FORCE)
-    set(SKIP_INSTALL_ALL ON CACHE BOOL "" FORCE)
     
     # 检查ZLIB源码是否存在并且目标尚未定义
     if(EXISTS "${ZLIB_DIR}/CMakeLists.txt" AND NOT TARGET zlib AND NOT TARGET zlibstatic)
