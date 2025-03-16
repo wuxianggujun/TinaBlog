@@ -72,13 +72,10 @@ file(GLOB_RECURSE common_HEADERS
 # 收集平台特定的头文件
 file(GLOB_RECURSE platform_HEADERS "${PLATFORM_SRC_DIR}/*.h")
 
-# 设置平台无关的源文件 - 同之前的配置
-# 注意这里可以简化，但为了易读性保持原来的结构
-set(common_SOURCES
-        # 添加模块定义文件
-        ${CMAKE_SOURCE_DIR}/ngx_modules.c
-
-        # core模块 - 平台无关部分
+# 组织源文件成更有结构的组 - 通过功能分类
+function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BLOG OUT_PLATFORM)
+    # Core模块源文件
+    set(CORE_SOURCES
         ${CORE_DIR}/nginx.c
         ${CORE_DIR}/ngx_log.c
         ${CORE_DIR}/ngx_palloc.c
@@ -114,8 +111,11 @@ set(common_SOURCES
         ${CORE_DIR}/ngx_crypt.c
         ${CORE_DIR}/ngx_proxy_protocol.c
         ${CORE_DIR}/ngx_syslog.c
-
-        # event模块 - 平台无关部分
+        ${CORE_DIR}/ngx_regex.c
+    )
+    
+    # Event模块源文件
+    set(EVENT_SOURCES
         ${EVENT_DIR}/ngx_event.c
         ${EVENT_DIR}/ngx_event_timer.c
         ${EVENT_DIR}/ngx_event_posted.c
@@ -123,14 +123,13 @@ set(common_SOURCES
         ${EVENT_DIR}/ngx_event_udp.c
         ${EVENT_DIR}/ngx_event_connect.c
         ${EVENT_DIR}/ngx_event_pipe.c
-
-        # SSL相关 - 平台无关
         ${EVENT_DIR}/ngx_event_openssl.c
         ${EVENT_DIR}/ngx_event_openssl_cache.c
         ${EVENT_DIR}/ngx_event_openssl_stapling.c
-        ${CORE_DIR}/ngx_regex.c
-
-        # HTTP模块 - 平台无关
+    )
+    
+    # HTTP模块源文件
+    set(HTTP_SOURCES
         ${HTTP_DIR}/ngx_http.c
         ${HTTP_DIR}/ngx_http_core_module.c
         ${HTTP_DIR}/ngx_http_special_response.c
@@ -204,8 +203,10 @@ set(common_SOURCES
         ${HTTP_DIR}/modules/ngx_http_upstream_keepalive_module.c
         ${HTTP_DIR}/modules/ngx_http_upstream_zone_module.c
         ${HTTP_DIR}/modules/ngx_http_stub_status_module.c
-
-        # MAIL模块 - 平台无关
+    )
+    
+    # MAIL模块源文件
+    set(MAIL_SOURCES
         ${MAIL_DIR}/ngx_mail.c
         ${MAIL_DIR}/ngx_mail_core_module.c
         ${MAIL_DIR}/ngx_mail_handler.c
@@ -220,8 +221,10 @@ set(common_SOURCES
         ${MAIL_DIR}/ngx_mail_auth_http_module.c
         ${MAIL_DIR}/ngx_mail_proxy_module.c
         ${MAIL_DIR}/ngx_mail_realip_module.c
-
-        # STREAM模块 - 平台无关
+    )
+    
+    # STREAM模块源文件
+    set(STREAM_SOURCES
         ${STREAM_DIR}/ngx_stream.c
         ${STREAM_DIR}/ngx_stream_variables.c
         ${STREAM_DIR}/ngx_stream_script.c
@@ -246,8 +249,10 @@ set(common_SOURCES
         ${STREAM_DIR}/ngx_stream_ssl_preread_module.c
         ${STREAM_DIR}/ngx_stream_set_module.c
         ${STREAM_DIR}/ngx_stream_pass_module.c
-
-        # Blog模块
+    )
+    
+    # Blog模块源文件
+    set(BLOG_SOURCES
         ${BLOG_DIR}/Nginx.cpp
         ${BLOG_DIR}/HttpConfigHelper.cpp
         ${BLOG_DIR}/BlogConfig.cpp
@@ -256,11 +261,11 @@ set(common_SOURCES
         ${BLOG_DIR}/TemplateCacheManager.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
-)
-
-# 设置平台特定的源文件
-if (WIN32)
-    set(platform_SOURCES
+    )
+    
+    # Windows平台特定源文件
+    if(WIN32)
+        set(PLATFORM_SOURCES
             # Windows平台特定源文件
             ${PLATFORM_SRC_DIR}/ngx_errno.c
             ${PLATFORM_SRC_DIR}/ngx_alloc.c
@@ -284,9 +289,9 @@ if (WIN32)
             ${EVENT_DIR}/modules/ngx_iocp_module.c
             ${EVENT_DIR}/modules/ngx_win32_select_module.c
             ${EVENT_DIR}/modules/ngx_win32_poll_module.c
-    )
-else ()
-    set(platform_SOURCES
+        )
+    else()
+        set(PLATFORM_SOURCES
             # Linux/Unix平台特定源文件
             ${PLATFORM_SRC_DIR}/ngx_errno.c
             ${PLATFORM_SRC_DIR}/ngx_alloc.c
@@ -298,11 +303,36 @@ else ()
             ${EVENT_DIR}/modules/ngx_epoll_module.c
             ${EVENT_DIR}/modules/ngx_kqueue_module.c
             # ... 其他Unix特定事件模块 ...
-    )
-endif ()
+        )
+    endif()
+    
+    # 返回结果
+    set(${OUT_CORE} ${CORE_SOURCES} PARENT_SCOPE)
+    set(${OUT_EVENT} ${EVENT_SOURCES} PARENT_SCOPE)
+    set(${OUT_HTTP} ${HTTP_SOURCES} PARENT_SCOPE)
+    set(${OUT_MAIL} ${MAIL_SOURCES} PARENT_SCOPE)
+    set(${OUT_STREAM} ${STREAM_SOURCES} PARENT_SCOPE)
+    set(${OUT_BLOG} ${BLOG_SOURCES} PARENT_SCOPE)
+    set(${OUT_PLATFORM} ${PLATFORM_SOURCES} PARENT_SCOPE)
+endfunction()
+
+# 使用新的源文件组织方式
+organize_sources(CORE_SOURCES EVENT_SOURCES HTTP_SOURCES MAIL_SOURCES STREAM_SOURCES BLOG_SOURCES PLATFORM_SOURCES)
+
+# 模块定义文件
+set(MODULE_SOURCES ${CMAKE_SOURCE_DIR}/ngx_modules.c)
 
 # 合并所有源文件和头文件
-set(nginx_SOURCES ${common_SOURCES} ${platform_SOURCES})
+set(nginx_SOURCES 
+    ${MODULE_SOURCES}
+    ${CORE_SOURCES} 
+    ${EVENT_SOURCES} 
+    ${HTTP_SOURCES} 
+    ${MAIL_SOURCES} 
+    ${STREAM_SOURCES} 
+    ${BLOG_SOURCES} 
+    ${PLATFORM_SOURCES}
+)
 set(nginx_HEADERS ${common_HEADERS} ${platform_HEADERS})
 
 # 创建可执行文件

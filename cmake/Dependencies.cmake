@@ -41,6 +41,31 @@ function(configure_compiler_options TARGET_NAME)
     endif()
 endfunction()
 
+# 添加版本检查函数
+function(check_dependency_versions)
+    # 设置最低版本要求
+    set(MIN_PCRE2_VERSION "10.40")
+    set(MIN_ZLIB_VERSION "1.2.13")
+    set(MIN_OPENSSL_VERSION "3.0.0")
+    
+    # 检查PCRE2版本
+    if(pcre2_VERSION VERSION_LESS ${MIN_PCRE2_VERSION})
+        message(WARNING "PCRE2版本过低: ${pcre2_VERSION}，建议至少使用 ${MIN_PCRE2_VERSION}")
+    endif()
+    
+    # 检查ZLIB版本
+    if(ZLIB_VERSION_STRING VERSION_LESS ${MIN_ZLIB_VERSION})
+        message(WARNING "ZLIB版本过低: ${ZLIB_VERSION_STRING}，建议至少使用 ${MIN_ZLIB_VERSION}")
+    endif()
+    
+    # 检查OpenSSL版本
+    if(OPENSSL_VERSION VERSION_LESS ${MIN_OPENSSL_VERSION})
+        message(WARNING "OpenSSL版本过低: ${OPENSSL_VERSION}，建议至少使用 ${MIN_OPENSSL_VERSION}")
+    endif()
+    
+    message(STATUS "依赖库版本检查完成")
+endfunction()
+
 # 统一的依赖查找函数
 function(find_all_dependencies)
     message(STATUS "----- 开始查找所有依赖库 -----")
@@ -75,7 +100,15 @@ function(find_all_dependencies)
         endif()
     endforeach()
     
+    # 执行版本检查
+    check_dependency_versions()
+    
     message(STATUS "----- 依赖库查找结果 -----")
+    message(STATUS "PCRE2: ${pcre2_VERSION}")
+    message(STATUS "ZLIB: ${ZLIB_VERSION_STRING}")
+    message(STATUS "OpenSSL: ${OPENSSL_VERSION}")
+    message(STATUS "MySQL Server: ${MYSQL_SERVER_DIR}")
+    message(STATUS "MySQL Connector C++: ${MYSQL_CONNECTOR_INCLUDE_DIRS}")
     message(STATUS "---------------------------")
 endfunction()
 
@@ -119,25 +152,28 @@ endfunction()
 
 # 配置运行时DLL复制
 function(configure_dll_dependencies TARGET_NAME)
+    # 设置DLL输出目录 - 改用构建输出目录
+    set(DLL_OUTPUT_DIR "$<TARGET_FILE_DIR:${TARGET_NAME}>")
+    
     # 添加复制依赖库到输出目录的逻辑
     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
         # 复制MySQL Server DLL
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
-            "${CMAKE_SOURCE_DIR}/libmysql.dll"
+            "${DLL_OUTPUT_DIR}/libmysql.dll"
         # 复制vcpkg库文件
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll"
-            "${CMAKE_SOURCE_DIR}/zlib1.dll"
+            "${DLL_OUTPUT_DIR}/zlib1.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/pcre2-8.dll"
-            "${CMAKE_SOURCE_DIR}/pcre2-8.dll"
+            "${DLL_OUTPUT_DIR}/pcre2-8.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libcrypto-3-x64.dll" 
-            "${CMAKE_SOURCE_DIR}/libcrypto-3-x64.dll"
+            "${DLL_OUTPUT_DIR}/libcrypto-3-x64.dll"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libssl-3-x64.dll"
-            "${CMAKE_SOURCE_DIR}/libssl-3-x64.dll"
+            "${DLL_OUTPUT_DIR}/libssl-3-x64.dll"
         COMMENT "复制运行时依赖DLL到输出目录..."
     )
     
@@ -151,7 +187,7 @@ function(configure_dll_dependencies TARGET_NAME)
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${DLL_FILE}
-                "${CMAKE_SOURCE_DIR}/${DLL_FILENAME}"
+                "${DLL_OUTPUT_DIR}/${DLL_FILENAME}"
             COMMENT "复制MySQL Connector C++ DLL: ${DLL_FILENAME}"
         )
     endforeach()
@@ -166,7 +202,7 @@ function(configure_dll_dependencies TARGET_NAME)
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 ${DLL_FILE}
-                "${CMAKE_SOURCE_DIR}/${DLL_FILENAME}"
+                "${DLL_OUTPUT_DIR}/${DLL_FILENAME}"
             COMMENT "复制Protobuf DLL (MySQL Connector C++依赖): ${DLL_FILENAME}"
         )
     endforeach()
@@ -176,7 +212,7 @@ function(configure_dll_dependencies TARGET_NAME)
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/lz4.dll"
-                "${CMAKE_SOURCE_DIR}/lz4.dll"
+                "${DLL_OUTPUT_DIR}/lz4.dll"
             COMMENT "复制LZ4 DLL (MySQL Connector C++依赖)"
         )
     endif()
@@ -193,7 +229,7 @@ function(configure_dll_dependencies TARGET_NAME)
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/${DEP_DLL}"
-                    "${CMAKE_SOURCE_DIR}/${DEP_DLL}"
+                    "${DLL_OUTPUT_DIR}/${DEP_DLL}"
                 COMMENT "复制${DEP_DLL} (可能的MySQL Connector C++依赖)"
             )
         endif()
@@ -211,11 +247,13 @@ function(configure_dll_dependencies TARGET_NAME)
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     ${DLL_FILE}
-                    "${CMAKE_SOURCE_DIR}/${DLL_FILENAME}"
+                    "${DLL_OUTPUT_DIR}/${DLL_FILENAME}"
                 COMMENT "复制MySQL相关DLL: ${DLL_FILENAME}"
             )
         endif()
     endforeach()
+    
+    message(STATUS "已配置DLL复制到目录: ${DLL_OUTPUT_DIR}")
 endfunction()
 
 # 链接所有依赖库到目标
