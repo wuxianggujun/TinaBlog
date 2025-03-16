@@ -5,13 +5,8 @@
 #include <vector>
 #include <mutex>
 
-// 直接包含MySQL相关头文件
-#include <jdbc/mysql_connection.h>
-#include <jdbc/mysql_driver.h>
-#include <jdbc/cppconn/statement.h>
-#include <jdbc/cppconn/resultset.h>
-#include <jdbc/cppconn/prepared_statement.h>
-#include <jdbc/cppconn/exception.h>
+#include <mysqlx/xdevapi.h>
+
 
 // 单例实例
 DbManager& DbManager::getInstance() {

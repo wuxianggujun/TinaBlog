@@ -26,6 +26,20 @@ function(copy_all_dependencies TARGET_NAME)
         message(STATUS "找不到ZLIB目标，跳过复制ZLIB DLL")
     endif()
     
+    # 检查并复制LZ4 DLL
+    if(TARGET lz4)
+        copy_dll_to_target(${TARGET_NAME} "$<TARGET_FILE:lz4>" "LZ4动态库" FALSE)
+    else()
+        message(STATUS "找不到LZ4目标，跳过复制LZ4 DLL")
+    endif()
+    
+    # 检查并复制ZSTD DLL
+    if(TARGET zstd)
+        copy_dll_to_target(${TARGET_NAME} "$<TARGET_FILE:zstd>" "ZSTD动态库" FALSE)
+    else()
+        message(STATUS "找不到ZSTD目标，跳过复制ZSTD DLL")
+    endif()
+    
     # 检查并复制MySQL Server DLL
     set(MYSQL_DLL_PATH "${MYSQL_SERVER_DIR}/lib/libmysql.dll")
     copy_dll_to_target(${TARGET_NAME} "${MYSQL_DLL_PATH}" "MySQL运行时DLL" TRUE)
@@ -35,7 +49,9 @@ function(copy_all_dependencies TARGET_NAME)
     copy_dll_to_target(${TARGET_NAME} "${OPENSSL_SSL_DLL}" "OpenSSL SSL DLL" FALSE)
     
     # 检查并复制MySQL Connector C++ DLL
-    copy_dll_to_target(${TARGET_NAME} "${MySQL_CONNECTOR_DLL}" "MySQL Connector C++ DLL" FALSE)
+    if(TARGET mysqlcppconn)
+        copy_dll_to_target(${TARGET_NAME} "$<TARGET_FILE:mysqlcppconn>" "MySQL Connector C++ DLL" FALSE)
+    endif()
 endfunction()
 
 # 创建copy_all_dlls目标，用于手动复制所有依赖到项目根目录
@@ -52,6 +68,26 @@ function(create_copy_dlls_target)
             "$<TARGET_FILE:zlib>"
             "${CMAKE_SOURCE_DIR}"
             COMMENT "复制ZLIB动态库到项目根目录"
+        )
+    endif()
+    
+    # 复制LZ4 DLL
+    if(TARGET lz4)
+        add_custom_command(TARGET copy_all_dlls POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:lz4>"
+            "${CMAKE_SOURCE_DIR}"
+            COMMENT "复制LZ4动态库到项目根目录"
+        )
+    endif()
+    
+    # 复制ZSTD DLL
+    if(TARGET zstd)
+        add_custom_command(TARGET copy_all_dlls POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:zstd>"
+            "${CMAKE_SOURCE_DIR}"
+            COMMENT "复制ZSTD动态库到项目根目录"
         )
     endif()
     
@@ -88,10 +124,10 @@ function(create_copy_dlls_target)
     endif()
     
     # 复制MySQL Connector C++ DLL
-    if(EXISTS "${MySQL_CONNECTOR_DLL}")
+    if(TARGET mysqlcppconn)
         add_custom_command(TARGET copy_all_dlls POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${MySQL_CONNECTOR_DLL}"
+            "$<TARGET_FILE:mysqlcppconn>"
             "${CMAKE_SOURCE_DIR}"
             COMMENT "复制MySQL Connector C++ DLL到项目根目录"
         )
@@ -105,12 +141,14 @@ function(create_clean_dlls_target)
         COMMAND ${CMAKE_COMMAND} -E remove -f 
             ${CMAKE_SOURCE_DIR}/zlibd1.dll
             ${CMAKE_SOURCE_DIR}/zlib1.dll
+            ${CMAKE_SOURCE_DIR}/lz4.dll
+            ${CMAKE_SOURCE_DIR}/zstd.dll
             ${CMAKE_SOURCE_DIR}/libmysql.dll
             ${CMAKE_SOURCE_DIR}/libcrypto-3-x64.dll
             ${CMAKE_SOURCE_DIR}/libssl-3-x64.dll
+            ${CMAKE_SOURCE_DIR}/mysqlcppconn.dll
             ${CMAKE_SOURCE_DIR}/mysqlcppconn-9-vs14.dll
             ${CMAKE_SOURCE_DIR}/mysqlcppconn-10-vs14.dll
-            ${CMAKE_SOURCE_DIR}/mysqlcppconn.dll
         COMMENT "清理项目根目录下的DLL文件"
     )
 endfunction() 
