@@ -29,7 +29,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 # 设置必要的目录结构
 set(NGINX_ROOT_DIR ${CMAKE_SOURCE_DIR})
 
-# 设置nginx工作目录
+# 设置TinaBlog工作目录
 set(NGINX_INSTALL_DIR ${CMAKE_BINARY_DIR}/dist)
 set(NGINX_CONF_DIR ${NGINX_INSTALL_DIR}/conf)
 set(NGINX_LOGS_DIR ${NGINX_INSTALL_DIR}/logs)
@@ -44,21 +44,8 @@ else ()
     add_compile_options(-Wall -Wpedantic)  # Linux/Mac 使用无 BOM UTF-8
 endif ()
 
-# 查找并加载所有第三方库依赖
-find_package(OpenSSL REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(pcre2 CONFIG REQUIRED)
-
-# 加载自定义库配置
-include(cmake/ThirdPartyLibs.cmake)
-include(cmake/MySQL.cmake)          # MySQL专用配置
-
-# 显示库信息
-message(STATUS "MySQL头文件目录: ${MySQL_INCLUDE_DIRS}")
-message(STATUS "MySQL库文件: ${MySQL_LIBRARIES}")
-message(STATUS "MySQL是否找到: ${MYSQL_FOUND}")
-message(STATUS "OpenSSL版本: ${OPENSSL_VERSION}")
-message(STATUS "ZLIB版本: ${ZLIB_VERSION_STRING}")
+# 加载统一的依赖管理系统
+include(cmake/Dependencies.cmake)  # 包含所有依赖库管理
 
 # 添加全局包含目录
 include_directories(
@@ -93,9 +80,6 @@ message(STATUS "构建类型: ${CMAKE_BUILD_TYPE}")
 
 message(STATUS "使用vcpkg管理依赖: ${VCPKG_ROOT}")
 message(STATUS "vcpkg目标平台: ${VCPKG_TARGET_TRIPLET}")
-message(STATUS "PCRE2: 使用vcpkg安装版本")
-
-message(STATUS "构建测试: ${BUILD_TESTS}")
 
 # 提示如何运行
 message(STATUS "配置完成。")

@@ -314,39 +314,17 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${PLATFORM_INCLUDE_DIRS}
         ${MySQL_INCLUDE_DIRS}
         "${MYSQL_SERVER_DIR}/include"
-        ${MYSQL_CONNECTOR_INCLUDE_DIRS}
+        ${MYSQL_CONNECTOR_INCLUDE_DIRS}  # MySQL Connector C++头文件
 )
 
-# 设置编译定义
-target_compile_definitions(${PROJECT_NAME} PRIVATE 
-    ${PLATFORM_DEFINES}
-    # 添加PCRE2支持
-    $<$<TARGET_EXISTS:PCRE2::8BIT>:NGX_PCRE2=1>
-    $<$<TARGET_EXISTS:PCRE2::8BIT>:NGX_HAVE_PCRE=1>
-)
+# 设置平台特定编译定义
+target_compile_definitions(${PROJECT_NAME} PRIVATE ${PLATFORM_DEFINES})
 
-# 链接库 - 使用现代方式
-target_link_libraries(${PROJECT_NAME}
-        PRIVATE
-        # 系统库 - Windows平台
-        $<$<PLATFORM_ID:Windows>:kernel32.lib>
-        $<$<PLATFORM_ID:Windows>:user32.lib>
-        $<$<PLATFORM_ID:Windows>:advapi32.lib>
-        $<$<PLATFORM_ID:Windows>:ws2_32.lib>
-        $<$<PLATFORM_ID:Windows>:gdi32.lib>
-        $<$<PLATFORM_ID:Windows>:crypt32.lib>
-        # SSL库
-        OpenSSL::SSL
-        OpenSSL::Crypto
-        # MySQL Connector C++
-        unofficial::mysql-connector-cpp::connector
-        # MySQL Server库 - 本地安装
-        ${MySQL_LIBRARIES}
-        # PCRE库 - 只使用vcpkg的PCRE2
-        PCRE2::8BIT
-        # zlib库 - 通过vcpkg安装
-        ZLIB::ZLIB
-)
+# 应用编译器选项
+configure_compiler_options(${PROJECT_NAME})
+
+# 链接所有依赖库
+link_all_dependencies(${PROJECT_NAME})
 
 # 设置生成位置
 set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -365,24 +343,5 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/docs/html")
     )
 endif ()
 
-# 添加复制MySQL和其他依赖库到输出目录的逻辑
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    # 复制MySQL Server DLL
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
-        "${CMAKE_SOURCE_DIR}/libmysql.dll"
-    # 复制vcpkg库文件
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll"
-        "${CMAKE_SOURCE_DIR}/zlib1.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/pcre2-8.dll"
-        "${CMAKE_SOURCE_DIR}/pcre2-8.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libcrypto-3-x64.dll" 
-        "${CMAKE_SOURCE_DIR}/libcrypto-3-x64.dll"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libssl-3-x64.dll"
-        "${CMAKE_SOURCE_DIR}/libssl-3-x64.dll"
-    COMMENT "Copying library dependencies to output directory..."
-)
+# 配置运行时DLL依赖
+configure_dll_dependencies(${PROJECT_NAME})
