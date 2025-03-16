@@ -1173,3 +1173,8 @@
 2025/03/16 20:51:58 [info] 20912#23828: OS: 260200 build:9200, "", suite:100, type:1
 2025/03/16 20:51:58 [notice] 20912#23828: create thread 12092
 2025/03/16 20:52:00 [notice] 20912#22864: console closing, exiting
+2025/03/16 21:04:52 [notice] 21092#19772: using the "select" event method
+2025/03/16 21:04:52 [notice] 21092#19772: nginx/1.27.5
+2025/03/16 21:04:52 [info] 21092#19772: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/16 21:04:52 [notice] 21092#19772: create thread 28344
+2025/03/16 21:11:13 [notice] 21092#20828: console closing, exiting
