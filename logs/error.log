@@ -50,3 +50,70 @@
 2025/03/16 22:36:15 [info] 24076#18696: *1 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
 2025/03/16 22:36:15 [info] 24076#18696: *1 初始化数据库连接: host=localhost;user=root;password=3344207732;database=blog;port=3306, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
 2025/03/16 22:36:15 [info] 24076#18696: Connecting with URL: mysqlx://root:3344207732@localhost:3306/blog
+2025/03/16 22:39:00 [notice] 13880#28304: using the "select" event method
+2025/03/16 22:39:00 [notice] 13880#28304: nginx/1.27.5
+2025/03/16 22:39:00 [info] 13880#28304: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/16 22:39:00 [notice] 13880#28304: create thread 12908
+2025/03/16 22:39:01 [info] 13880#12908: *2 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 初始化数据库连接: host=localhost;user=root;password=3344207732;database=blog;port=3306, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: Connecting to MySQL at localhost:3306, user: root, database: blog
+2025/03/16 22:39:01 [error] 13880#12908: MySQL X DevAPI error: CDK Error: Failed string conversion
+2025/03/16 22:39:01 [error] 13880#12908: Failed to connect on port 3306
+2025/03/16 22:39:01 [error] 13880#12908: *2 数据库连接初始化失败, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [debug] 13880#12908: *2 尝试匹配路由: /
+2025/03/16 22:39:01 [debug] 13880#12908: *2 检查路由模式: /
+2025/03/16 22:39:01 [debug] 13880#12908: 尝试匹配: URI=/ 与模式=/
+2025/03/16 22:39:01 [debug] 13880#12908: 完全匹配成功: URI=/ 与模式=/
+2025/03/16 22:39:01 [info] 13880#12908: *2 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:01 [info] 13880#12908: *2 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 处理请求: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 尝试匹配路由: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [debug] 13880#12908: *2 尝试匹配路由: /
+2025/03/16 22:39:03 [debug] 13880#12908: *2 检查路由模式: /
+2025/03/16 22:39:03 [debug] 13880#12908: 尝试匹配: URI=/ 与模式=/
+2025/03/16 22:39:03 [debug] 13880#12908: 完全匹配成功: URI=/ 与模式=/
+2025/03/16 22:39:03 [info] 13880#12908: *2 路由匹配成功: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 使用模板渲染首页, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:03 [info] 13880#12908: *2 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost", referrer: "http://localhost/blog/post/1"
+2025/03/16 22:39:07 [info] 13880#12908: *2 处理请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [info] 13880#12908: *2 博客基础路径: html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [info] 13880#12908: *2 尝试匹配路由: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [debug] 13880#12908: *2 尝试匹配路由: /blog/post/1
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/
+2025/03/16 22:39:07 [debug] 13880#12908: 匹配失败: URI=/blog/post/1 与模式=/
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /index.html
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/index.html
+2025/03/16 22:39:07 [debug] 13880#12908: 匹配失败: URI=/blog/post/1 与模式=/index.html
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /blog
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/blog
+2025/03/16 22:39:07 [debug] 13880#12908: 匹配失败: URI=/blog/post/1 与模式=/blog
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /blog/
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/blog/
+2025/03/16 22:39:07 [debug] 13880#12908: 匹配失败: URI=/blog/post/1 与模式=/blog/
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /blog/index
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/blog/index
+2025/03/16 22:39:07 [debug] 13880#12908: 匹配失败: URI=/blog/post/1 与模式=/blog/index
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /blog/index.html
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/16 22:39:07 [debug] 13880#12908: 匹配失败: URI=/blog/post/1 与模式=/blog/index.html
+2025/03/16 22:39:07 [debug] 13880#12908: *2 检查路由模式: /blog/post/:id
+2025/03/16 22:39:07 [debug] 13880#12908: 尝试匹配: URI=/blog/post/1 与模式=/blog/post/:id
+2025/03/16 22:39:07 [debug] 13880#12908: 提取参数: id=1
+2025/03/16 22:39:07 [debug] 13880#12908: 完整匹配成功: 剩余URI= 剩余模式=
+2025/03/16 22:39:07 [info] 13880#12908: *2 路由匹配成功: /blog/post/:id, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [debug] 13880#12908: *2 参数: id = 1
+2025/03/16 22:39:07 [info] 13880#12908: *2 找到路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [info] 13880#12908: *2 处理博客文章请求: /blog/post/1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [warn] 13880#12908: *2 文章不存在或未初始化，使用示例数据: 1, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [info] 13880#12908: *2 使用模板渲染文章页面, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:07 [info] 13880#12908: *2 使用模板: html/blog/templates/blog_post.html, client: 127.0.0.1, server: localhost, request: "GET /blog/post/1 HTTP/1.1", host: "localhost", referrer: "http://localhost/"
+2025/03/16 22:39:22 [notice] 13880#15712: console closing, exiting

@@ -45,17 +45,25 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
     }
     
     try {
-        // 构建连接URL
-        std::string url = "mysqlx://" + user_ + ":" + password_ + "@" + 
-                        host_ + ":" + std::to_string(port_) + "/" + database_;
+        // 使用简单的参数方式而不是URL字符串
+        session_ = nullptr; // 确保是nullptr
         
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Connecting with URL: %s", url.c_str());
+        // 直接使用参数而不是构建URL
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
+                     "Connecting to MySQL at %s:%d, user: %s, database: %s", 
+                     host_.c_str(), port_, user_.c_str(), database_.c_str());
         
-        // 建立连接 - 使用直接构造函数而不是make_unique
-        session_ = new mysqlx::Session(url);
+        // 使用mysqlx名字空间中的静态方法，而不是直接构造
+        session_ = new mysqlx::Session(
+            mysqlx::SessionOption::HOST, host_,
+            mysqlx::SessionOption::PORT, port_,
+            mysqlx::SessionOption::USER, user_,
+            mysqlx::SessionOption::PWD, password_,
+            mysqlx::SessionOption::DB, database_
+        );
+        
         connected_ = true;
-        
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Successfully connected to MySQL database using X Protocol");
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Successfully connected to MySQL database");
         
         // 如果需要自动初始化数据库表
         if (autoInit && !createTables()) {
@@ -71,26 +79,38 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
         
         // 尝试使用传统端口
         try {
-            port_ = 3306;  // 切换到传统端口
-            std::string url = "mysqlx://" + user_ + ":" + password_ + "@" + 
-                            host_ + ":" + std::to_string(port_) + "/" + database_;
-            
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Retrying with traditional port: %s", url.c_str());
-            
-            // 重新尝试连接
-            session_ = new mysqlx::Session(url);
-            connected_ = true;
-            
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Successfully connected to MySQL database on port 3306");
-            
-            // 如果需要自动初始化数据库表
-            if (autoInit && !createTables()) {
-                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to initialize database tables");
-                close();
+            if (port_ != 3306) {
+                port_ = 3306;  // 切换到传统端口
+                
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
+                             "Retrying with traditional port 3306");
+                
+                // 使用传统端口重试
+                session_ = new mysqlx::Session(
+                    mysqlx::SessionOption::HOST, host_,
+                    mysqlx::SessionOption::PORT, port_,
+                    mysqlx::SessionOption::USER, user_,
+                    mysqlx::SessionOption::PWD, password_,
+                    mysqlx::SessionOption::DB, database_
+                );
+                
+                connected_ = true;
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Successfully connected to MySQL database on port 3306");
+                
+                // 如果需要自动初始化数据库表
+                if (autoInit && !createTables()) {
+                    ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to initialize database tables");
+                    close();
+                    return false;
+                }
+                
+                return true;
+            }
+            else {
+                // 已经是传统端口3306了，不需要重试
+                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to connect on port 3306");
                 return false;
             }
-            
-            return true;
         }
         catch (const std::exception& ex) {
             ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to connect on traditional port: %s", ex.what());
@@ -185,12 +205,18 @@ void DbManager::close() {
     std::lock_guard<std::mutex> lock(mutex_);
     if (session_) {
         try {
-            session_->close();
-            delete session_; // 释放内存
+            // 使用session的close方法关闭连接
+            if (connected_) {
+                session_->close();
+            }
+            
+            // 释放内存
+            delete session_;
             session_ = nullptr;
         }
         catch (...) {
             // 忽略关闭连接时的异常
+            ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, "Exception ignored while closing MySQL connection");
         }
     }
     connected_ = false;
