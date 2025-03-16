@@ -11,6 +11,7 @@
 #include <iostream>
 #include <cstring>
 #include <thread>
+#include <mutex>
 
 // 声明外部模块变量，这样代码中使用时编译器能识别它
 extern "C" {
@@ -324,6 +325,28 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         // 因为我们的路由可以处理多种路径格式
         BlogConfig config(request);
         logger.info("博客基础路径: %s", config.getBasePath().c_str());
+        
+        // 初始化数据库连接（如果配置为自动连接）
+        static std::once_flag dbInitFlag;
+        if (config.isDbAutoConnect()) {
+            try {
+                std::call_once(dbInitFlag, [&]() {
+                    std::string connStr = config.getDbConnectionString();
+                    if (!connStr.empty()) {
+                        logger.info("初始化数据库连接: %s", connStr.c_str());
+                        if (!DbManager::getInstance().initialize(connStr)) {
+                            logger.error("数据库连接初始化失败");
+                        } else {
+                            logger.info("数据库连接初始化成功");
+                        }
+                    } else {
+                        logger.warn("未配置数据库连接字符串，跳过数据库初始化");
+                    }
+                });
+            } catch (const std::exception& ex) {
+                logger.error("数据库初始化异常: %s", ex.what());
+            }
+        }
         
         // 调用路由处理请求
         auto& router = getBlogRouter();

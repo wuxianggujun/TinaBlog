@@ -6,6 +6,7 @@
 #include <vector>
 #include <optional>
 #include <memory>
+#include <mysqlx/xdevapi.h>
 
 // MySQL类型已经在DbManager.hpp中定义，这里不需要重复定义
 
@@ -146,11 +147,11 @@ public:
 
 private:
     /**
-     * 从结果集中解析文章记录
-     * @param result MySQL结果集
+     * 从行结果中解析文章记录
+     * @param row MySQL行对象
      * @return 文章记录
      */
-    BlogPostRecord parsePostRecord(MYSQL_RES* result);
+    BlogPostRecord parsePostRecord(const mysqlx::Row& row);
     
     /**
      * 加载文章的分类
@@ -186,9 +187,8 @@ private:
     std::string generateSlug(const std::string& name);
     
     /**
-     * 执行查询，获取记录集
-     * @param sql SQL语句
-     * @return 记录集
+     * 获取数据库会话
+     * @return 数据库会话
      */
-    MYSQL_RES* executeQuery(const std::string& sql);
+    mysqlx::Session& getSession();
 };

@@ -5,8 +5,8 @@
 #include <memory>
 #include <mutex>
 
-// 直接包含MySQL头文件
-#include <mysql.h>
+// 使用MySQL Connector/C++ DevAPI
+#include <mysqlx/xdevapi.h>
 
 /**
  * 数据库连接管理器
@@ -28,10 +28,10 @@ public:
     bool initialize(const std::string& connStr, bool autoInit = true);
 
     /**
-     * 获取数据库连接
-     * @return 数据库连接指针
+     * 获取会话
+     * @return MySQL会话对象
      */
-    MYSQL* getConnection();
+    mysqlx::Session& getSession();
 
     /**
      * 检查数据库连接是否有效
@@ -42,9 +42,9 @@ public:
     /**
      * 执行SQL查询
      * @param sql SQL语句
-     * @return 查询结果集指针，失败时返回nullptr
+     * @return 查询结果集，失败时抛出异常
      */
-    MYSQL_RES* executeQuery(const std::string& sql);
+    mysqlx::RowResult executeQuery(const std::string& sql);
 
     /**
      * 执行SQL更新（INSERT, UPDATE, DELETE等）
@@ -57,7 +57,7 @@ public:
      * 获取最后一次插入操作的ID
      * @return 最后插入的ID
      */
-    unsigned long long getLastInsertId();
+    uint64_t getLastInsertId();
 
     /**
      * 关闭数据库连接
@@ -80,8 +80,8 @@ private:
     bool parseConnectionString(const std::string& connStr);
 
 private:
-    // 数据库连接
-    MYSQL* connection_;
+    // 数据库会话 - 使用裸指针，在close()中手动管理内存
+    mysqlx::Session* session_;
     
     // 连接参数
     std::string host_;
