@@ -119,78 +119,103 @@ endfunction()
 
 # 配置运行时DLL复制
 function(configure_dll_dependencies TARGET_NAME)
-    # 创建通用的DLL复制函数
-    function(copy_dll SOURCE_PATH TARGET_NAME FILENAME COMMENT_TEXT)
+    # 添加复制依赖库到输出目录的逻辑
+    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+        # 复制MySQL Server DLL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${MYSQL_SERVER_DIR}/lib/libmysql.dll"
+            "${CMAKE_SOURCE_DIR}/libmysql.dll"
+        # 复制vcpkg库文件
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll"
+            "${CMAKE_SOURCE_DIR}/zlib1.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/pcre2-8.dll"
+            "${CMAKE_SOURCE_DIR}/pcre2-8.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libcrypto-3-x64.dll" 
+            "${CMAKE_SOURCE_DIR}/libcrypto-3-x64.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libssl-3-x64.dll"
+            "${CMAKE_SOURCE_DIR}/libssl-3-x64.dll"
+        COMMENT "复制运行时依赖DLL到输出目录..."
+    )
+    
+    # 查找MySQL Connector C++ DLL
+    file(GLOB MYSQL_CPP_DLL_FILES
+        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/mysqlcppconn*.dll"
+    )
+    
+    foreach(DLL_FILE ${MYSQL_CPP_DLL_FILES})
+        get_filename_component(DLL_FILENAME ${DLL_FILE} NAME)
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SOURCE_PATH}"
-                "${CMAKE_SOURCE_DIR}/${FILENAME}"
-            COMMENT "${COMMENT_TEXT}: ${FILENAME}"
+                ${DLL_FILE}
+                "${CMAKE_SOURCE_DIR}/${DLL_FILENAME}"
+            COMMENT "复制MySQL Connector C++ DLL: ${DLL_FILENAME}"
         )
-    endfunction()
-    
-    # 复制单个DLL文件的函数
-    function(copy_single_dll TARGET_NAME DLL_PATH DLL_CATEGORY)
-        if(EXISTS "${DLL_PATH}")
-            get_filename_component(DLL_FILENAME ${DLL_PATH} NAME)
-            copy_dll("${DLL_PATH}" ${TARGET_NAME} "${DLL_FILENAME}" "复制${DLL_CATEGORY}依赖")
-        endif()
-    endfunction()
-    
-    # 复制目录中匹配模式的所有DLL
-    function(copy_dll_pattern TARGET_NAME DLL_DIR PATTERN DLL_CATEGORY EXCLUDE_PATTERN)
-        file(GLOB DLL_FILES "${DLL_DIR}/${PATTERN}")
-        foreach(DLL_FILE ${DLL_FILES})
-            get_filename_component(DLL_FILENAME ${DLL_FILE} NAME)
-            if("${EXCLUDE_PATTERN}" STREQUAL "" OR NOT "${DLL_FILENAME}" MATCHES "${EXCLUDE_PATTERN}")
-                copy_dll("${DLL_FILE}" ${TARGET_NAME} "${DLL_FILENAME}" "复制${DLL_CATEGORY}依赖")
-            endif()
-        endforeach()
-    endfunction()
-    
-    # 1. 复制基本依赖库
-    set(BASIC_DLLS
-        "${MYSQL_SERVER_DIR}/lib/libmysql.dll|MySQL Server"
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/zlib1.dll|ZLIB压缩库"
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/pcre2-8.dll|PCRE2正则表达式库"
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libcrypto-3-x64.dll|OpenSSL加密库"
-        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libssl-3-x64.dll|OpenSSL SSL库"
-    )
-    
-    foreach(DLL_ENTRY ${BASIC_DLLS})
-        string(REPLACE "|" ";" DLL_PARTS ${DLL_ENTRY})
-        list(GET DLL_PARTS 0 DLL_PATH)
-        list(GET DLL_PARTS 1 DLL_CATEGORY)
-        copy_single_dll(${TARGET_NAME} "${DLL_PATH}" "${DLL_CATEGORY}")
     endforeach()
     
-    # 2. 复制MySQL Connector C++ DLL和其依赖
-    # MySQL Connector C++主要库
-    copy_dll_pattern(${TARGET_NAME} "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin" "mysqlcppconn*.dll" "MySQL Connector C++" "")
+    # 复制Protobuf DLL (MySQL Connector C++依赖库)
+    file(GLOB PROTOBUF_DLL_FILES
+        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/libprotobuf-lite.dll"
+    )
     
-    # Protobuf依赖
-    copy_dll_pattern(${TARGET_NAME} "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin" "libprotobuf*.dll" "Protobuf (MySQL Connector C++依赖)" "")
+    foreach(DLL_FILE ${PROTOBUF_DLL_FILES})
+        get_filename_component(DLL_FILENAME ${DLL_FILE} NAME)
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${DLL_FILE}
+                "${CMAKE_SOURCE_DIR}/${DLL_FILENAME}"
+            COMMENT "复制Protobuf DLL (MySQL Connector C++依赖): ${DLL_FILENAME}"
+        )
+    endforeach()
     
-    # 其他MySQL相关DLL
-    copy_dll_pattern(${TARGET_NAME} "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin" "*mysql*.dll" "MySQL相关" "mysqlcppconn")
+    # 复制LZ4 DLL (另一个MySQL Connector C++依赖)
+    if(EXISTS "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/lz4.dll")
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/lz4.dll"
+                "${CMAKE_SOURCE_DIR}/lz4.dll"
+            COMMENT "复制LZ4 DLL (MySQL Connector C++依赖)"
+        )
+    endif()
     
-    # 3. 复制其他可能的依赖DLL
+    # 复制其他可能的依赖DLL
     set(POSSIBLE_DEPS 
-        "lz4.dll|LZ4压缩库"
-        "zstd.dll|ZSTD压缩库"
-        "xxhash.dll|Hash库"
-        "fmt.dll|格式化库"
+        "zstd.dll"      # ZSTD压缩库
+        "xxhash.dll"    # Hash库
+        "fmt.dll"       # 格式化库
     )
     
-    foreach(DEP_ENTRY ${POSSIBLE_DEPS})
-        string(REPLACE "|" ";" DEP_PARTS ${DEP_ENTRY})
-        list(GET DEP_PARTS 0 DEP_FILENAME)
-        list(GET DEP_PARTS 1 DEP_CATEGORY)
-        set(DEP_PATH "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/${DEP_FILENAME}")
-        copy_single_dll(${TARGET_NAME} "${DEP_PATH}" "${DEP_CATEGORY}")
+    foreach(DEP_DLL ${POSSIBLE_DEPS})
+        if(EXISTS "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/${DEP_DLL}")
+            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/${DEP_DLL}"
+                    "${CMAKE_SOURCE_DIR}/${DEP_DLL}"
+                COMMENT "复制${DEP_DLL} (可能的MySQL Connector C++依赖)"
+            )
+        endif()
     endforeach()
     
-    message(STATUS "已配置所有依赖DLL的复制")
+    # 复制vcpkg bin目录中所有包含"mysql"的DLL
+    # 这是为了确保捕获所有MySQL相关的DLL
+    file(GLOB MYSQL_RELATED_DLLS
+        "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/bin/*mysql*.dll"
+    )
+    
+    foreach(DLL_FILE ${MYSQL_RELATED_DLLS})
+        get_filename_component(DLL_FILENAME ${DLL_FILE} NAME)
+        if(NOT "${DLL_FILENAME}" MATCHES "mysqlcppconn") # 避免重复复制已处理的文件
+            add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${DLL_FILE}
+                    "${CMAKE_SOURCE_DIR}/${DLL_FILENAME}"
+                COMMENT "复制MySQL相关DLL: ${DLL_FILENAME}"
+            )
+        endif()
+    endforeach()
 endfunction()
 
 # 链接所有依赖库到目标
