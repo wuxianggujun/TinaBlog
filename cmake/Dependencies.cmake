@@ -8,6 +8,7 @@ set(VCPKG_LIBS
     "ZLIB"      # 压缩库
     "OpenSSL"   # SSL库
     "MySQL-Connector-C++"  # MySQL Connector C++
+    "nlohmann-json"  # JSON库
 )
 
 set(LOCAL_LIBS
@@ -90,6 +91,11 @@ function(find_all_dependencies)
             message(STATUS "找到MySQL Connector C++")
             # 导出变量到父作用域
             set(MYSQL_CONNECTOR_INCLUDE_DIRS ${MYSQL_CONNECTOR_INCLUDE_DIRS} PARENT_SCOPE)
+        elseif(LIB STREQUAL "nlohmann-json")
+            # 设置nlohmann-json不使用隐式转换
+            set(nlohmann-json_IMPLICIT_CONVERSIONS OFF)
+            find_package(nlohmann_json CONFIG REQUIRED)
+            message(STATUS "找到nlohmann-json库")
         endif()
     endforeach()
     
@@ -289,6 +295,10 @@ function(link_all_dependencies TARGET_NAME)
         elseif(LIB STREQUAL "MySQL-Connector-C++")
             target_link_libraries(${TARGET_NAME} PRIVATE 
                 unofficial::mysql-connector-cpp::connector
+            )
+        elseif(LIB STREQUAL "nlohmann-json")
+            target_link_libraries(${TARGET_NAME} PRIVATE 
+                nlohmann_json::nlohmann_json
             )
         endif()
     endforeach()
