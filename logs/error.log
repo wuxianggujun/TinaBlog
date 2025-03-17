@@ -1,1 +1,7 @@
 2025/03/17 21:19:41 [notice] 4408#21912: console closing, exiting
+2025/03/17 22:11:33 [warn] 21204#11744: Blog base path not configured, using default value
+2025/03/17 22:11:33 [notice] 21204#11744: using the "select" event method
+2025/03/17 22:11:33 [notice] 21204#11744: nginx/1.27.5
+2025/03/17 22:11:33 [info] 21204#11744: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 22:11:33 [notice] 21204#11744: create thread 11400
+2025/03/17 22:17:26 [notice] 21204#21492: console closing, exiting

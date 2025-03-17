@@ -683,7 +683,7 @@ ngx_int_t BlogModule::handleStaticRequest(ngx_http_request_t* r)
     NgxRequest request(r);
     NgxLog logger(r);
 
-    std::string uri = request.getUri();
+    std::string uri(reinterpret_cast<char*>(r->uri.data), r->uri.len);
     logger.info("Handling static file request: %s", uri.c_str());
 
     // 如果是API请求，直接返回DECLINED让API路由处理
