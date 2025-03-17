@@ -416,3 +416,15 @@
 2025/03/17 15:39:38 [info] 19740#25608: *2 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/17 15:39:38 [info] 19740#25608: *2 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
 2025/03/17 15:39:57 [notice] 19740#16932: console closing, exiting
+2025/03/17 16:02:39 [warn] 12644#14668: Blog base path not configured, using default value
+2025/03/17 16:02:39 [notice] 12644#14668: using the "select" event method
+2025/03/17 16:02:39 [notice] 12644#14668: nginx/1.27.5
+2025/03/17 16:02:39 [info] 12644#14668: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 16:02:39 [notice] 12644#14668: create thread 8076
+2025/03/17 16:02:42 [notice] 12644#24064: console closing, exiting
+2025/03/17 16:21:17 [warn] 14472#21328: Blog base path not configured, using default value
+2025/03/17 16:21:17 [notice] 14472#21328: using the "select" event method
+2025/03/17 16:21:17 [notice] 14472#21328: nginx/1.27.5
+2025/03/17 16:21:17 [info] 14472#21328: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 16:21:17 [notice] 14472#21328: create thread 26532
+2025/03/17 16:21:30 [notice] 14472#23116: console closing, exiting

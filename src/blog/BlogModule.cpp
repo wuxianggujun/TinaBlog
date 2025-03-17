@@ -1669,56 +1669,8 @@ namespace {
         NgxLog logger(r);
         logger.info("从/blog/重定向到/");
         
-        // 创建重定向响应头
-        ngx_table_elt_t* location = static_cast<ngx_table_elt_t*>(
-            ngx_list_push(&r->headers_out.headers));
-        
-        if (location == nullptr) {
-            logger.error("无法创建重定向响应头");
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        
-        // 设置Location头
-        location->hash = 1;
-        location->key.len = sizeof("Location") - 1;
-        location->key.data = (u_char*)"Location";
-        
-        // 设置重定向目标
-        location->value.len = sizeof("/") - 1;
-        location->value.data = (u_char*)"/"; 
-        
-        // 设置301永久重定向状态码
-        r->headers_out.status = NGX_HTTP_MOVED_PERMANENTLY;
-        
-        // 设置响应头中的location属性
-        r->headers_out.location = location;
-        
-        // 设置内容长度为0
-        r->headers_out.content_length_n = 0;
-        
-        // 发送响应头并结束请求
-        ngx_int_t rc = ngx_http_send_header(r);
-        if (rc == NGX_ERROR || rc > NGX_OK) {
-            return rc;
-        }
-        
-        // 创建一个空的响应体，确保正确设置
-        ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-        if (b == nullptr) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        
-        // 标记为最后一个缓冲区，但不包含数据（只包含元数据）
-        b->last_buf = 1;      // 标记为最后一个缓冲区
-        b->last_in_chain = 1; // 标记为链中最后一个
-        b->pos = b->last = nullptr; // 明确指示这是一个零大小的缓冲区
-        b->sync = 1;          // 标记为同步操作
-        
-        ngx_chain_t out;
-        out.buf = b;
-        out.next = nullptr;
-        
-        return ngx_http_output_filter(r, &out);
+        // 使用NgxResponse简化重定向处理
+        return NgxResponse(r).redirect("/", NGX_HTTP_MOVED_PERMANENTLY);
     }
     
     // 处理管理面板统计数据API请求
@@ -1851,90 +1803,11 @@ namespace {
         NgxLog logger(r);
         logger.info("处理OPTIONS请求: %s", ((NgxRequest(r)).getUri()).c_str());
         
-        // 设置响应头部
-        r->headers_out.status = NGX_HTTP_OK;
-        
-        // 设置CORS头，允许所有来源访问
-        ngx_table_elt_t *h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h == NULL) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        h->hash = 1;
-        h->key.len = sizeof("Access-Control-Allow-Origin") - 1;
-        h->key.data = (u_char *) "Access-Control-Allow-Origin";
-        h->value.len = sizeof("*") - 1;
-        h->value.data = (u_char *) "*";
-        
-        // 添加允许的方法
-        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h == NULL) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        h->hash = 1;
-        h->key.len = sizeof("Access-Control-Allow-Methods") - 1;
-        h->key.data = (u_char *) "Access-Control-Allow-Methods";
-        h->value.len = sizeof("GET, POST, PUT, DELETE, OPTIONS") - 1;
-        h->value.data = (u_char *) "GET, POST, PUT, DELETE, OPTIONS";
-        
-        // 添加允许的头部
-        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h == NULL) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        h->hash = 1;
-        h->key.len = sizeof("Access-Control-Allow-Headers") - 1;
-        h->key.data = (u_char *) "Access-Control-Allow-Headers";
-        h->value.len = sizeof("Content-Type, Authorization, X-Requested-With") - 1;
-        h->value.data = (u_char *) "Content-Type, Authorization, X-Requested-With";
-        
-        // 允许凭证
-        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h == NULL) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        h->hash = 1;
-        h->key.len = sizeof("Access-Control-Allow-Credentials") - 1;
-        h->key.data = (u_char *) "Access-Control-Allow-Credentials";
-        h->value.len = sizeof("true") - 1;
-        h->value.data = (u_char *) "true";
-        
-        // 设置最大缓存时间
-        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h == NULL) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        h->hash = 1;
-        h->key.len = sizeof("Access-Control-Max-Age") - 1;
-        h->key.data = (u_char *) "Access-Control-Max-Age";
-        h->value.len = sizeof("86400") - 1; // 24小时
-        h->value.data = (u_char *) "86400";
-        
-        // 设置响应长度为0
-        r->headers_out.content_length_n = 0;
-        
-        // 发送HTTP头
-        ngx_int_t rc = ngx_http_send_header(r);
-        if (rc == NGX_ERROR || rc > NGX_OK) {
-            return rc;
-        }
-        
-        // 创建一个空的缓冲区表示响应体结束
-        ngx_buf_t *b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-        if (b == NULL) {
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
-        }
-        
-        // 标记为最后一个缓冲区，但不包含数据
-        b->last_buf = 1;      // 标记为最后一个缓冲区
-        b->last_in_chain = 1; // 标记为链中最后一个
-        b->pos = b->last = nullptr; // 明确指示这是一个零大小的缓冲区
-        b->sync = 1;          // 标记为同步操作
-        
-        ngx_chain_t out;
-        out.buf = b;
-        out.next = nullptr;
-        
-        return ngx_http_output_filter(r, &out);
+        // 使用NgxResponse简化CORS响应处理
+        return NgxResponse(r)
+            .status(NGX_HTTP_OK)
+            .enableCors()
+            .sendEmpty();
     }
 }
 

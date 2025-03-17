@@ -6,6 +6,8 @@
 #define TINA_BLOG_JSON_RESPONSE_HPP
 
 #include "Nginx.hpp"
+#include "NgxResponse.hpp"
+#include "NgxString.hpp"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_map>
@@ -22,6 +24,16 @@ public:
      * 
      * @param r Nginx请求对象
      * @param jsonContent JSON内容字符串
+     * @param status HTTP状态码
+     * @return ngx_int_t Nginx状态码
+     */
+    static ngx_int_t send(ngx_http_request_t* r, const NgxString& jsonContent, ngx_uint_t status = NGX_HTTP_OK);
+    
+    /**
+     * @brief 发送JSON响应
+     * 
+     * @param r Nginx请求对象
+     * @param jsonContent JSON内容标准字符串
      * @param status HTTP状态码
      * @return ngx_int_t Nginx状态码
      */
