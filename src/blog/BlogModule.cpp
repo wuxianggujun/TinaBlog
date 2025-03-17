@@ -33,18 +33,18 @@ using json = nlohmann::json;
 // 路由处理函数声明
 namespace {
     // 所有路由处理函数的实现声明为文件内部静态函数
-    ngx_int_t handleBlogIndex(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleBlogPost(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleBlogCategory(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleBlogTag(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleAdmin(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleAdminStats(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleGetPostForEdit(ngx_http_request_t* r, const RouteParams& params);
-    ngx_int_t handleOptionsRequest(ngx_http_request_t* r, const RouteParams& params);
+    ngx_int_t handleBlogIndex(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleBlogPost(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleBlogCategory(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleBlogTag(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleAdmin(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleAddPost(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleEditPost(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleDeletePost(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleBlogRedirect(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleAdminStats(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleGetPostForEdit(NgxResponse& response, const RouteParams& params);
+    ngx_int_t handleOptionsRequest(NgxResponse& response, const RouteParams& params);
     
     void initBlogTemplates();
 }
@@ -1204,17 +1204,16 @@ namespace {
     }
     
     // 处理博客首页
-    ngx_int_t handleBlogIndex(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleBlogIndex(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求
-            NgxRequest request(r);
-            
-            // 创建配置对象
-            BlogConfig config(request);
-            
-            // 使用NgxLog记录日志
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
             logger.info("处理博客首页API请求");
+            
+            // 创建配置对象
+            NgxRequest request(r);
+            BlogConfig config(request);
             
             // 从数据库中获取文章列表
             BlogPostDao dao;
@@ -1237,26 +1236,37 @@ namespace {
                 postsJson.push_back(postJson);
             }
             
-            // 使用JsonResponse创建成功响应
+            // 构建完整JSON响应
             json data;
             data["posts"] = postsJson;
+            json successResponse = JsonResponse::success(data);
             
-            return JsonResponse::send(r, JsonResponse::success(data));
+            // 使用NgxResponse返回JSON响应
+            return response
+                .status(NGX_HTTP_OK)
+                .contentType("application/json")
+                .enableCors()
+                .send(successResponse.dump(2));
         }
         catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                        "处理博客首页API异常: %s", e.what());
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理博客首页API异常: %s", e.what());
             
-            // 使用JsonResponse创建错误响应
-            return JsonResponse::send(r, JsonResponse::error(e.what(), 500), NGX_HTTP_INTERNAL_SERVER_ERROR);
+            // 使用NgxResponse返回错误JSON响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
 
     // 处理博客文章详情页
-    ngx_int_t handleBlogPost(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleBlogPost(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求和日志
-            NgxRequest request(r);
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
             logger.info("处理博客文章详情API请求");
 
@@ -1265,6 +1275,7 @@ namespace {
             int postId = std::stoi(postIdParam);
 
             // 创建配置对象
+            NgxRequest request(r);
             BlogConfig config(request);
             
             // 从数据库获取文章
@@ -1290,51 +1301,64 @@ namespace {
                 postData["tags"] = post->tags;
                 
                 // 返回成功响应
-                return JsonResponse::send(r, JsonResponse::success(postData));
+                json successResponse = JsonResponse::success(postData);
+                return response
+                    .status(NGX_HTTP_OK)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(successResponse.dump(2));
             } else {
                 // 文章不存在
                 logger.warn("Post with ID %d not found", postId);
                 
                 // 返回404错误
-                return JsonResponse::send(r, 
-                    JsonResponse::error("文章不存在", 404), 
-                    NGX_HTTP_NOT_FOUND);
+                json errorResponse = JsonResponse::error("文章不存在", 404);
+                return response
+                    .status(NGX_HTTP_NOT_FOUND)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
             }
         }
         catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理博客文章详情API异常: %s", e.what());
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理博客文章详情API异常: %s", e.what());
             
             // 返回服务器错误
-            return JsonResponse::send(r, 
-                JsonResponse::error(e.what(), 500), 
-                NGX_HTTP_INTERNAL_SERVER_ERROR);
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
 
     // 处理博客分类页面
-    ngx_int_t handleBlogCategory(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleBlogCategory(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求
-            NgxRequest request(r);
-            
-            // 创建配置对象
-            BlogConfig config(request);
-            
-            // 使用NgxLog记录日志
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
             
             // 获取分类参数
-            auto it = params.find("name");
+            auto it = params.find("category");
             if (it == params.end()) {
                 logger.error("缺少分类参数");
-                return JsonResponse::send(r, 
-                    JsonResponse::error("缺少分类参数", 400), 
-                    NGX_HTTP_BAD_REQUEST);
+                json errorResponse = JsonResponse::error("缺少分类参数", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
             }
             
             std::string category = it->second;
             logger.info("处理分类API请求: %s", category.c_str());
+            
+            // 创建配置对象
+            NgxRequest request(r);
+            BlogConfig config(request);
             
             // 从数据库获取该分类的文章
             BlogPostDao dao;
@@ -1363,55 +1387,62 @@ namespace {
             responseData["posts"] = postsArray;
             
             // 返回成功响应
-            return JsonResponse::send(r, JsonResponse::success(responseData));
-        } catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理分类API请求异常: %s", e.what());
+            json successResponse = JsonResponse::success(responseData);
+            return response
+                .status(NGX_HTTP_OK)
+                .contentType("application/json")
+                .enableCors()
+                .send(successResponse.dump(2));
+        } 
+        catch (const std::exception& e) {
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理分类API请求异常: %s", e.what());
             
             // 返回服务器错误
-            return JsonResponse::send(r, 
-                JsonResponse::error(e.what(), 500), 
-                NGX_HTTP_INTERNAL_SERVER_ERROR);
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
 
     // 处理博客标签页面
-    ngx_int_t handleBlogTag(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleBlogTag(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求
-            NgxRequest request(r);
-            
-            // 创建配置对象
-            BlogConfig config(request);
-            
-            // 使用NgxLog记录日志
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
             
             // 获取标签参数
-            auto it = params.find("name");
+            auto it = params.find("tag");
             if (it == params.end()) {
                 logger.error("缺少标签参数");
                 
-                json errorResponse;
-                errorResponse["success"] = false;
-                errorResponse["error"]["code"] = 400;
-                errorResponse["error"]["message"] = "缺少标签参数";
-                
-                return sendJsonResponse(r, errorResponse, NGX_HTTP_BAD_REQUEST);
+                json errorResponse = JsonResponse::error("缺少标签参数", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
             }
             
             std::string tag = it->second;
             logger.info("处理标签API请求: %s", tag.c_str());
             
+            // 创建配置对象
+            NgxRequest request(r);
+            BlogConfig config(request);
+            
             // 从数据库获取该标签的文章
             BlogPostDao dao;
             auto posts = dao.getPostsByTag(tag, 10); // 获取前10篇文章
             
-            // 使用nlohmann/json库构建响应
-            json response;
-            response["success"] = true;
-            response["data"]["tag"] = tag;
-            response["data"]["posts"] = json::array();
+            // 构建响应JSON
+            json data;
+            data["tag"] = tag;
+            data["posts"] = json::array();
             
             for (const auto& post : posts) {
                 json postJson;
@@ -1422,53 +1453,53 @@ namespace {
                 postJson["created_at"] = post.created_at;
                 postJson["updated_at"] = post.updated_at;
                 postJson["view_count"] = post.view_count;
-                
-                // 添加分类和标签
                 postJson["categories"] = post.categories;
                 postJson["tags"] = post.tags;
                 
                 // 将文章添加到列表
-                response["data"]["posts"].push_back(postJson);
+                data["posts"].push_back(postJson);
             }
             
-            // 发送JSON响应
-            return sendJsonResponse(r, response);
-        } catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理标签API请求异常: %s", e.what());
+            // 返回成功响应
+            json successResponse = JsonResponse::success(data);
+            return response
+                .status(NGX_HTTP_OK)
+                .contentType("application/json")
+                .enableCors()
+                .send(successResponse.dump(2));
+        } 
+        catch (const std::exception& e) {
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理标签API请求异常: %s", e.what());
             
-            // 构建错误响应
-            json errorResponse;
-            errorResponse["success"] = false;
-            errorResponse["error"]["code"] = 500;
-            errorResponse["error"]["message"] = e.what();
-            
-            return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
+            // 返回错误响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
 
     // 处理博客管理页面
-    ngx_int_t handleAdmin(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleAdmin(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求
-            NgxRequest request(r);
-            
-            // 创建配置对象
-            BlogConfig config(request);
-            
-            // 创建日志对象
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
             logger.info("处理博客管理API请求");
+            
+            // 创建配置对象
+            NgxRequest request(r);
+            BlogConfig config(request);
             
             // 从数据库获取所有文章
             BlogPostDao dao;
             auto posts = dao.getAllPosts();
             
-            // 使用nlohmann/json库构建响应
-            json response;
-            response["success"] = true;
-            response["data"]["posts"] = json::array();
-            
+            // 构建响应JSON
+            json postsArray = json::array();
             for (const auto& post : posts) {
                 json postJson;
                 postJson["id"] = post.id;
@@ -1478,118 +1509,103 @@ namespace {
                 postJson["created_at"] = post.created_at;
                 postJson["updated_at"] = post.updated_at;
                 postJson["view_count"] = post.view_count;
-                
-                // 添加分类和标签
                 postJson["categories"] = post.categories;
                 postJson["tags"] = post.tags;
                 
-                // 将文章添加到列表
-                response["data"]["posts"].push_back(postJson);
+                postsArray.push_back(postJson);
             }
             
-            // 发送JSON响应
-            return sendJsonResponse(r, response);
+            // 返回成功响应
+            json data;
+            data["posts"] = postsArray;
+            json successResponse = JsonResponse::success(data);
+            
+            return response
+                .status(NGX_HTTP_OK)
+                .contentType("application/json")
+                .enableCors()
+                .send(successResponse.dump(2));
         }
         catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理博客管理API异常: %s", e.what());
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理博客管理API异常: %s", e.what());
             
-            // 构建错误响应
-            json errorResponse;
-            errorResponse["success"] = false;
-            errorResponse["error"]["code"] = 500;
-            errorResponse["error"]["message"] = e.what();
-            
-            return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
+            // 返回错误响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
 
     // 处理添加文章请求
-    ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleAddPost(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求
-            NgxRequest request(r);
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
+            logger.info("处理添加文章API请求");
             
             // 创建配置对象
+            NgxRequest request(r);
             BlogConfig config(request);
             
-            // 构建模板变量
-            std::unordered_map<std::string, std::string> variables;
-            variables["title"] = "添加新文章";
-            variables["description"] = "添加新的博客文章";
-            variables["blog_base_path"] = config.getBasePath();
-            
-            // 如果是GET请求，显示添加文章表单
-            if (request.getMethod() != NGX_HTTP_POST) {
-                logger.info("GET请求，显示添加文章表单");
-                variables["error_message"] = "";
-                variables["post_title"] = "";
-                variables["post_content"] = "";
-                variables["post_summary"] = "";
-                variables["post_categories"] = "";
-                variables["post_tags"] = "";
-                variables["post_published"] = "checked"; // 默认发布
-                return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
+            // 解析请求体中的JSON数据
+            std::string requestBody = request.getRequestBody();
+            if (requestBody.empty()) {
+                // 如果请求体为空，返回错误
+                json errorResponse = JsonResponse::error("请求体不能为空", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
             }
             
-            // 处理POST请求：新增文章
-            logger.info("处理添加文章POST请求");
-            
-            // 读取POST数据
-            std::string postData = request.getRequestBody();
-            
-            // 解析表单数据
-            std::unordered_map<std::string, std::string> formData = request.parseFormData(postData);
-            
-            // 提取表单字段
-            std::string title = formData["title"];
-            std::string content = formData["content"];
-            std::string summary = formData["summary"];
-            std::string categoriesStr = formData["categories"];
-            std::string tagsStr = formData["tags"];
-            bool isPublished = formData.find("publish") != formData.end() && formData["publish"] == "on";
-            
-            // 检查必填字段
-            if (title.empty() || content.empty()) {
-                logger.warn("Title or content is empty");
-                variables["error_message"] = "标题和内容不能为空！";
-                variables["post_title"] = title;
-                variables["post_content"] = content;
-                variables["post_summary"] = summary;
-                variables["post_categories"] = categoriesStr;
-                variables["post_tags"] = tagsStr;
-                variables["post_published"] = isPublished ? "checked" : "";
-                return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
+            // 解析JSON
+            json postData;
+            try {
+                postData = json::parse(requestBody);
+            } catch (const json::parse_error& e) {
+                // JSON解析错误
+                json errorResponse = JsonResponse::error("JSON格式错误: " + std::string(e.what()), 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
             }
             
-            // 处理分类（以逗号分隔）
+            // 提取字段
+            if (!postData.contains("title") || !postData.contains("content")) {
+                // 标题和内容是必需的
+                json errorResponse = JsonResponse::error("标题和内容不能为空", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            std::string title = postData["title"];
+            std::string content = postData["content"];
+            std::string summary = postData.contains("summary") ? postData["summary"] : "";
+            bool isPublished = postData.contains("is_published") ? postData["is_published"].get<bool>() : true;
+            
+            // 获取分类和标签
             std::vector<std::string> categories;
-            if (!categoriesStr.empty()) {
-                std::stringstream ss(categoriesStr);
-                std::string category;
-                while (std::getline(ss, category, ',')) {
-                    // 去除前后空格
-                    category.erase(0, category.find_first_not_of(" \t\n\r\f\v"));
-                    category.erase(category.find_last_not_of(" \t\n\r\f\v") + 1);
-                    if (!category.empty()) {
-                        categories.push_back(category);
-                    }
+            if (postData.contains("categories") && postData["categories"].is_array()) {
+                for (const auto& category : postData["categories"]) {
+                    categories.push_back(category);
                 }
             }
             
-            // 处理标签（以逗号分隔）
             std::vector<std::string> tags;
-            if (!tagsStr.empty()) {
-                std::stringstream ss(tagsStr);
-                std::string tag;
-                while (std::getline(ss, tag, ',')) {
-                    // 去除前后空格
-                    tag.erase(0, tag.find_first_not_of(" \t\n\r\f\v"));
-                    tag.erase(tag.find_last_not_of(" \t\n\r\f\v") + 1);
-                    if (!tag.empty()) {
-                        tags.push_back(tag);
-                    }
+            if (postData.contains("tags") && postData["tags"].is_array()) {
+                for (const auto& tag : postData["tags"]) {
+                    tags.push_back(tag);
                 }
             }
             
@@ -1600,88 +1616,228 @@ namespace {
             if (postId > 0) {
                 logger.info("文章创建成功，ID: %d", postId);
                 
-                // 重定向到新创建的文章页面
-                std::string redirectUrl = config.getBasePath() + "/post/" + std::to_string(postId);
-                ngx_table_elt_t *location = static_cast<ngx_table_elt_t*>(
-                    ngx_list_push(&r->headers_out.headers));
-                
-                if (location == NULL) {
-                    return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                // 获取新创建的文章
+                auto post = dao.getPostById(postId);
+                if (post.has_value()) {
+                    // 构建响应数据
+                    json responseData;
+                    responseData["id"] = post->id;
+                    responseData["title"] = post->title;
+                    responseData["content"] = post->content;
+                    responseData["summary"] = post->summary;
+                    responseData["author"] = post->author;
+                    responseData["categories"] = post->categories;
+                    responseData["tags"] = post->tags;
+                    responseData["created_at"] = post->created_at;
+                    responseData["updated_at"] = post->updated_at;
+                    responseData["is_published"] = post->published;
+                    
+                    // 返回成功响应
+                    json successResponse = JsonResponse::success(responseData);
+                    return response
+                        .status(NGX_HTTP_CREATED)
+                        .contentType("application/json")
+                        .enableCors()
+                        .send(successResponse.dump(2));
                 }
-                
-                location->hash = 1;
-                location->key.len = sizeof("Location") - 1;
-                location->key.data = (u_char *) "Location";
-                location->value.len = redirectUrl.length();
-                location->value.data = (u_char *) redirectUrl.c_str();
-                
-                r->headers_out.status = NGX_HTTP_MOVED_TEMPORARILY;
-                r->headers_out.location = location;
-                
-                return ngx_http_send_header(r);
-            } else {
-                logger.error("创建文章失败");
-                variables["error_message"] = "保存文章失败，请重试！";
-                variables["post_title"] = title;
-                variables["post_content"] = content;
-                variables["post_summary"] = summary;
-                variables["post_categories"] = categoriesStr;
-                variables["post_tags"] = tagsStr;
-                variables["post_published"] = isPublished ? "checked" : "";
-                return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
             }
+            
+            // 如果到这里，说明创建失败
+            logger.error("创建文章失败");
+            json errorResponse = JsonResponse::error("创建文章失败", 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
         catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理添加文章请求异常: %s", e.what());
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理添加文章请求异常: %s", e.what());
+            
+            // 返回错误响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
 
     // 处理文章编辑页面
-    ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params) {
-        // 简化实现，暂不支持编辑功能
-        NgxLog logger(r);
-        logger.warn("编辑文章功能尚未实现");
-        
-        std::unordered_map<std::string, std::string> variables;
-        variables["title"] = "功能未实现";
-        variables["message"] = "编辑文章功能尚未实现，请稍后再试。";
-        
-        return BlogModule::serveTemplateWithVariables(r, "blog_error.html", variables);
+    ngx_int_t handleEditPost(NgxResponse& response, const RouteParams& params) {
+        try {
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
+            NgxLog logger(r);
+            logger.info("处理编辑文章API请求");
+            
+            // 检查是否有文章ID
+            if (params.find("id") == params.end()) {
+                json errorResponse = JsonResponse::error("缺少文章ID参数", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // 获取文章ID
+            int postId = std::stoi(params.at("id"));
+            
+            // 创建配置对象
+            NgxRequest request(r);
+            BlogConfig config(request);
+            
+            // 解析请求体中的JSON数据
+            std::string requestBody = request.getRequestBody();
+            if (requestBody.empty()) {
+                // 如果请求体为空，返回错误
+                json errorResponse = JsonResponse::error("请求体不能为空", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // 解析JSON
+            json postData;
+            try {
+                postData = json::parse(requestBody);
+            } catch (const json::parse_error& e) {
+                // JSON解析错误
+                json errorResponse = JsonResponse::error("JSON格式错误: " + std::string(e.what()), 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // 使用DAO更新文章
+            BlogPostDao dao;
+            
+            // 首先检查文章是否存在
+            auto post = dao.getPostById(postId);
+            if (!post.has_value()) {
+                // 文章不存在
+                json errorResponse = JsonResponse::error("文章不存在", 404);
+                return response
+                    .status(NGX_HTTP_NOT_FOUND)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // TODO: 实现文章更新逻辑
+            // 现在简单返回未实现
+            json errorResponse = JsonResponse::error("文章编辑功能尚未实现", 501);
+            return response
+                .status(NGX_HTTP_NOT_IMPLEMENTED)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
+        }
+        catch (const std::exception& e) {
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理编辑文章请求异常: %s", e.what());
+            
+            // 返回错误响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
+        }
     }
 
     // 处理文章删除功能
-    ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params) {
-        // 简化实现，暂不支持删除功能
-        NgxLog logger(r);
-        logger.warn("删除文章功能尚未实现");
-        
-        std::unordered_map<std::string, std::string> variables;
-        variables["title"] = "功能未实现";
-        variables["message"] = "删除文章功能尚未实现，请稍后再试。";
-        
-        return BlogModule::serveTemplateWithVariables(r, "blog_error.html", variables);
+    ngx_int_t handleDeletePost(NgxResponse& response, const RouteParams& params) {
+        try {
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
+            NgxLog logger(r);
+            logger.info("处理删除文章API请求");
+            
+            // 检查是否有文章ID
+            if (params.find("id") == params.end()) {
+                json errorResponse = JsonResponse::error("缺少文章ID参数", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // 获取文章ID
+            int postId = std::stoi(params.at("id"));
+            
+            // 创建配置对象
+            NgxRequest request(r);
+            BlogConfig config(request);
+            
+            // 使用DAO删除文章
+            BlogPostDao dao;
+            
+            // 首先检查文章是否存在
+            auto post = dao.getPostById(postId);
+            if (!post.has_value()) {
+                // 文章不存在
+                json errorResponse = JsonResponse::error("文章不存在", 404);
+                return response
+                    .status(NGX_HTTP_NOT_FOUND)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // TODO: 实现文章删除逻辑
+            // 现在简单返回未实现
+            json errorResponse = JsonResponse::error("文章删除功能尚未实现", 501);
+            return response
+                .status(NGX_HTTP_NOT_IMPLEMENTED)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
+        }
+        catch (const std::exception& e) {
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理删除文章请求异常: %s", e.what());
+            
+            // 返回错误响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
+        }
     }
 
     // 处理博客首页重定向
-    ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& params) {
-        NgxLog logger(r);
+    ngx_int_t handleBlogRedirect(NgxResponse& response, const RouteParams& params) {
+        NgxLog logger(response.get());
         logger.info("从/blog/重定向到/");
         
-        // 使用NgxResponse简化重定向处理
-        return NgxResponse(r).redirect("/", NGX_HTTP_MOVED_PERMANENTLY);
+        // 直接使用传入的response对象进行重定向
+        return response
+            .status(NGX_HTTP_MOVED_PERMANENTLY)
+            .redirect("/", NGX_HTTP_MOVED_PERMANENTLY);
     }
     
     // 处理管理面板统计数据API请求
-    ngx_int_t handleAdminStats(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleAdminStats(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求和日志
-            NgxRequest request(r);
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
             logger.info("处理管理面板统计数据API请求");
             
             // 创建配置对象
+            NgxRequest request(r);
             BlogConfig config(request);
             
             // 从数据库获取统计数据
@@ -1731,80 +1887,114 @@ namespace {
             responseData["stats"] = statsData;
             responseData["recent_posts"] = recentPostsArray;
             
-            // 发送JSON响应
-            return JsonResponse::send(r, JsonResponse::success(responseData));
+            // 使用封装的NgxResponse返回JSON响应
+            json successResponse = JsonResponse::success(responseData);
+            std::string jsonContent = successResponse.dump(2);
+            
+            return response
+                .status(NGX_HTTP_OK)
+                .contentType("application/json")
+                .enableCors()
+                .send(jsonContent);
         }
         catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理管理面板统计数据请求异常: %s", e.what());
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理管理面板统计数据请求异常: %s", e.what());
             
-            // 返回错误响应
-            return JsonResponse::send(r, JsonResponse::error(e.what(), 500), NGX_HTTP_INTERNAL_SERVER_ERROR);
+            // 构建错误响应JSON
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            std::string jsonContent = errorResponse.dump(2);
+            
+            // 使用封装的NgxResponse返回错误JSON响应
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(jsonContent);
         }
     }
     
     // 处理获取文章编辑数据的请求
-    ngx_int_t handleGetPostForEdit(ngx_http_request_t* r, const RouteParams& params) {
+    ngx_int_t handleGetPostForEdit(NgxResponse& response, const RouteParams& params) {
         try {
-            // 封装请求和日志
-            NgxRequest request(r);
+            // 获取请求对象和日志
+            ngx_http_request_t* r = response.get();
             NgxLog logger(r);
-            logger.info("处理获取文章编辑数据API请求");
-
-            // 从路由参数中获取文章ID
-            std::string postIdParam = params.at("id");
-            int postId = std::stoi(postIdParam);
-
+            logger.info("处理获取文章编辑数据请求");
+            
+            // 检查postId参数
+            if (params.find("id") == params.end()) {
+                // 使用NgxResponse返回错误JSON响应
+                json errorResponse = JsonResponse::error("缺少文章ID参数", 400);
+                return response
+                    .status(NGX_HTTP_BAD_REQUEST)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
+            }
+            
+            // 获取文章ID
+            int postId = std::stoi(params.at("id"));
+            
             // 创建配置对象
+            NgxRequest request(r);
             BlogConfig config(request);
             
             // 从数据库获取文章
             BlogPostDao dao;
             auto post = dao.getPostById(postId);
             
-            // 检查文章是否存在
-            if (!post.has_value()) {
-                // 文章不存在
-                logger.warn("Post with ID %d not found", postId);
-                return JsonResponse::send(r, 
-                    JsonResponse::error("文章不存在", 404), 
-                    NGX_HTTP_NOT_FOUND);
+            if (!post) {
+                // 使用NgxResponse返回错误JSON响应
+                json errorResponse = JsonResponse::error("文章不存在", 404);
+                return response
+                    .status(NGX_HTTP_NOT_FOUND)
+                    .contentType("application/json")
+                    .enableCors()
+                    .send(errorResponse.dump(2));
             }
             
-            // 构建文章数据响应
+            // 构建响应数据
             json postData;
             postData["id"] = post->id;
             postData["title"] = post->title;
             postData["content"] = post->content;
-            postData["summary"] = post->summary;
             postData["author"] = post->author;
-            postData["created_at"] = post->created_at;
-            postData["updated_at"] = post->updated_at;
-            postData["published"] = post->published;
             postData["categories"] = post->categories;
             postData["tags"] = post->tags;
+            postData["created_at"] = post->created_at;
+            postData["updated_at"] = post->updated_at;
+            postData["is_published"] = post->published;
             
-            // 返回成功响应
-            return JsonResponse::send(r, JsonResponse::success(postData));
+            // 使用NgxResponse返回JSON响应
+            json successResponse = JsonResponse::success(postData);
+            return response
+                .status(NGX_HTTP_OK)
+                .contentType("application/json")
+                .enableCors()
+                .send(successResponse.dump(2));
         }
         catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理获取文章编辑数据请求异常: %s", e.what());
+            NgxLog logger(response.get()->connection->log);
+            logger.error("处理获取文章编辑数据请求异常: %s", e.what());
             
-            // 返回错误响应
-            return JsonResponse::send(r, 
-                JsonResponse::error(e.what(), 500), 
-                NGX_HTTP_INTERNAL_SERVER_ERROR);
+            // 使用NgxResponse返回错误JSON响应
+            json errorResponse = JsonResponse::error(e.what(), 500);
+            return response
+                .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
+                .contentType("application/json")
+                .enableCors()
+                .send(errorResponse.dump(2));
         }
     }
     
     // 处理OPTIONS请求，支持CORS预检请求
-    ngx_int_t handleOptionsRequest(ngx_http_request_t* r, const RouteParams& params) {
-        NgxLog logger(r);
-        logger.info("处理OPTIONS请求: %s", ((NgxRequest(r)).getUri()).c_str());
+    ngx_int_t handleOptionsRequest(NgxResponse& response, const RouteParams& params) {
+        NgxLog logger(response.get());
+        logger.info("处理OPTIONS请求: %s", ((NgxRequest(response.get())).getUri()).c_str());
         
-        // 使用NgxResponse简化CORS响应处理
-        return NgxResponse(r)
+        // 使用NgxResponse处理CORS预检请求
+        return response
             .status(NGX_HTTP_OK)
             .enableCors()
             .sendEmpty();
@@ -1848,57 +2038,73 @@ void initBlogRoutes(BlogRouter* router) {
     
     // API 路由 - 博客文章列表
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleBlogIndex(r, params);
+        NgxResponse response(r);
+        return handleBlogIndex(response, params);
     }));
     
-    // API 路由 - 单篇博客文章
+    // API 路由 - 获取单篇博客文章
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleBlogPost(r, params);
+        NgxResponse response(r);
+        return handleBlogPost(response, params);
     }));
     
-    // API 路由 - 按分类查看博客
+    // API 路由 - 分类文章列表
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/categories/:category", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleBlogCategory(r, params);
+        NgxResponse response(r);
+        return handleBlogCategory(response, params);
     }));
     
-    // API 路由 - 按标签查看博客
+    // API 路由 - 标签文章列表
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/tags/:tag", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleBlogTag(r, params);
+        NgxResponse response(r);
+        return handleBlogTag(response, params);
     }));
     
-    // API 路由 - 管理面板统计数据
+    // API 路由 - 管理面板
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        NgxResponse response(r);
+        return handleAdmin(response, params);
+    }));
+    
+    // API 路由 - 获取管理面板统计数据
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin/stats", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleAdminStats(r, params);
+        NgxResponse response(r);
+        return handleAdminStats(response, params);
     }));
     
-    // API 路由 - 添加新博客
-    router->addRoute(Route(HttpMethod::POST_METHOD, basePath + "/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleAddPost(r, params);
+    // API 路由 - 获取文章编辑数据
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin/posts/:id/edit", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        NgxResponse response(r);
+        return handleGetPostForEdit(response, params);
     }));
     
-    // API 路由 - 获取博客编辑数据
-    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts/:id/edit", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleGetPostForEdit(r, params);
+    // API 路由 - 添加博客文章
+    router->addRoute(Route(HttpMethod::POST_METHOD, basePath + "/admin/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        NgxResponse response(r);
+        return handleAddPost(response, params);
     }));
     
-    // API 路由 - 更新博客
-    router->addRoute(Route(HttpMethod::PUT_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleEditPost(r, params);
+    // API 路由 - 编辑博客文章
+    router->addRoute(Route(HttpMethod::PUT_METHOD, basePath + "/admin/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        NgxResponse response(r);
+        return handleEditPost(response, params);
     }));
     
-    // API 路由 - 删除博客
-    router->addRoute(Route(HttpMethod::DELETE_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleDeletePost(r, params);
+    // API 路由 - 删除博客文章
+    router->addRoute(Route(HttpMethod::DELETE_METHOD, basePath + "/admin/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        NgxResponse response(r);
+        return handleDeletePost(response, params);
     }));
     
-    // API 路由 - OPTIONS 请求处理
+    // 重定向路由
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/blog", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        NgxResponse response(r);
+        return handleBlogRedirect(response, params);
+    }));
+    
+    // CORS 预检请求处理
     router->addRoute(Route(HttpMethod::OPTIONS_METHOD, basePath + "/*", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleOptionsRequest(r, params);
+        NgxResponse response(r);
+        return handleOptionsRequest(response, params);
     }));
-    
-    // 打印所有路由以供调试
-    std::vector<std::string> routes = router->dumpRoutes();
-    for (const auto& route : routes) {
-        logger.info("Registered API route: %s", route.c_str());
-    }
 }

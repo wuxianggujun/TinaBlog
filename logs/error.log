@@ -1,436 +1,132 @@
-2025/03/17 14:16:13 [warn] 1008#20764: Blog base path not configured, using default value
-2025/03/17 14:16:13 [notice] 1008#20764: using the "select" event method
-2025/03/17 14:16:13 [notice] 1008#20764: nginx/1.27.5
-2025/03/17 14:16:13 [info] 1008#20764: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 14:16:13 [notice] 1008#20764: create thread 24432
-2025/03/17 14:28:24 [notice] 1008#17688: console closing, exiting
-2025/03/17 14:32:28 [warn] 3276#4952: Blog base path not configured, using default value
-2025/03/17 14:32:28 [notice] 3276#4952: using the "select" event method
-2025/03/17 14:32:28 [notice] 3276#4952: nginx/1.27.5
-2025/03/17 14:32:28 [info] 3276#4952: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 14:32:28 [notice] 3276#4952: create thread 26540
-2025/03/17 14:32:52 [notice] 3276#17584: console closing, exiting
-2025/03/17 14:42:25 [warn] 21356#12252: Blog base path not configured, using default value
-2025/03/17 14:42:25 [notice] 21356#12252: using the "select" event method
-2025/03/17 14:42:25 [notice] 21356#12252: nginx/1.27.5
-2025/03/17 14:42:25 [info] 21356#12252: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 14:42:25 [notice] 21356#12252: create thread 21420
-2025/03/17 14:42:29 [info] 21356#21420: *1 处理请求: /api/posts, 方法: 2, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:29 [debug] 21356#21420: *1 路由器中注册的路由数量: 10
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /*
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /api/posts
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /api/posts/:id
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /api/categories/:category
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /api/tags/:tag
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /api/admin
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [POST] /api/posts
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [PUT] /api/posts/:id
-2025/03/17 14:42:29 [info] 21356#21420: Registered route: [DELETE] /api/posts/:id
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /*' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /api/admin' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Trying to match route: /api/posts
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /*
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /api/posts
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /api/posts/:id
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /api/categories/:category
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /api/tags/:tag
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /api/admin
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: POST /api/posts
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: GET /api/posts/:id/edit
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: PUT /api/posts/:id
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Checking route: DELETE /api/posts/:id
-2025/03/17 14:42:29 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/*
-2025/03/17 14:42:29 [debug] 21356#21420: 匹配失败: URI=/api/posts 与模式=/*
-2025/03/17 14:42:29 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:42:29 [debug] 21356#21420: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:42:29 [debug] 21356#21420: *1 Found matching route: /api/posts
-2025/03/17 14:42:29 [info] 21356#21420: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:29 [info] 21356#21420: *1 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:29 [info] 21356#21420: *1 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:29 [info] 21356#21420: *1 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 14:42:47 [info] 21356#21420: *2 处理请求: /api/posts, 方法: 2, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:47 [debug] 21356#21420: *2 路由器中注册的路由数量: 10
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /*
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /api/posts
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /api/posts/:id
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /api/categories/:category
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /api/tags/:tag
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /api/admin
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [POST] /api/posts
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [PUT] /api/posts/:id
-2025/03/17 14:42:47 [info] 21356#21420: Registered route: [DELETE] /api/posts/:id
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /*' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /api/admin' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Trying to match route: /api/posts
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /*
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /api/posts
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /api/posts/:id
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /api/categories/:category
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /api/tags/:tag
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /api/admin
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: POST /api/posts
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: GET /api/posts/:id/edit
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: PUT /api/posts/:id
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Checking route: DELETE /api/posts/:id
-2025/03/17 14:42:47 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/*
-2025/03/17 14:42:47 [debug] 21356#21420: 匹配失败: URI=/api/posts 与模式=/*
-2025/03/17 14:42:47 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:42:47 [debug] 21356#21420: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:42:47 [debug] 21356#21420: *2 Found matching route: /api/posts
-2025/03/17 14:42:47 [info] 21356#21420: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:47 [info] 21356#21420: *2 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:47 [info] 21356#21420: *2 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:42:47 [info] 21356#21420: *2 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 14:43:17 [info] 21356#21420: *3 处理请求: /api/posts, 方法: 2, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:43:17 [debug] 21356#21420: *3 路由器中注册的路由数量: 10
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /*
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /api/posts
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /api/posts/:id
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /api/categories/:category
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /api/tags/:tag
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /api/admin
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [POST] /api/posts
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [PUT] /api/posts/:id
-2025/03/17 14:43:17 [info] 21356#21420: Registered route: [DELETE] /api/posts/:id
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /*' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /api/admin' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Trying to match route: /api/posts
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /*
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /api/posts
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /api/posts/:id
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /api/categories/:category
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /api/tags/:tag
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /api/admin
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: POST /api/posts
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: GET /api/posts/:id/edit
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: PUT /api/posts/:id
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Checking route: DELETE /api/posts/:id
-2025/03/17 14:43:17 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/*
-2025/03/17 14:43:17 [debug] 21356#21420: 匹配失败: URI=/api/posts 与模式=/*
-2025/03/17 14:43:17 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:43:17 [debug] 21356#21420: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:43:17 [debug] 21356#21420: *3 Found matching route: /api/posts
-2025/03/17 14:43:17 [info] 21356#21420: *3 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:43:17 [info] 21356#21420: *3 处理博客首页请求, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:43:17 [info] 21356#21420: *3 使用模板: html/blog/templates/blog_index.html, client: 127.0.0.1, server: localhost, request: "GET /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:43:17 [info] 21356#21420: *3 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 14:43:49 [info] 21356#21420: *4 处理请求: /, 方法: 2, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
-2025/03/17 14:43:49 [debug] 21356#21420: *4 路由器中注册的路由数量: 10
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /*
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /api/posts
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /api/posts/:id
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /api/categories/:category
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /api/tags/:tag
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /api/admin
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [POST] /api/posts
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [PUT] /api/posts/:id
-2025/03/17 14:43:49 [info] 21356#21420: Registered route: [DELETE] /api/posts/:id
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /*' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /api/admin' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Trying to match route: /
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /*
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /api/posts
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /api/posts/:id
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /api/categories/:category
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /api/tags/:tag
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /api/admin
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: POST /api/posts
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: GET /api/posts/:id/edit
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: PUT /api/posts/:id
-2025/03/17 14:43:49 [debug] 21356#21420: *4 Checking route: DELETE /api/posts/:id
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/*
-2025/03/17 14:43:49 [debug] 21356#21420: 匹配失败: URI=/ 与模式=/*
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/posts
-2025/03/17 14:43:49 [debug] 21356#21420: 匹配失败: URI=/ 与模式=/api/posts
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/posts/:id
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/posts/
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/categories/:category
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/categories/
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/tags/:tag
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/tags/
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/admin
-2025/03/17 14:43:49 [debug] 21356#21420: 匹配失败: URI=/ 与模式=/api/admin
-2025/03/17 14:43:49 [debug] 21356#21420: *4 HTTP method mismatch: 8 != 2
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/posts/:id/edit
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/posts/
-2025/03/17 14:43:49 [debug] 21356#21420: *4 HTTP method mismatch: 16 != 2
-2025/03/17 14:43:49 [debug] 21356#21420: *4 HTTP method mismatch: 32 != 2
-2025/03/17 14:43:49 [debug] 21356#21420: *4 No matching route found
-2025/03/17 14:43:49 [info] 21356#21420: *4 正在路由请求: /, 方法: 2, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
-2025/03/17 14:43:49 [info] 21356#21420: *4 当前路由器有 10 条路由规则, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/*
-2025/03/17 14:43:49 [debug] 21356#21420: 匹配失败: URI=/ 与模式=/*
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/posts
-2025/03/17 14:43:49 [debug] 21356#21420: 匹配失败: URI=/ 与模式=/api/posts
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/posts/:id
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/posts/
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/categories/:category
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/categories/
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/tags/:tag
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/tags/
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/admin
-2025/03/17 14:43:49 [debug] 21356#21420: 匹配失败: URI=/ 与模式=/api/admin
-2025/03/17 14:43:49 [debug] 21356#21420: *4 路由 '/api/posts' 的HTTP方法不匹配: 8 != 2
-2025/03/17 14:43:49 [debug] 21356#21420: 尝试匹配: URI=/ 与模式=/api/posts/:id/edit
-2025/03/17 14:43:49 [debug] 21356#21420: 静态部分不匹配: URI=/ 部分=/api/posts/
-2025/03/17 14:43:49 [debug] 21356#21420: *4 路由 '/api/posts/:id' 的HTTP方法不匹配: 16 != 2
-2025/03/17 14:43:49 [debug] 21356#21420: *4 路由 '/api/posts/:id' 的HTTP方法不匹配: 32 != 2
-2025/03/17 14:43:49 [warn] 21356#21420: *4 No matching route found, tried 10 routes, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
-2025/03/17 14:43:49 [warn] 21356#21420: *4 No matching route found: /, client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost"
-2025/03/17 14:44:49 [info] 21356#21420: *5 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
-2025/03/17 14:44:49 [info] 21356#21420: *6 client timed out (10060: A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond) while waiting for request, client: 127.0.0.1, server: 0.0.0.0:80
-2025/03/17 14:48:23 [info] 21356#21420: *7 处理请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:23 [debug] 21356#21420: *7 路由器中注册的路由数量: 10
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /*
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /api/posts
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /api/posts/:id
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /api/categories/:category
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /api/tags/:tag
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /api/admin
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [POST] /api/posts
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [PUT] /api/posts/:id
-2025/03/17 14:48:23 [info] 21356#21420: Registered route: [DELETE] /api/posts/:id
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /*' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /api/admin' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Trying to match route: /api/posts
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /*
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /api/posts
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /api/posts/:id
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /api/categories/:category
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /api/tags/:tag
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /api/admin
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: POST /api/posts
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: GET /api/posts/:id/edit
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: PUT /api/posts/:id
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Checking route: DELETE /api/posts/:id
-2025/03/17 14:48:23 [debug] 21356#21420: *7 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:23 [debug] 21356#21420: *7 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:23 [debug] 21356#21420: *7 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:23 [debug] 21356#21420: *7 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:23 [debug] 21356#21420: *7 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:23 [debug] 21356#21420: *7 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:23 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:48:23 [debug] 21356#21420: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:48:23 [debug] 21356#21420: *7 Found matching route: /api/posts
-2025/03/17 14:48:23 [info] 21356#21420: *7 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:23 [info] 21356#21420: *7 处理添加文章POST请求, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:23 [warn] 21356#21420: *7 Title or content is empty, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:23 [info] 21356#21420: *7 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:23 [info] 21356#21420: *7 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 14:48:32 [info] 21356#21420: *8 处理请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:32 [debug] 21356#21420: *8 路由器中注册的路由数量: 10
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /*
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /api/posts
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /api/posts/:id
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /api/categories/:category
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /api/tags/:tag
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /api/admin
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [POST] /api/posts
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [PUT] /api/posts/:id
-2025/03/17 14:48:32 [info] 21356#21420: Registered route: [DELETE] /api/posts/:id
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /*' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /api/admin' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Trying to match route: /api/posts
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /*
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /api/posts
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /api/posts/:id
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /api/categories/:category
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /api/tags/:tag
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /api/admin
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: POST /api/posts
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: GET /api/posts/:id/edit
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: PUT /api/posts/:id
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Checking route: DELETE /api/posts/:id
-2025/03/17 14:48:32 [debug] 21356#21420: *8 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:32 [debug] 21356#21420: *8 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:32 [debug] 21356#21420: *8 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:32 [debug] 21356#21420: *8 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:32 [debug] 21356#21420: *8 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:32 [debug] 21356#21420: *8 HTTP method mismatch: 2 != 8
-2025/03/17 14:48:32 [debug] 21356#21420: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:48:32 [debug] 21356#21420: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 14:48:32 [debug] 21356#21420: *8 Found matching route: /api/posts
-2025/03/17 14:48:32 [info] 21356#21420: *8 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:32 [info] 21356#21420: *8 处理添加文章POST请求, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:32 [warn] 21356#21420: *8 Title or content is empty, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:32 [info] 21356#21420: *8 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 14:48:32 [info] 21356#21420: *8 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 15:03:07 [notice] 21356#23416: console closing, exiting
-2025/03/17 15:38:58 [warn] 19740#26136: Blog base path not configured, using default value
-2025/03/17 15:38:58 [notice] 19740#26136: using the "select" event method
-2025/03/17 15:38:58 [notice] 19740#26136: nginx/1.27.5
-2025/03/17 15:38:58 [info] 19740#26136: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 15:38:58 [notice] 19740#26136: create thread 25608
-2025/03/17 15:39:20 [info] 19740#25608: *1 处理请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:20 [debug] 19740#25608: *1 路由器中注册的路由数量: 11
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /*
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /api/posts
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /api/posts/:id
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /api/categories/:category
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /api/tags/:tag
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /api/admin/stats
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [POST] /api/posts
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [PUT] /api/posts/:id
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [DELETE] /api/posts/:id
-2025/03/17 15:39:20 [info] 19740#25608: Registered route: [ANY] /api/*
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /*' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /api/admin/stats' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 尝试与路由 'UNKNOWN /api/*' 匹配
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Trying to match route: /api/posts
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /*
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /api/posts
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /api/posts/:id
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /api/categories/:category
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /api/tags/:tag
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /api/admin/stats
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: POST /api/posts
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: GET /api/posts/:id/edit
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: PUT /api/posts/:id
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: DELETE /api/posts/:id
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Checking route: UNKNOWN /api/*
-2025/03/17 15:39:20 [debug] 19740#25608: *1 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:20 [debug] 19740#25608: *1 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:20 [debug] 19740#25608: *1 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:20 [debug] 19740#25608: *1 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:20 [debug] 19740#25608: *1 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:20 [debug] 19740#25608: *1 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:20 [debug] 19740#25608: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 15:39:20 [debug] 19740#25608: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 15:39:20 [debug] 19740#25608: *1 Found matching route: /api/posts
-2025/03/17 15:39:20 [info] 19740#25608: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:20 [info] 19740#25608: *1 处理添加文章POST请求, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:20 [warn] 19740#25608: *1 Title or content is empty, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:20 [info] 19740#25608: *1 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:20 [info] 19740#25608: *1 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 15:39:38 [info] 19740#25608: *2 处理请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:38 [debug] 19740#25608: *2 路由器中注册的路由数量: 11
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /*
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /api/posts
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /api/posts/:id
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /api/categories/:category
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /api/tags/:tag
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /api/admin/stats
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [POST] /api/posts
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [GET] /api/posts/:id/edit
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [PUT] /api/posts/:id
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [DELETE] /api/posts/:id
-2025/03/17 15:39:38 [info] 19740#25608: Registered route: [ANY] /api/*
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /*' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /api/posts' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /api/posts/:id' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /api/categories/:category' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /api/tags/:tag' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /api/admin/stats' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'POST /api/posts' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'GET /api/posts/:id/edit' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'PUT /api/posts/:id' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'DELETE /api/posts/:id' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 尝试与路由 'UNKNOWN /api/*' 匹配
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Trying to match route: /api/posts
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /*
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /api/posts
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /api/posts/:id
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /api/categories/:category
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /api/tags/:tag
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /api/admin/stats
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: POST /api/posts
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: GET /api/posts/:id/edit
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: PUT /api/posts/:id
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: DELETE /api/posts/:id
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Checking route: UNKNOWN /api/*
-2025/03/17 15:39:38 [debug] 19740#25608: *2 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:38 [debug] 19740#25608: *2 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:38 [debug] 19740#25608: *2 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:38 [debug] 19740#25608: *2 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:38 [debug] 19740#25608: *2 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:38 [debug] 19740#25608: *2 HTTP method mismatch: 2 != 8
-2025/03/17 15:39:38 [debug] 19740#25608: 尝试匹配: URI=/api/posts 与模式=/api/posts
-2025/03/17 15:39:38 [debug] 19740#25608: 完全匹配成功: URI=/api/posts 与模式=/api/posts
-2025/03/17 15:39:38 [debug] 19740#25608: *2 Found matching route: /api/posts
-2025/03/17 15:39:38 [info] 19740#25608: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:38 [info] 19740#25608: *2 处理添加文章POST请求, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:38 [warn] 19740#25608: *2 Title or content is empty, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:38 [info] 19740#25608: *2 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
-2025/03/17 15:39:38 [info] 19740#25608: *2 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
-2025/03/17 15:39:57 [notice] 19740#16932: console closing, exiting
-2025/03/17 16:02:39 [warn] 12644#14668: Blog base path not configured, using default value
-2025/03/17 16:02:39 [notice] 12644#14668: using the "select" event method
-2025/03/17 16:02:39 [notice] 12644#14668: nginx/1.27.5
-2025/03/17 16:02:39 [info] 12644#14668: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 16:02:39 [notice] 12644#14668: create thread 8076
-2025/03/17 16:02:42 [notice] 12644#24064: console closing, exiting
-2025/03/17 16:21:17 [warn] 14472#21328: Blog base path not configured, using default value
-2025/03/17 16:21:17 [notice] 14472#21328: using the "select" event method
-2025/03/17 16:21:17 [notice] 14472#21328: nginx/1.27.5
-2025/03/17 16:21:17 [info] 14472#21328: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 16:21:17 [notice] 14472#21328: create thread 26532
-2025/03/17 16:21:30 [notice] 14472#23116: console closing, exiting
-2025/03/17 16:40:49 [warn] 6636#1072: Blog base path not configured, using default value
-2025/03/17 16:40:49 [notice] 6636#1072: using the "select" event method
-2025/03/17 16:40:49 [notice] 6636#1072: nginx/1.27.5
-2025/03/17 16:40:49 [info] 6636#1072: OS: 260200 build:9200, "", suite:100, type:1
-2025/03/17 16:40:49 [notice] 6636#1072: create thread 22568
-2025/03/17 16:40:52 [notice] 6636#10352: console closing, exiting
+2025/03/17 16:49:14 [info] 23844#20252: *1 处理请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 16:49:14 [debug] 23844#20252: *1 路由器中注册的路由数量: 11
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /*
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /api/posts
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /api/posts/:id
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /api/categories/:category
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /api/tags/:tag
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /api/admin/stats
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [POST] /api/posts
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [GET] /api/posts/:id/edit
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [PUT] /api/posts/:id
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [DELETE] /api/posts/:id
+2025/03/17 16:49:14 [info] 23844#20252: Registered route: [ANY] /api/*
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /*' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'POST /api/posts' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'GET /api/posts/:id/edit' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'PUT /api/posts/:id' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'DELETE /api/posts/:id' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 尝试与路由 'UNKNOWN /api/*' 匹配
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Trying to match route: /api/posts
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /*
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /api/posts
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /api/posts/:id
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /api/categories/:category
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /api/tags/:tag
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /api/admin/stats
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: POST /api/posts
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: GET /api/posts/:id/edit
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: PUT /api/posts/:id
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: DELETE /api/posts/:id
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Checking route: UNKNOWN /api/*
+2025/03/17 16:49:14 [debug] 23844#20252: *1 HTTP method mismatch: 2 != 8
+2025/03/17 16:49:14 [debug] 23844#20252: *1 HTTP method mismatch: 2 != 8
+2025/03/17 16:49:14 [debug] 23844#20252: *1 HTTP method mismatch: 2 != 8
+2025/03/17 16:49:14 [debug] 23844#20252: *1 HTTP method mismatch: 2 != 8
+2025/03/17 16:49:14 [debug] 23844#20252: *1 HTTP method mismatch: 2 != 8
+2025/03/17 16:49:14 [debug] 23844#20252: *1 HTTP method mismatch: 2 != 8
+2025/03/17 16:49:14 [debug] 23844#20252: 尝试匹配: URI=/api/posts 与模式=/api/posts
+2025/03/17 16:49:14 [debug] 23844#20252: 完全匹配成功: URI=/api/posts 与模式=/api/posts
+2025/03/17 16:49:14 [debug] 23844#20252: *1 Found matching route: /api/posts
+2025/03/17 16:49:14 [info] 23844#20252: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 16:49:14 [info] 23844#20252: *1 处理添加文章POST请求, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 16:49:14 [warn] 23844#20252: *1 Title or content is empty, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 16:49:14 [info] 23844#20252: *1 使用模板: html/blog/templates/blog_add_post.html, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 16:49:14 [info] 23844#20252: *1 client sent invalid method while reading client pipelined request line, client: 127.0.0.1, server: localhost, request: "  {"
+2025/03/17 16:58:35 [notice] 23844#9960: console closing, exiting
+2025/03/17 17:11:56 [warn] 26556#25224: Blog base path not configured, using default value
+2025/03/17 17:11:56 [notice] 26556#25224: using the "select" event method
+2025/03/17 17:11:56 [notice] 26556#25224: nginx/1.27.5
+2025/03/17 17:11:56 [info] 26556#25224: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 17:11:56 [notice] 26556#25224: create thread 7224
+2025/03/17 17:12:19 [info] 26556#7224: *1 处理请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由器中注册的路由数量: 13
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /*
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/posts
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/posts/:id
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/categories/:category
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/tags/:tag
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/admin
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/admin/stats
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /api/admin/posts/:id/edit
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [POST] /api/admin/posts
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [PUT] /api/admin/posts/:id
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [DELETE] /api/admin/posts/:id
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [GET] /blog
+2025/03/17 17:12:19 [info] 26556#7224: Registered route: [ANY] /api/*
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /*' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'POST /api/admin/posts' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'PUT /api/admin/posts/:id' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'DELETE /api/admin/posts/:id' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'GET /blog' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 尝试与路由 'UNKNOWN /api/*' 匹配
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Trying to match route: /api/posts
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /*
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/posts
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/posts/:id
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/categories/:category
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/tags/:tag
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/admin
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/admin/stats
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /api/admin/posts/:id/edit
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: POST /api/admin/posts
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: PUT /api/admin/posts/:id
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: DELETE /api/admin/posts/:id
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: GET /blog
+2025/03/17 17:12:19 [debug] 26556#7224: *1 Checking route: UNKNOWN /api/*
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: 尝试匹配: URI=/api/posts 与模式=/api/admin/posts
+2025/03/17 17:12:19 [debug] 26556#7224: 匹配失败: URI=/api/posts 与模式=/api/admin/posts
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 16 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 32 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 HTTP method mismatch: 512 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 No matching route found
+2025/03/17 17:12:19 [info] 26556#7224: *1 正在路由请求: /api/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 17:12:19 [info] 26556#7224: *1 当前路由器有 13 条路由规则, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/*' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/posts' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/posts/:id' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/categories/:category' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/tags/:tag' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/admin' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/admin/stats' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/admin/posts/:id/edit' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: 尝试匹配: URI=/api/posts 与模式=/api/admin/posts
+2025/03/17 17:12:19 [debug] 26556#7224: 匹配失败: URI=/api/posts 与模式=/api/admin/posts
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/admin/posts/:id' 的HTTP方法不匹配: 16 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/admin/posts/:id' 的HTTP方法不匹配: 32 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/blog' 的HTTP方法不匹配: 2 != 8
+2025/03/17 17:12:19 [debug] 26556#7224: *1 路由 '/api/*' 的HTTP方法不匹配: 512 != 8
+2025/03/17 17:12:19 [warn] 26556#7224: *1 No matching route found, tried 13 routes, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 17:12:19 [warn] 26556#7224: *1 No matching route found: /api/posts, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/17 17:12:50 [info] 26556#7224: *1 client 127.0.0.1 closed keepalive connection
