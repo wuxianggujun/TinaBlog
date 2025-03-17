@@ -483,7 +483,7 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r)
     {
         // 封装请求
         NgxRequest request(r);
-        
+
         // 创建日志对象
         NgxLog logger(r);
 
@@ -1027,7 +1027,7 @@ ngx_int_t BlogModule::handleBlogPost(NgxResponse& response, const RouteParams& p
         // 从路由参数中获取文章ID
         std::string postIdParam = params.at("id");
         int postId = std::stoi(postIdParam);
-        
+
         // 从数据库获取文章
         BlogPostDao dao;
         auto post = dao.getPostById(postId);
@@ -1107,7 +1107,7 @@ ngx_int_t BlogModule::handleBlogCategory(NgxResponse& response, const RouteParam
 
         std::string category = it->second;
         logger.info("处理分类API请求: %s", category.c_str());
-        
+
         // 从数据库获取该分类的文章
         BlogPostDao dao;
         auto posts = dao.getPostsByCategory(category, 10); // 获取前10篇文章
@@ -1181,7 +1181,7 @@ ngx_int_t BlogModule::handleBlogTag(NgxResponse& response, const RouteParams& pa
 
         std::string tag = it->second;
         logger.info("处理标签API请求: %s", tag.c_str());
-        
+
         // 从数据库获取该标签的文章
         BlogPostDao dao;
         auto posts = dao.getPostsByTag(tag, 10); // 获取前10篇文章
@@ -1236,7 +1236,6 @@ ngx_int_t BlogModule::handleAdmin(NgxResponse& response, const RouteParams& para
 {
     try
     {
-
         NgxLog logger(response.get());
         logger.info("处理博客管理API请求");
 
@@ -1427,6 +1426,7 @@ ngx_int_t BlogModule::handleAddPost(NgxResponse& response, const RouteParams& pa
     }
 }
 
+
 // 处理文章编辑页面
 ngx_int_t BlogModule::handleEditPost(NgxResponse& response, const RouteParams& params)
 {
@@ -1543,7 +1543,7 @@ ngx_int_t BlogModule::handleDeletePost(NgxResponse& response, const RouteParams&
 
         // 获取文章ID
         int postId = std::stoi(params.at("id"));
-        
+
         // 使用DAO删除文章
         BlogPostDao dao;
 
@@ -1561,8 +1561,9 @@ ngx_int_t BlogModule::handleDeletePost(NgxResponse& response, const RouteParams&
         }
 
         bool success = dao.deletePost(postId);
-        
-        if (success) {
+
+        if (success)
+        {
             // 返回成功响应
             json successResponse = JsonResponse::success({{"message", "文章删除成功"}});
             return response
@@ -1613,7 +1614,7 @@ ngx_int_t BlogModule::handleAdminStats(NgxResponse& response, const RouteParams&
     {
         NgxLog logger(response.get());
         logger.info("处理管理面板统计数据API请求");
-        
+
         // 从数据库获取统计数据
         BlogPostDao dao;
 
@@ -1711,7 +1712,7 @@ ngx_int_t BlogModule::handleGetPostForEdit(NgxResponse& response, const RoutePar
 
         // 获取文章ID
         int postId = std::stoi(params.at("id"));
-        
+
         // 使用DAO获取文章
         BlogPostDao dao;
         auto post = dao.getPostById(postId);

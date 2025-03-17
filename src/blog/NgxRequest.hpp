@@ -421,12 +421,34 @@ public:
         if (!valid()) {
             return "";
         }
-        
-        // 检查请求体是否已经读取
+    
+        // 检查请求体是否已经读取，如果未读取则主动读取
         if (!ptr_->request_body) {
-            return "";
-        }
+            ngx_log_error(NGX_LOG_INFO, ptr_->connection->log, 0, 
+                "请求体未读取，现在自动读取");
         
+            // 设置读取选项 - 尽量在内存中保存请求体
+            ptr_->request_body_in_single_buf = 1;  // 尝试使用单一缓冲区
+            ptr_->request_body_in_file_only = 0;   // 不要只保存在文件中
+        
+            // 同步读取请求体 (这会阻塞当前线程直到请求体被完全读取)
+            ngx_int_t rc = ngx_http_read_client_request_body(ptr_, nullptr);
+        
+            if (rc != NGX_OK) {
+                ngx_log_error(NGX_LOG_ERR, ptr_->connection->log, 0, 
+                    "读取请求体失败，状态码: %d", rc);
+                return "";
+            }
+        
+            // 如果请求体读取失败，仍然返回空字符串
+            if (!ptr_->request_body) {
+                ngx_log_error(NGX_LOG_ERR, ptr_->connection->log, 0, 
+                    "请求体读取失败");
+                return "";
+            }
+        }
+    
+        // 从缓冲区读取请求体内容
         std::string body;
         if (ptr_->request_body->bufs) {
             ngx_chain_t* chain;
@@ -438,11 +460,13 @@ public:
             }
         } else if (ptr_->request_body->temp_file) {
             // 从临时文件读取请求体（大请求体情况）
-            // 本实现简化处理，实际应该根据需求决定是否支持
             ngx_log_error(NGX_LOG_WARN, ptr_->connection->log, 0, 
-                "Request body was saved to temp file, not supported in this implementation");
+                "请求体保存在临时文件中，当前实现不支持从文件读取");
         }
-        
+    
+        ngx_log_error(NGX_LOG_INFO, ptr_->connection->log, 0, 
+            "成功读取请求体，长度: %d", body.length());
+    
         return body;
     }
 
