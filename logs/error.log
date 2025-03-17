@@ -428,3 +428,9 @@
 2025/03/17 16:21:17 [info] 14472#21328: OS: 260200 build:9200, "", suite:100, type:1
 2025/03/17 16:21:17 [notice] 14472#21328: create thread 26532
 2025/03/17 16:21:30 [notice] 14472#23116: console closing, exiting
+2025/03/17 16:40:49 [warn] 6636#1072: Blog base path not configured, using default value
+2025/03/17 16:40:49 [notice] 6636#1072: using the "select" event method
+2025/03/17 16:40:49 [notice] 6636#1072: nginx/1.27.5
+2025/03/17 16:40:49 [info] 6636#1072: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 16:40:49 [notice] 6636#1072: create thread 22568
+2025/03/17 16:40:52 [notice] 6636#10352: console closing, exiting

@@ -6,36 +6,36 @@
 #include "NgxLog.hpp"
 #include "NgxBuf.hpp"
 #include "NgxChain.hpp"
+#include "NgxTableElt.hpp"
 #include <cstring>
 
 // 应用所有设置的响应头
 void NgxResponse::applyHeaders() {
-    // 使用this->ptr_访问请求对象
+    // 使用get()访问请求对象
     // 设置HTTP状态码
-    this->ptr_->headers_out.status = status_;
+    get()->headers_out.status = status_;
     
     // 设置内容类型
     if (!contentType_.empty()) {
-        this->ptr_->headers_out.content_type.len = contentType_.length();
-        this->ptr_->headers_out.content_type.data = (u_char*)contentType_.c_str();
+        get()->headers_out.content_type.len = contentType_.length();
+        get()->headers_out.content_type.data = (u_char*)contentType_.c_str();
     }
     
     // 添加自定义响应头
     for (const auto& header : headers_) {
-        ngx_table_elt_t* h = static_cast<ngx_table_elt_t*>(
-            ngx_list_push(&this->ptr_->headers_out.headers));
-            
-        if (h == nullptr) {
-            // 创建新的NgxLog对象而不是复制
-            NgxLog(this->ptr_->connection->log).error("Failed to add response header: %s", header.first.c_str());
+        // 使用NgxTableElt创建头部
+        NgxTableElt h = NgxTableElt::create_header(get());
+        
+        if (!h.get()) {
+            // 创建日志对象
+            NgxLog(get()->connection->log).error("Failed to add response header: %s", header.first.c_str());
             continue;
         }
         
-        h->hash = 1;
-        h->key.len = header.first.length();
-        h->key.data = (u_char*)header.first.c_str();
-        h->value.len = header.second.length();
-        h->value.data = (u_char*)header.second.c_str();
+        // 设置头部属性
+        h.set_hash()
+         .set_key_direct((u_char*)header.first.c_str(), header.first.length())
+         .set_value_direct((u_char*)header.second.c_str(), header.second.length());
     }
 }
 
@@ -45,16 +45,16 @@ ngx_int_t NgxResponse::send(const std::string& content) {
     applyHeaders();
     
     // 设置内容长度
-    this->ptr_->headers_out.content_length_n = content.length();
+    get()->headers_out.content_length_n = content.length();
     
     // 发送HTTP头
-    ngx_int_t rc = ngx_http_send_header(this->ptr_);
-    if (rc == NGX_ERROR || rc > NGX_OK || this->ptr_->header_only) {
+    ngx_int_t rc = ngx_http_send_header(get());
+    if (rc == NGX_ERROR || rc > NGX_OK || get()->header_only) {
         return rc;
     }
     
     // 使用NgxBuf创建包含内容的缓冲区
-    NgxBuf buf = NgxBuf::create_with_string(this->ptr_->pool, content);
+    NgxBuf buf = NgxBuf::create_with_string(get()->pool, content);
     if (!buf.get()) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -63,13 +63,13 @@ ngx_int_t NgxResponse::send(const std::string& content) {
     buf.set_last_buf(true).set_last_in_chain(true).set_memory(true);
     
     // 创建响应链
-    NgxChain chain = NgxChain::create(this->ptr_->pool, buf);
+    NgxChain chain = NgxChain::create(get()->pool, buf);
     if (!chain.get()) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
     // 发送响应体
-    return ngx_http_output_filter(this->ptr_, chain.get());
+    return ngx_http_output_filter(get(), chain.get());
 }
 
 // 发送空响应（只有头部，没有响应体）
@@ -78,28 +78,28 @@ ngx_int_t NgxResponse::sendEmpty() {
     applyHeaders();
     
     // 设置内容长度为0
-    this->ptr_->headers_out.content_length_n = 0;
+    get()->headers_out.content_length_n = 0;
     
     // 发送HTTP头
-    ngx_int_t rc = ngx_http_send_header(this->ptr_);
+    ngx_int_t rc = ngx_http_send_header(get());
     if (rc == NGX_ERROR || rc > NGX_OK) {
         return rc;
     }
     
     // 使用NgxBuf创建空缓冲区
-    NgxBuf buf = NgxBuf::create_empty_buf(this->ptr_->pool);
+    NgxBuf buf = NgxBuf::create_empty_buf(get()->pool);
     if (!buf.get()) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
     // 创建响应链
-    NgxChain chain = NgxChain::create(this->ptr_->pool, buf);
+    NgxChain chain = NgxChain::create(get()->pool, buf);
     if (!chain.get()) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
     // 发送响应体
-    return ngx_http_output_filter(this->ptr_, chain.get());
+    return ngx_http_output_filter(get(), chain.get());
 }
 
 // 发送文本响应（NgxString版本）
@@ -114,31 +114,28 @@ ngx_int_t NgxResponse::redirect(const std::string& url, ngx_uint_t status) {
     status_ = status;
     
     // 创建重定向响应头
-    ngx_table_elt_t* location = static_cast<ngx_table_elt_t*>(
-        ngx_list_push(&this->ptr_->headers_out.headers));
+    NgxTableElt location = NgxTableElt::create_header(get());
     
-    if (location == nullptr) {
-        // 创建新的NgxLog对象而不是复制
-        NgxLog(this->ptr_->connection->log).error("无法创建重定向响应头");
+    if (!location.get()) {
+        // 创建日志对象
+        NgxLog(get()->connection->log).error("无法创建重定向响应头");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
     // 设置Location头
-    location->hash = 1;
-    location->key.len = sizeof("Location") - 1;
-    location->key.data = (u_char*)"Location";
-    location->value.len = url.length();
-    location->value.data = (u_char*)url.c_str();
+    location.set_hash()
+           .set_key_direct((u_char*)"Location", sizeof("Location") - 1)
+           .set_value_direct((u_char*)url.c_str(), url.length());
     
     // 设置响应头中的location属性
-    this->ptr_->headers_out.location = location;
+    get()->headers_out.location = location.get();
     
     // 应用其他响应头
     applyHeaders();
     
     // 设置内容长度为0
-    this->ptr_->headers_out.content_length_n = 0;
+    get()->headers_out.content_length_n = 0;
     
     // 发送响应头
-    return ngx_http_send_header(this->ptr_);
+    return ngx_http_send_header(get());
 } 

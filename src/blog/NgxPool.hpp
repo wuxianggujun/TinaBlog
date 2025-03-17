@@ -88,6 +88,15 @@ public:
     }
 
     /**
+     * @brief 分配并清零内存（calloc是pcalloc的别名）
+     * @param size 内存大小
+     * @return 内存指针，分配失败返回nullptr
+     */
+    [[nodiscard]] inline void* calloc(size_t size) const noexcept {
+        return pcalloc(size);
+    }
+
+    /**
      * @brief 分配指定类型的对象
      * @tparam T 对象类型
      * @return 类型T的指针，分配失败返回nullptr
@@ -201,6 +210,37 @@ public:
      */
     [[nodiscard]] inline ngx_log_t* log() const noexcept {
         return valid() ? ptr_->log : nullptr;
+    }
+
+    /**
+     * @brief 从请求对象获取内存池
+     * 
+     * @param r Nginx请求对象
+     * @return NgxPool 内存池对象
+     */
+    static NgxPool from_request(ngx_http_request_t* r) {
+        return NgxPool(r->pool);
+    }
+
+    /**
+     * @brief 在内存池中复制字符串
+     * @param str 字符串
+     * @return 复制后的字符串指针，失败返回nullptr
+     */
+    [[nodiscard]] inline u_char* strdup(const std::string& str) const noexcept {
+        if (!valid() || str.empty()) {
+            return nullptr;
+        }
+        
+        u_char* p = static_cast<u_char*>(ngx_palloc(ptr_, str.length() + 1));
+        if (p == nullptr) {
+            return nullptr;
+        }
+        
+        ngx_memcpy(p, str.c_str(), str.length());
+        p[str.length()] = '\0';
+        
+        return p;
     }
 
 protected:

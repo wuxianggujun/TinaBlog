@@ -33,8 +33,8 @@ ngx_int_t JsonResponse::send(ngx_http_request_t* r, const nlohmann::json& jsonOb
         return send(r, jsonContent, status);
     }
     catch (const std::exception& e) {
-        NgxLog logger(r);
-        logger.error("JSON序列化失败: %s", e.what());
+        // 直接创建日志对象而不是复制
+        NgxLog(r->connection->log).error("JSON序列化失败: %s", e.what());
         
         // 返回错误响应
         nlohmann::json errorResponse = {
