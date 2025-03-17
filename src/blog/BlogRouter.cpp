@@ -206,7 +206,7 @@ ngx_int_t Router::route(ngx_http_request_t* r) {
         }
     }
     
-    logger.warn("没有找到匹配的路由，共尝试 %d 条路由规则", routes.size());
+    logger.warn("No matching route found, tried %d routes", routes.size());
     return NGX_DECLINED;
 }
 
@@ -438,7 +438,7 @@ ngx_int_t handleBlogPost(ngx_http_request_t* r, const RouteParams& params) {
             response["data"]["tags"] = post->tags;
         } else {
             // 文章不存在
-            logger.warn("未找到ID为 %d 的文章", postId);
+            logger.warn("Post with ID %d not found", postId);
             response["success"] = false;
             response["error"]["code"] = 404;
             response["error"]["message"] = "文章不存在";
@@ -676,7 +676,7 @@ ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
         
         // 如果是GET请求，返回错误，因为API只支持POST
         if (request.getMethod() != NGX_HTTP_POST) {
-            logger.warn("添加文章API只支持POST请求");
+            logger.warn("Add post API only supports POST requests");
             
             json errorResponse;
             errorResponse["success"] = false;
@@ -705,7 +705,7 @@ ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
         
         // 检查必填字段
         if (title.empty() || content.empty()) {
-            logger.warn("提交的标题或内容为空");
+            logger.warn("Title or content is empty");
             
             json errorResponse;
             errorResponse["success"] = false;
@@ -811,7 +811,7 @@ ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params) {
             auto post = dao.getPostById(postId);
             
             if (!post.has_value()) {
-                logger.warn("未找到ID为 %d 的文章", postId);
+                logger.warn("Post with ID %d not found", postId);
                 
                 json errorResponse;
                 errorResponse["success"] = false;
@@ -854,7 +854,7 @@ ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params) {
             
             // 检查必填字段
             if (title.empty() || content.empty()) {
-                logger.warn("提交的标题或内容为空");
+                logger.warn("Title or content is empty");
                 
                 json errorResponse;
                 errorResponse["success"] = false;
@@ -934,7 +934,7 @@ ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params) {
         }
         // 其他HTTP方法
         else {
-            logger.warn("编辑文章API不支持当前请求方法: %d", request.getMethod());
+            logger.warn("Edit post API does not support current request method: %d", request.getMethod());
             
             json errorResponse;
             errorResponse["success"] = false;
@@ -972,7 +972,7 @@ ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params) {
         
         // 验证请求方法
         if (request.getMethod() != NGX_HTTP_POST && request.getMethod() != NGX_HTTP_DELETE) {
-            logger.warn("删除文章API仅支持POST或DELETE请求");
+            logger.warn("Delete post API only supports POST or DELETE requests");
             
             json errorResponse;
             errorResponse["success"] = false;

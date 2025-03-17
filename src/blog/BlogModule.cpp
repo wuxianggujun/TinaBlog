@@ -57,6 +57,8 @@ namespace {
 
 // 前向声明
 static void initBlogRoutes(const std::string& basePath, Router& router);
+// 新增前向声明
+void initBlogRoutes(BlogRouter* router);
 
 // 初始化静态成员变量
 bool BlogModule::isRegistered_ = false;
@@ -217,28 +219,26 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
 
         // 显式初始化路由一次
         BlogConfig blogConfig(config);
-        ngx_log_error(NGX_LOG_INFO, cf->log, 0, "初始化路由器，基础路径: %s", basePath.c_str());
+        ngx_log_error(NGX_LOG_INFO, cf->log, 0, "Initializing router, base path: %s", basePath.c_str());
         
         // 获取路由器实例并初始化
         auto& router = getBlogRouter();
         router.reset(); // 确保路由器是空的
-        initBlogRoutes(basePath, router);
+        initBlogRoutes(&router);
         
         // 输出已注册的路由
-        ngx_log_error(NGX_LOG_INFO, cf->log, 0, "已注册路由总数: %d", (int)router.getRouteCount());
+        ngx_log_error(NGX_LOG_INFO, cf->log, 0, "Total registered routes: %d", (int)router.getRouteCount());
         std::vector<std::string> routeStrings = router.dumpRoutes();
         for (const auto& routeStr : routeStrings) {
-            ngx_log_error(NGX_LOG_DEBUG, cf->log, 0, "路由: %s", routeStr.c_str());
+            ngx_log_error(NGX_LOG_DEBUG, cf->log, 0, "Route: %s", routeStr.c_str());
         }
     } else {
-        ngx_log_error(NGX_LOG_WARN, cf->log, 0, "博客基础路径未配置，使用默认值");
-        // 使用默认路径
-        std::string basePath = "/blog";
+        ngx_log_error(NGX_LOG_WARN, cf->log, 0, "Blog base path not configured, using default value");
         
         // 获取路由器实例并初始化
         auto& router = getBlogRouter();
         router.reset(); // 确保路由器是空的
-        initBlogRoutes(basePath, router);
+        initBlogRoutes(&router);
     }
     
     ngx_log_error(NGX_LOG_INFO, cf->log, 0, "BlogModule::postConfiguration - 配置完成");
@@ -421,7 +421,7 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         }
         
         // 未找到匹配的路由，返回404
-        logger.warn("找不到匹配的路由: %s", uri.c_str());
+        logger.warn("No matching route found: %s", uri.c_str());
         return NGX_HTTP_NOT_FOUND;
     }
     catch (const std::exception& e) {
@@ -973,11 +973,8 @@ namespace {
         // 获取博客路由器实例
         auto& router = getBlogRouter();
         
-        // 清除之前的路由
-        router.reset();
-        
-        // 初始化博客路由，传入基础路径和路由器实例
-        initBlogRoutes(config.getBasePath(), router);
+        // 使用新的initBlogRoutes函数，传入路由器实例
+        initBlogRoutes(&router);
     }
     
     // 处理静态文件请求
@@ -986,11 +983,11 @@ namespace {
         NgxLog logger(r);
         
         std::string uri = request.getUri();
-        logger.info("处理静态文件请求: %s", uri.c_str());
+        logger.info("Handling static file request: %s", uri.c_str());
         
         // 如果是API请求，直接返回DECLINED让API路由处理
         if (uri.find("/api/") == 0) {
-            logger.debug("API请求，不由静态文件处理器处理: %s", uri.c_str());
+            logger.debug("API request, not handled by static file handler: %s", uri.c_str());
             return NGX_DECLINED;
         }
         
@@ -1015,14 +1012,14 @@ namespace {
             
             // 构建完整文件路径
             std::string fullPath = frontendBasePath + uri;
-            logger.info("提供静态资源文件: %s", fullPath.c_str());
+            logger.info("Serving static resource file: %s", fullPath.c_str());
             return serveStaticFile(r, fullPath);
         }
         
         // 对于所有其他请求，提供index.html（SPA应用的入口点）
         // 这样前端路由可以接管导航
         std::string indexPath = frontendBasePath + "/index.html";
-        logger.info("提供SPA入口页面: %s (实际文件: %s)", uri.c_str(), indexPath.c_str());
+        logger.info("Serving SPA entry page: %s (actual file: %s)", uri.c_str(), indexPath.c_str());
         return serveStaticFile(r, indexPath);
     }
     
@@ -1033,21 +1030,7 @@ namespace {
         // 打开文件
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (!file.is_open()) {
-            logger.error("无法打开静态文件: %s", path.c_str());
-            
-            // 如果是前端路由页面，我们返回index.html
-            if (path.find("/index.html") == std::string::npos) {
-                std::string indexPath = "C:/Users/wuxianggujun/CodeSpace/CMakeProjects/TinaBlog/html/index.html";
-                std::ifstream indexFile(indexPath, std::ios::binary | std::ios::ate);
-                if (indexFile.is_open()) {
-                    logger.info("提供首页作为替代");
-                    indexFile.close();
-                    return serveStaticFile(r, indexPath);
-                }
-            }
-            
-            r->headers_out.status = NGX_HTTP_NOT_FOUND;
-            ngx_http_send_header(r);
+            logger.error("Failed to open file: %s", path.c_str());
             return NGX_HTTP_NOT_FOUND;
         }
         
@@ -1055,111 +1038,82 @@ namespace {
         std::streamsize size = file.tellg();
         file.seekg(0, std::ios::beg);
         
-        // 根据文件扩展名设置Content-Type
-        std::string extension;
-        size_t extPos = path.find_last_of('.');
-        if (extPos != std::string::npos) {
-            extension = path.substr(extPos + 1);
-            std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+        // 设置内容类型
+        std::string contentType = "text/html";
+        if (path.find(".css") != std::string::npos) {
+            contentType = "text/css";
+        } else if (path.find(".js") != std::string::npos) {
+            contentType = "application/javascript";
+        } else if (path.find(".json") != std::string::npos) {
+            contentType = "application/json";
+        } else if (path.find(".png") != std::string::npos) {
+            contentType = "image/png";
+        } else if (path.find(".jpg") != std::string::npos || path.find(".jpeg") != std::string::npos) {
+            contentType = "image/jpeg";
+        } else if (path.find(".gif") != std::string::npos) {
+            contentType = "image/gif";
+        } else if (path.find(".svg") != std::string::npos) {
+            contentType = "image/svg+xml";
+        } else if (path.find(".ico") != std::string::npos) {
+            contentType = "image/x-icon";
+        } else if (path.find(".woff") != std::string::npos) {
+            contentType = "font/woff";
+        } else if (path.find(".woff2") != std::string::npos) {
+            contentType = "font/woff2";
+        } else if (path.find(".ttf") != std::string::npos) {
+            contentType = "font/ttf";
+        } else if (path.find(".eot") != std::string::npos) {
+            contentType = "application/vnd.ms-fontobject";
         }
-        
-        std::string contentType = "application/octet-stream"; // 默认
-        
-        if (extension == "html" || extension == "htm") contentType = "text/html";
-        else if (extension == "css") contentType = "text/css";
-        else if (extension == "js") contentType = "application/javascript";
-        else if (extension == "json") contentType = "application/json";
-        else if (extension == "png") contentType = "image/png";
-        else if (extension == "jpg" || extension == "jpeg") contentType = "image/jpeg";
-        else if (extension == "gif") contentType = "image/gif";
-        else if (extension == "svg") contentType = "image/svg+xml";
-        else if (extension == "ico") contentType = "image/x-icon";
-        else if (extension == "txt") contentType = "text/plain";
-        else if (extension == "pdf") contentType = "application/pdf";
         
         // 设置响应头
         r->headers_out.status = NGX_HTTP_OK;
         r->headers_out.content_length_n = size;
         
-        ngx_str_t type;
-        type.data = (u_char*)contentType.c_str();
-        type.len = contentType.length();
-        r->headers_out.content_type = type;
+        ngx_str_t content_type;
+        content_type.data = (u_char*)contentType.c_str();
+        content_type.len = contentType.length();
+        r->headers_out.content_type = content_type;
         
-        // 添加CORS头，允许所有来源访问
-        ngx_table_elt_t *h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h != NULL) {
-            h->hash = 1;
-            h->key.len = sizeof("Access-Control-Allow-Origin") - 1;
-            h->key.data = (u_char *) "Access-Control-Allow-Origin";
-            h->value.len = sizeof("*") - 1;
-            h->value.data = (u_char *) "*";
-        }
-        
-        // 添加缓存控制头
-        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-        if (h != NULL) {
-            h->hash = 1;
-            h->key.len = sizeof("Cache-Control") - 1;
-            h->key.data = (u_char *) "Cache-Control";
-            h->value.len = sizeof("max-age=3600") - 1;  // 1小时缓存
-            h->value.data = (u_char *) "max-age=3600";
-        }
-        
-        // 发送响应头
+        // 发送HTTP头
         ngx_int_t rc = ngx_http_send_header(r);
         if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
-            file.close();
+            logger.error("Failed to send HTTP header");
             return rc;
         }
         
-        // 读取文件内容
+        // 读取文件内容并发送
         std::vector<char> buffer(size);
         if (file.read(buffer.data(), size)) {
-            // 创建缓冲区
-            ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-            if (b == nullptr) {
-                logger.error("无法分配内存");
-                file.close();
+            // 分配内存
+            ngx_buf_t *b = ngx_create_temp_buf(r->pool, size);
+            if (b == NULL) {
+                logger.error("Failed to allocate buffer");
                 return NGX_HTTP_INTERNAL_SERVER_ERROR;
             }
             
-            // 复制文件内容到缓冲区
-            u_char* data = static_cast<u_char*>(ngx_palloc(r->pool, size));
-            if (data == nullptr) {
-                logger.error("无法分配内存");
-                file.close();
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
-            }
+            // 复制数据
+            ngx_memcpy(b->pos, buffer.data(), size);
+            b->last = b->pos + size;
+            b->memory = 1;    // 这是一个内存缓冲区
+            b->last_buf = 1;  // 这是最后一个缓冲区
             
-            ngx_memcpy(data, buffer.data(), size);
-            
-            // 设置缓冲区
-            b->pos = data;
-            b->last = data + size;
-            b->memory = 1;    // 内存缓冲区
-            b->last_buf = 1;  // 最后一个缓冲区
-            
-            // 创建响应链
+            // 创建输出链
             ngx_chain_t out;
             out.buf = b;
             out.next = nullptr;
             
-            // 发送响应体
-            rc = ngx_http_output_filter(r, &out);
+            return ngx_http_output_filter(r, &out);
         } else {
-            logger.error("读取文件内容失败: %s", path.c_str());
-            rc = NGX_HTTP_INTERNAL_SERVER_ERROR;
+            logger.error("Failed to read file content: %s", path.c_str());
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
-        
-        file.close();
-        return rc;
     }
 
     // 初始化博客模板
     void initBlogTemplates() {
         // 简单初始化，确保函数存在
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "初始化博客模板");
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Initializing blog templates");
     }
 
     // 处理博客首页
@@ -1312,7 +1266,7 @@ namespace {
                 variables["^post_not_found"] = "";
             } else {
                 // 文章不存在
-                logger.warn("未找到ID为 %d 的文章", postId);
+                logger.warn("Post with ID %d not found", postId);
                 variables["title"] = "文章未找到";
                 variables["description"] = "请求的文章不存在";
                 variables["#post_exists"] = "";
@@ -1603,7 +1557,7 @@ namespace {
             
             // 检查必填字段
             if (title.empty() || content.empty()) {
-                logger.warn("提交的标题或内容为空");
+                logger.warn("Title or content is empty");
                 variables["error_message"] = "标题和内容不能为空！";
                 variables["post_title"] = title;
                 variables["post_content"] = content;
@@ -1775,56 +1729,17 @@ namespace {
 
 // 初始化博客路由
 static void initBlogRoutes(const std::string& basePath, Router& router) {
-    // 首先清空现有路由，避免重复注册
-    router.reset();
-    
+    // 此函数已废弃，使用下面的新版initBlogRoutes(BlogRouter*)替代
     NgxLog logger(ngx_cycle->log);
-    logger.info("初始化博客路由, 基础路径: %s", basePath.c_str());
+    logger.warn("Using deprecated initBlogRoutes function, please use the new implementation");
     
-    // 检查basePath，确保它正确设置
-    std::string path = basePath;
-    if (path.empty()) {
-        path = "/blog"; // 使用默认路径
-        logger.warn("博客基础路径未配置，使用默认值: %s", path.c_str());
-    }
-    
-    // 定义路由处理器
-    RouteHandler blogIndexHandler = std::bind(handleBlogIndex, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler blogPostHandler = std::bind(handleBlogPost, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler blogCategoryHandler = std::bind(handleBlogCategory, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler blogTagHandler = std::bind(handleBlogTag, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler adminHandler = std::bind(handleAdmin, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler addPostHandler = std::bind(handleAddPost, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler editPostHandler = std::bind(handleEditPost, std::placeholders::_1, std::placeholders::_2);
-    RouteHandler deletePostHandler = std::bind(handleDeletePost, std::placeholders::_1, std::placeholders::_2);
-    
-    // API路由 - 提供JSON数据
-    std::string apiPrefix = "/api";
-    
-    // 博客文章API
-    router.addRoute(Route(apiPrefix + "/posts", blogIndexHandler));               // 获取所有文章列表
-    router.addRoute(Route(apiPrefix + "/posts/:id", blogPostHandler));            // 获取单篇文章
-    router.addRoute(Route(apiPrefix + "/categories/:name", blogCategoryHandler)); // 获取分类文章
-    router.addRoute(Route(apiPrefix + "/tags/:name", blogTagHandler));            // 获取标签文章
-    
-    // 管理API
-    router.addRoute(Route(apiPrefix + "/admin/posts", adminHandler));             // 管理所有文章
-    router.addRoute(Route(apiPrefix + "/admin/posts/create", addPostHandler));    // 创建文章
-    router.addRoute(Route(apiPrefix + "/admin/posts/:id/edit", editPostHandler)); // 编辑文章
-    router.addRoute(Route(apiPrefix + "/admin/posts/:id/delete", deletePostHandler)); // 删除文章
-    
-    // 添加一个根路径处理程序，将请求重定向到前端静态文件
-    router.addRoute(Route("/", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        // 直接调用静态文件处理程序
-        return handleStaticRequest(r);
-    }));
-    
-    logger.info("博客路由初始化完成，仅保留API路由");
-    
-    // 调试：输出注册的路由
-    auto registeredRoutes = router.dumpRoutes();
-    for (const auto& route : registeredRoutes) {
-        logger.debug("已注册路由: %s", route.c_str());
+    // 尝试将Router转换为BlogRouter
+    // 由于Router现在是多态类，可以使用dynamic_cast
+    BlogRouter* blogRouter = dynamic_cast<BlogRouter*>(&router);
+    if (blogRouter) {
+        initBlogRoutes(blogRouter);
+    } else {
+        logger.error("Cannot convert Router to BlogRouter, please use BlogRouter type");
     }
 }
 
@@ -1837,59 +1752,63 @@ void initBlogRoutes(BlogRouter* router) {
     // 清除现有路由并设置新的API路由
     router->reset();
     
+    // 读取配置的基础路径
+    NgxLog logger(ngx_cycle->log);
+    std::string basePath = "/api"; // 前后端分离模式下使用/api作为基础路径
+    logger.info("Initializing blog routes, API base path: %s", basePath.c_str());
+    
     // 静态文件服务路由 - 处理所有非API请求
     router->addRoute(Route(HttpMethod::GET_METHOD, "/*", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleStaticRequest(r);
     }));
     
     // API 路由 - 博客文章列表
-    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleBlogIndex(r, params);
     }));
     
     // API 路由 - 单篇博客文章
-    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleBlogPost(r, params);
     }));
     
     // API 路由 - 按分类查看博客
-    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/categories/:category", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/categories/:category", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleBlogCategory(r, params);
     }));
     
     // API 路由 - 按标签查看博客
-    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/tags/:tag", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/tags/:tag", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleBlogTag(r, params);
     }));
     
     // API 路由 - 管理面板（可能需要身份验证）
-    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/admin", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleAdmin(r, params);
     }));
     
     // API 路由 - 添加新博客
-    router->addRoute(Route(HttpMethod::POST_METHOD, "/api/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::POST_METHOD, basePath + "/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleAddPost(r, params);
     }));
     
     // API 路由 - 编辑博客
-    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/posts/:id/edit", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts/:id/edit", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleEditPost(r, params);
     }));
     
-    router->addRoute(Route(HttpMethod::PUT_METHOD, "/api/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::PUT_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleEditPost(r, params);
     }));
     
     // API 路由 - 删除博客
-    router->addRoute(Route(HttpMethod::DELETE_METHOD, "/api/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+    router->addRoute(Route(HttpMethod::DELETE_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleDeletePost(r, params);
     }));
     
     // 打印所有路由以供调试
-    NgxLog logger(ngx_cycle->log);
     std::vector<std::string> routes = router->dumpRoutes();
     for (const auto& route : routes) {
-        logger.info("路由: %s", route.c_str());
+        logger.info("Registered route: %s", route.c_str());
     }
 }

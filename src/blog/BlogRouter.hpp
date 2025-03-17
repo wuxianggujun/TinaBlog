@@ -63,20 +63,23 @@ struct Route
 class Router
 {
 public:
+    // 虚析构函数，使得Router成为多态类
+    virtual ~Router() = default;
+    
     // 添加路由
-    void addRoute(const Route& route);
+    virtual void addRoute(const Route& route);
     
     // 重置所有路由
-    void reset();
+    virtual void reset();
     
     // 路由处理
-    ngx_int_t route(ngx_http_request_t* r);
+    virtual ngx_int_t route(ngx_http_request_t* r);
     
     // 获取路由数量
-    size_t getRouteCount() const;
+    virtual size_t getRouteCount() const;
     
     // 转储路由列表（用于调试）
-    std::vector<std::string> dumpRoutes() const;
+    virtual std::vector<std::string> dumpRoutes() const;
     
 protected:
     std::vector<Route> routes;
@@ -122,12 +125,12 @@ public:
         ngx_uri.data = (u_char*)uri.c_str();
         ngx_uri.len = uri.length();
         
-        logger.debug("尝试匹配路由: %s", uri.c_str());
+        logger.debug("Trying to match route: %s", uri.c_str());
         
         // 遍历所有路由并检查匹配（注：使用dumpRoutes只是为了日志）
         std::vector<std::string> routesList = Router::dumpRoutes();
         for (const auto& routeStr : routesList) {
-            logger.debug("检查路由: %s", routeStr.c_str());
+            logger.debug("Checking route: %s", routeStr.c_str());
         }
         
         // 遍历所有路由并检查匹配
@@ -140,7 +143,7 @@ public:
             
             // 检查HTTP方法匹配 (ANY_METHOD匹配任何方法)
             if (route.method != ANY_METHOD && route.method != method) {
-                logger.debug("HTTP方法不匹配: %d != %d", route.method, method);
+                logger.debug("HTTP method mismatch: %d != %d", route.method, method);
                 continue;
             }
             
@@ -149,12 +152,12 @@ public:
             
             // 尝试匹配路由模式
             if (route.match(ngx_uri, params)) {
-                logger.debug("找到匹配的路由: %s", route.pattern.c_str());
+                logger.debug("Found matching route: %s", route.pattern.c_str());
                 return route.handler;
             }
         }
         
-        logger.debug("没有找到匹配的路由");
+        logger.debug("No matching route found");
         return nullptr;  // 没有匹配的路由
     }
 
@@ -189,7 +192,7 @@ public:
             
             // 打印路由信息
             ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                "已注册路由: [%s] %s", 
+                "Registered route: [%s] %s", 
                 methodStr.c_str(), 
                 route.pattern.c_str());
         }
