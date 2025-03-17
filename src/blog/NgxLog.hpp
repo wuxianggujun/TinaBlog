@@ -20,7 +20,7 @@ public:
      * @brief 构造函数，使用当前请求创建日志记录器
      * @param r 当前HTTP请求对象
      */
-    NgxLog(ngx_http_request_t* r) 
+    explicit NgxLog(ngx_http_request_t* r) 
         : NginxContext<ngx_log_t>(r && r->connection ? r->connection->log : nullptr, false),
           r_(r) {}
     

@@ -244,7 +244,7 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf)
 
         db_initialized = true;
     }
-    
+
     // 处理博客路径配置
     if (loc_conf && loc_conf->base_path.len > 0)
     {
@@ -311,14 +311,14 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf)
 void* BlogModule::createMainConfig(ngx_conf_t* cf)
 {
     // 使用NgxConf封装原始指针
-    NgxConf conf(cf);
-    NgxLog logger(cf->log);
+    const NgxConf conf(cf);
+    const NgxLog logger(cf->log);
 
     logger.debug("创建主配置");
 
-    // 分配内存
-    auto* config = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(conf.pool(), sizeof(BlogModuleConfig)));
+    const NgxPool pool(conf.pool());
+
+    auto* config = pool.alloc<BlogModuleConfig>();
 
     if (config == nullptr)
     {
@@ -361,9 +361,9 @@ void* BlogModule::createServerConfig(ngx_conf_t* cf)
 
     logger.debug("创建服务器配置");
 
-    // 分配内存
-    auto* config = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(conf.pool(), sizeof(BlogModuleConfig)));
+    NgxPool pool(conf.pool());
+
+    auto* config = pool.alloc<BlogModuleConfig>();
 
     if (config == nullptr)
     {
@@ -419,9 +419,9 @@ void* BlogModule::createLocationConfig(ngx_conf_t* cf)
     NgxLog logger(cf->log);
     logger.debug("创建位置配置");
 
-    // 创建配置结构体
-    BlogModuleConfig* conf = static_cast<BlogModuleConfig*>(
-        ngx_pcalloc(cf->pool, sizeof(BlogModuleConfig)));
+    NgxPool pool(cf->pool);
+
+    auto* conf = pool.alloc<BlogModuleConfig>();
 
     if (conf == nullptr)
     {
@@ -449,8 +449,8 @@ void* BlogModule::createLocationConfig(ngx_conf_t* cf)
 char* BlogModule::mergeLocationConfig(ngx_conf_t* cf, void* parent, void* child)
 {
     // 转换父子配置为模块配置类型
-    BlogModuleConfig* prev = static_cast<BlogModuleConfig*>(parent);
-    BlogModuleConfig* conf = static_cast<BlogModuleConfig*>(child);
+    auto* prev = static_cast<BlogModuleConfig*>(parent);
+    auto* conf = static_cast<BlogModuleConfig*>(child);
 
     NgxLog logger(cf->log);
     logger.debug("合并位置配置开始");
@@ -566,7 +566,7 @@ char* BlogModule::setBlogPath(ngx_conf_t* cf, ngx_command_t* cmd, void* conf)
                        "Setting blog_path to: %V", &value.get());
 
         // 设置配置
-        BlogModuleConfig* config = static_cast<BlogModuleConfig*>(conf);
+        auto* config = static_cast<BlogModuleConfig*>(conf);
         config->base_path = value.get();
 
         return NGX_CONF_OK;
@@ -629,14 +629,10 @@ char* BlogModule::setDbAutoConnect(ngx_conf_t* cf, ngx_command_t* cmd, void* con
     return ngx_conf_set_flag_slot(cf, cmd, conf);
 }
 
-// 在命名空间内部实现handleOptionsRequest的非静态版本
-namespace
+ngx_int_t handleOptionsRequest(NgxResponse& response, const RouteParams& params)
 {
-    ngx_int_t handleOptionsRequest(NgxResponse& response, const RouteParams& params)
-    {
-        // 调用BlogModule的静态方法
-        return BlogModule::handleOptionsRequest(response, params);
-    }
+    // 调用BlogModule的静态方法
+    return BlogModule::handleOptionsRequest(response, params);
 }
 
 // 在命名空间外部定义全局可见的模块结构
@@ -842,31 +838,8 @@ ngx_int_t BlogModule::serveStaticFile(ngx_http_request_t* r, const std::string& 
 
         return ngx_http_output_filter(r, &out);
     }
-    else
-    {
-        logger.error("Failed to read file content: %s", path.c_str());
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-}
-
-// 初始化博客路由
-static void initBlogRoutes(const std::string& basePath, Router& router)
-{
-    // 此函数已废弃，使用下面的新版initBlogRoutes(BlogRouter*)替代
-    NgxLog logger(ngx_cycle->log);
-    logger.warn("Using deprecated initBlogRoutes function, please use the new implementation");
-
-    // 尝试将Router转换为BlogRouter
-    // 由于Router现在是多态类，可以使用dynamic_cast
-    BlogRouter* blogRouter = dynamic_cast<BlogRouter*>(&router);
-    if (blogRouter)
-    {
-        BlogModule::initBlogRoutes(blogRouter);
-    }
-    else
-    {
-        logger.error("Cannot convert Router to BlogRouter, please use BlogRouter type");
-    }
+    logger.error("Failed to read file content: %s", path.c_str());
+    return NGX_HTTP_INTERNAL_SERVER_ERROR;
 }
 
 // 初始化博客路由
@@ -1101,19 +1074,16 @@ ngx_int_t BlogModule::handleBlogPost(NgxResponse& response, const RouteParams& p
                    .enableCors()
                    .send(successResponse.dump(2));
         }
-        else
-        {
-            // 文章不存在
-            logger.warn("Post with ID %d not found", postId);
+        // 文章不存在
+        logger.warn("Post with ID %d not found", postId);
 
-            // 返回404错误
-            json errorResponse = JsonResponse::error("文章不存在", 404);
-            return response
-                   .status(NGX_HTTP_NOT_FOUND)
-                   .contentType("application/json")
-                   .enableCors()
-                   .send(errorResponse.dump(2));
-        }
+        // 返回404错误
+        json errorResponse = JsonResponse::error("文章不存在", 404);
+        return response
+               .status(NGX_HTTP_NOT_FOUND)
+               .contentType("application/json")
+               .enableCors()
+               .send(errorResponse.dump(2));
     }
     catch (const std::exception& e)
     {
@@ -1592,9 +1562,7 @@ ngx_int_t BlogModule::handleDeletePost(NgxResponse& response, const RouteParams&
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理删除文章API请求");
 
         // 检查是否有文章ID
@@ -1610,11 +1578,7 @@ ngx_int_t BlogModule::handleDeletePost(NgxResponse& response, const RouteParams&
 
         // 获取文章ID
         int postId = std::stoi(params.at("id"));
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
-
+        
         // 使用DAO删除文章
         BlogPostDao dao;
 
@@ -1631,11 +1595,21 @@ ngx_int_t BlogModule::handleDeletePost(NgxResponse& response, const RouteParams&
                    .send(errorResponse.dump(2));
         }
 
-        // TODO: 实现文章删除逻辑
-        // 现在简单返回未实现
-        json errorResponse = JsonResponse::error("文章删除功能尚未实现", 501);
+        bool success = dao.deletePost(postId);
+        
+        if (success) {
+            // 返回成功响应
+            json successResponse = JsonResponse::success({{"message", "文章删除成功"}});
+            return response
+                   .status(NGX_HTTP_OK)
+                   .contentType("application/json")
+                   .enableCors()
+                   .send(successResponse.dump(2));
+        }
+        // 删除失败
+        json errorResponse = JsonResponse::error("删除文章失败", 500);
         return response
-               .status(NGX_HTTP_NOT_IMPLEMENTED)
+               .status(NGX_HTTP_INTERNAL_SERVER_ERROR)
                .contentType("application/json")
                .enableCors()
                .send(errorResponse.dump(2));
