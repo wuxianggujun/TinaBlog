@@ -41,7 +41,7 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
     // 记录输入的连接字符串
     ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "配置的连接字符串: %s", connStr.c_str());
     
-    // 尝试解析连接字符串
+    // 解析连接字符串
     parseConnectionString(connStr);
     
     // 打印连接参数
@@ -50,28 +50,16 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
                  host_.c_str(), port_, user_.c_str(), database_.c_str());
 
     try {
-        // 构建X Protocol专用URL格式
-        std::string url = "mysqlx://";
-        url += user_;
+        // 使用参数方式连接MySQL X Protocol
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "使用SessionOption连接到MySQL X Protocol");
         
-        // 始终添加密码参数，即使为空也添加冒号，确保格式正确
-        url += ":";
-        url += password_;
-        
-        url += "@";
-        url += host_;
-        url += ":";
-        // 确保使用X Protocol端口33060
-        url += std::to_string(33060);
-        url += "/";
-        url += database_;
-        
-        // 打印连接URL（隐藏密码）
-        std::string logUrl = "mysqlx://" + user_ + ":***@" + host_ + ":33060/" + database_;
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "尝试使用URL连接: %s", logUrl.c_str());
-        
-        // 创建会话
-        session_ = new mysqlx::Session(url);
+        session_ = new mysqlx::Session(
+            mysqlx::SessionOption::HOST, host_,
+            mysqlx::SessionOption::PORT, port_,  // 使用解析后的端口，默认33060
+            mysqlx::SessionOption::USER, user_,
+            mysqlx::SessionOption::PWD, password_,
+            mysqlx::SessionOption::DB, database_
+        );
         
         connected_ = true;
         ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "成功连接到MySQL数据库");
@@ -98,66 +86,7 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
         return true;
     } catch (const mysqlx::Error& err) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "MySQL X DevAPI 错误: %s", err.what());
-        
-        // 尝试直接使用默认参数和X Protocol端口
-        try {
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "尝试使用MySQL Server配置中的X Protocol");
-            
-            std::string auth_url;
-            
-            // 使用nginx.conf中配置的密码
-            if (!password_.empty()) {
-                auth_url = "mysqlx://root:" + password_ + "@127.0.0.1:33060/blog";
-            } else {
-                auth_url = "mysqlx://root@127.0.0.1:33060/blog";
-            }
-            
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "连接URL: mysqlx://root:***@127.0.0.1:33060/blog");
-            
-            session_ = new mysqlx::Session(auth_url);
-            
-            connected_ = true;
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "成功连接到MySQL数据库（X Protocol）");
-            
-            // 如果需要自动初始化数据库表
-            if (autoInit && !createTables()) {
-                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "创建数据库表失败");
-                close();
-                return false;
-            }
-            
-            return true;
-        } catch (const std::exception& ex) {
-            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "X Protocol连接失败: %s", ex.what());
-            
-            // 最后尝试使用手动构建的Session选项
-            try {
-                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "尝试使用SessionOption连接到MySQL X Protocol");
-                
-                session_ = new mysqlx::Session(
-                    mysqlx::SessionOption::HOST, "127.0.0.1",
-                    mysqlx::SessionOption::PORT, 33060,  // 确保使用33060
-                    mysqlx::SessionOption::USER, "root",
-                    mysqlx::SessionOption::PWD, password_,  // 使用配置的密码
-                    mysqlx::SessionOption::DB, "blog"
-                );
-                
-                connected_ = true;
-                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "成功使用SessionOption连接到MySQL X Protocol");
-                
-                // 如果需要自动初始化数据库表
-                if (autoInit && !createTables()) {
-                    ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "创建数据库表失败");
-                    close();
-                    return false;
-                }
-                
-                return true;
-            } catch (const std::exception& ex) {
-                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "SessionOption连接失败: %s", ex.what());
-                return false;
-            }
-        }
+        return false;
     } catch (const std::exception& ex) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "连接过程中异常: %s", ex.what());
         return false;
