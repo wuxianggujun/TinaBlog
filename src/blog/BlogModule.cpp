@@ -483,10 +483,7 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r)
     {
         // 封装请求
         NgxRequest request(r);
-
-        // 创建配置对象
-        BlogConfig config(request);
-
+        
         // 创建日志对象
         NgxLog logger(r);
 
@@ -967,14 +964,8 @@ ngx_int_t BlogModule::handleBlogIndex(NgxResponse& response, const RouteParams& 
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理博客首页API请求");
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
 
         // 从数据库中获取文章列表
         BlogPostDao dao;
@@ -1030,19 +1021,13 @@ ngx_int_t BlogModule::handleBlogPost(NgxResponse& response, const RouteParams& p
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理博客文章详情API请求");
 
         // 从路由参数中获取文章ID
         std::string postIdParam = params.at("id");
         int postId = std::stoi(postIdParam);
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
-
+        
         // 从数据库获取文章
         BlogPostDao dao;
         auto post = dao.getPostById(postId);
@@ -1105,9 +1090,7 @@ ngx_int_t BlogModule::handleBlogCategory(NgxResponse& response, const RouteParam
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
 
         // 获取分类参数
         auto it = params.find("category");
@@ -1124,11 +1107,7 @@ ngx_int_t BlogModule::handleBlogCategory(NgxResponse& response, const RouteParam
 
         std::string category = it->second;
         logger.info("处理分类API请求: %s", category.c_str());
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
-
+        
         // 从数据库获取该分类的文章
         BlogPostDao dao;
         auto posts = dao.getPostsByCategory(category, 10); // 获取前10篇文章
@@ -1184,9 +1163,7 @@ ngx_int_t BlogModule::handleBlogTag(NgxResponse& response, const RouteParams& pa
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
 
         // 获取标签参数
         auto it = params.find("tag");
@@ -1204,11 +1181,7 @@ ngx_int_t BlogModule::handleBlogTag(NgxResponse& response, const RouteParams& pa
 
         std::string tag = it->second;
         logger.info("处理标签API请求: %s", tag.c_str());
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
-
+        
         // 从数据库获取该标签的文章
         BlogPostDao dao;
         auto posts = dao.getPostsByTag(tag, 10); // 获取前10篇文章
@@ -1263,14 +1236,12 @@ ngx_int_t BlogModule::handleAdmin(NgxResponse& response, const RouteParams& para
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+
+        NgxLog logger(response.get());
         logger.info("处理博客管理API请求");
 
         // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
+        NgxRequest request(response.get());
 
         // 从数据库获取所有文章
         BlogPostDao dao;
@@ -1325,14 +1296,11 @@ ngx_int_t BlogModule::handleAddPost(NgxResponse& response, const RouteParams& pa
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理添加文章API请求");
 
         // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
+        NgxRequest request(response.get());
 
         // 解析请求体中的JSON数据
         std::string requestBody = request.getRequestBody();
@@ -1464,9 +1432,7 @@ ngx_int_t BlogModule::handleEditPost(NgxResponse& response, const RouteParams& p
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理编辑文章API请求");
 
         // 检查是否有文章ID
@@ -1484,8 +1450,7 @@ ngx_int_t BlogModule::handleEditPost(NgxResponse& response, const RouteParams& p
         int postId = std::stoi(params.at("id"));
 
         // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
+        NgxRequest request(response.get());
 
         // 解析请求体中的JSON数据
         std::string requestBody = request.getRequestBody();
@@ -1646,15 +1611,9 @@ ngx_int_t BlogModule::handleAdminStats(NgxResponse& response, const RouteParams&
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理管理面板统计数据API请求");
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
-
+        
         // 从数据库获取统计数据
         BlogPostDao dao;
 
@@ -1736,9 +1695,7 @@ ngx_int_t BlogModule::handleGetPostForEdit(NgxResponse& response, const RoutePar
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理获取文章编辑数据API请求");
 
         // 检查是否有文章ID
@@ -1754,11 +1711,7 @@ ngx_int_t BlogModule::handleGetPostForEdit(NgxResponse& response, const RoutePar
 
         // 获取文章ID
         int postId = std::stoi(params.at("id"));
-
-        // 创建配置对象
-        NgxRequest request(r);
-        BlogConfig config(request);
-
+        
         // 使用DAO获取文章
         BlogPostDao dao;
         auto post = dao.getPostById(postId);
@@ -1847,9 +1800,7 @@ ngx_int_t BlogModule::handleOptionsRequest(NgxResponse& response, const RoutePar
 {
     try
     {
-        // 获取请求对象和日志
-        ngx_http_request_t* r = response.get();
-        NgxLog logger(r);
+        NgxLog logger(response.get());
         logger.info("处理OPTIONS预检请求");
 
         // 设置CORS响应头
