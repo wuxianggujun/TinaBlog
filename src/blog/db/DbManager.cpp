@@ -5,7 +5,6 @@
 #include <vector>
 #include <mutex>
 
-
 // 单例实例
 DbManager& DbManager::getInstance() {
     static DbManager instance;
@@ -14,12 +13,13 @@ DbManager& DbManager::getInstance() {
 
 // 构造函数
 DbManager::DbManager() 
-    : host_("localhost"),
+    : host_("127.0.0.1"),  // 使用IP地址而不是主机名
       user_("root"),
       password_(""),
       database_("blog"),
       port_(33060), // X Protocol默认端口
-      connected_(false)
+      connected_(false),
+      session_(nullptr)
 {
     // 构造函数体为空
 }
@@ -38,87 +38,128 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
         close();
     }
     
-    // 解析连接字符串
-    if (!parseConnectionString(connStr)) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to parse database connection string");
-        return false;
-    }
+    // 记录输入的连接字符串
+    ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "配置的连接字符串: %s", connStr.c_str());
     
+    // 尝试解析连接字符串
+    parseConnectionString(connStr);
+    
+    // 打印连接参数
+    ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
+                 "连接参数 - 主机: %s, 端口: %d, 用户: %s, 数据库: %s", 
+                 host_.c_str(), port_, user_.c_str(), database_.c_str());
+
     try {
-        // 使用简单的参数方式而不是URL字符串
-        session_ = nullptr; // 确保是nullptr
+        // 构建X Protocol专用URL格式
+        std::string url = "mysqlx://";
+        url += user_;
         
-        // 直接使用参数而不是构建URL
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                     "Connecting to MySQL at %s:%d, user: %s, database: %s", 
-                     host_.c_str(), port_, user_.c_str(), database_.c_str());
+        // 始终添加密码参数，即使为空也添加冒号，确保格式正确
+        url += ":";
+        url += password_;
         
-        // 使用mysqlx名字空间中的静态方法，而不是直接构造
-        session_ = new mysqlx::Session(
-            mysqlx::SessionOption::HOST, host_,
-            mysqlx::SessionOption::PORT, port_,
-            mysqlx::SessionOption::USER, user_,
-            mysqlx::SessionOption::PWD, password_,
-            mysqlx::SessionOption::DB, database_
-        );
+        url += "@";
+        url += host_;
+        url += ":";
+        // 确保使用X Protocol端口33060
+        url += std::to_string(33060);
+        url += "/";
+        url += database_;
+        
+        // 打印连接URL（隐藏密码）
+        std::string logUrl = "mysqlx://" + user_ + ":***@" + host_ + ":33060/" + database_;
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "尝试使用URL连接: %s", logUrl.c_str());
+        
+        // 创建会话
+        session_ = new mysqlx::Session(url);
         
         connected_ = true;
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Successfully connected to MySQL database");
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "成功连接到MySQL数据库");
+        
+        // 显示MySQL服务器版本信息
+        try {
+            mysqlx::RowResult res = session_->sql("SHOW VARIABLES LIKE 'version'").execute();
+            mysqlx::Row row = res.fetchOne();
+            if (row) {
+                std::string version = row[1].get<std::string>();
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "MySQL 服务器版本: %s", version.c_str());
+            }
+        } catch (const std::exception& ex) {
+            ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, "无法获取MySQL版本: %s", ex.what());
+        }
         
         // 如果需要自动初始化数据库表
         if (autoInit && !createTables()) {
-            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to initialize database tables");
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "创建数据库表失败");
             close();
             return false;
         }
         
         return true;
-    }
-    catch (const mysqlx::Error &err) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "MySQL X DevAPI error: %s", err.what());
+    } catch (const mysqlx::Error& err) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "MySQL X DevAPI 错误: %s", err.what());
         
-        // 尝试使用传统端口
+        // 尝试直接使用默认参数和X Protocol端口
         try {
-            if (port_ != 3306) {
-                port_ = 3306;  // 切换到传统端口
+            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "尝试使用MySQL Server配置中的X Protocol");
+            
+            std::string auth_url;
+            
+            // 使用nginx.conf中配置的密码
+            if (!password_.empty()) {
+                auth_url = "mysqlx://root:" + password_ + "@127.0.0.1:33060/blog";
+            } else {
+                auth_url = "mysqlx://root@127.0.0.1:33060/blog";
+            }
+            
+            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "连接URL: mysqlx://root:***@127.0.0.1:33060/blog");
+            
+            session_ = new mysqlx::Session(auth_url);
+            
+            connected_ = true;
+            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "成功连接到MySQL数据库（X Protocol）");
+            
+            // 如果需要自动初始化数据库表
+            if (autoInit && !createTables()) {
+                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "创建数据库表失败");
+                close();
+                return false;
+            }
+            
+            return true;
+        } catch (const std::exception& ex) {
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "X Protocol连接失败: %s", ex.what());
+            
+            // 最后尝试使用手动构建的Session选项
+            try {
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "尝试使用SessionOption连接到MySQL X Protocol");
                 
-                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                             "Retrying with traditional port 3306");
-                
-                // 使用传统端口重试
                 session_ = new mysqlx::Session(
-                    mysqlx::SessionOption::HOST, host_,
-                    mysqlx::SessionOption::PORT, port_,
-                    mysqlx::SessionOption::USER, user_,
-                    mysqlx::SessionOption::PWD, password_,
-                    mysqlx::SessionOption::DB, database_
+                    mysqlx::SessionOption::HOST, "127.0.0.1",
+                    mysqlx::SessionOption::PORT, 33060,  // 确保使用33060
+                    mysqlx::SessionOption::USER, "root",
+                    mysqlx::SessionOption::PWD, password_,  // 使用配置的密码
+                    mysqlx::SessionOption::DB, "blog"
                 );
                 
                 connected_ = true;
-                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Successfully connected to MySQL database on port 3306");
+                ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "成功使用SessionOption连接到MySQL X Protocol");
                 
                 // 如果需要自动初始化数据库表
                 if (autoInit && !createTables()) {
-                    ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to initialize database tables");
+                    ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "创建数据库表失败");
                     close();
                     return false;
                 }
                 
                 return true;
-            }
-            else {
-                // 已经是传统端口3306了，不需要重试
-                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to connect on port 3306");
+            } catch (const std::exception& ex) {
+                ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "SessionOption连接失败: %s", ex.what());
                 return false;
             }
         }
-        catch (const std::exception& ex) {
-            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Failed to connect on traditional port: %s", ex.what());
-            return false;
-        }
-    }
-    catch (const std::exception& ex) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Exception during MySQL connection: %s", ex.what());
+    } catch (const std::exception& ex) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "连接过程中异常: %s", ex.what());
         return false;
     }
 }
@@ -142,8 +183,7 @@ bool DbManager::isConnected() const {
         // 尝试通过简单的SQL查询检查连接是否有效
         mysqlx::SqlResult res = const_cast<mysqlx::Session*>(session_)->sql("SELECT 1").execute();
         return true;
-    }
-    catch (...) {
+    } catch (...) {
         return false;
     }
 }
@@ -158,8 +198,7 @@ mysqlx::RowResult DbManager::executeQuery(const std::string& sql) {
     
     try {
         return session_->sql(sql).execute();
-    }
-    catch (const mysqlx::Error& err) {
+    } catch (const mysqlx::Error& err) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "MySQL query error: %s", err.what());
         throw;
     }
@@ -176,8 +215,7 @@ int DbManager::executeUpdate(const std::string& sql) {
     try {
         mysqlx::SqlResult result = session_->sql(sql).execute();
         return static_cast<int>(result.getAffectedItemsCount());
-    }
-    catch (const mysqlx::Error& err) {
+    } catch (const mysqlx::Error& err) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "MySQL update error: %s", err.what());
         return -1;
     }
@@ -193,8 +231,7 @@ uint64_t DbManager::getLastInsertId() {
         mysqlx::RowResult result = session_->sql("SELECT LAST_INSERT_ID()").execute();
         mysqlx::Row row = result.fetchOne();
         return row[0].get<uint64_t>();
-    }
-    catch (const std::exception& ex) {
+    } catch (const std::exception& ex) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Error getting last insert ID: %s", ex.what());
         return 0;
     }
@@ -213,8 +250,7 @@ void DbManager::close() {
             // 释放内存
             delete session_;
             session_ = nullptr;
-        }
-        catch (...) {
+        } catch (...) {
             // 忽略关闭连接时的异常
             ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, "Exception ignored while closing MySQL connection");
         }
@@ -285,8 +321,7 @@ bool DbManager::createTables() {
         session_->sql(createPostCategoriesTable).execute();
         session_->sql(createPostTagsTable).execute();
         return true;
-    }
-    catch (const mysqlx::Error& err) {
+    } catch (const mysqlx::Error& err) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Error creating tables: %s", err.what());
         return false;
     }
@@ -295,21 +330,36 @@ bool DbManager::createTables() {
 // 解析连接字符串
 bool DbManager::parseConnectionString(const std::string& connStr) {
     // 默认值
-    host_ = "localhost";
+    host_ = "127.0.0.1";  // 使用IP地址而不是主机名
     user_ = "root";
     password_ = "";
     database_ = "blog";
     port_ = 33060; // X Protocol默认端口
+    
+    // 如果连接字符串为空，使用默认值
+    if (connStr.empty()) {
+        return true;
+    }
     
     // 格式: host=localhost;user=root;password=secret;database=blog;port=33060
     std::istringstream ss(connStr);
     std::string token;
     
     while (std::getline(ss, token, ';')) {
-        std::istringstream tokenStream(token);
-        std::string key, value;
-        
-        if (std::getline(tokenStream, key, '=') && std::getline(tokenStream, value)) {
+        size_t pos = token.find('=');
+        if (pos != std::string::npos) {
+            std::string key = token.substr(0, pos);
+            std::string value = token.substr(pos + 1);
+            
+            // 去除可能的空格
+            auto trim = [](std::string& s) {
+                s.erase(0, s.find_first_not_of(" \t\r\n"));
+                s.erase(s.find_last_not_of(" \t\r\n") + 1);
+            };
+            
+            trim(key);
+            trim(value);
+            
             if (key == "host") {
                 host_ = value;
             } else if (key == "user") {
@@ -323,7 +373,7 @@ bool DbManager::parseConnectionString(const std::string& connStr) {
                     port_ = std::stoi(value);
                 } catch (...) {
                     ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, 
-                                 "Invalid port in connection string: %s", value.c_str());
+                                 "端口格式不正确: %s", value.c_str());
                 }
             }
         }

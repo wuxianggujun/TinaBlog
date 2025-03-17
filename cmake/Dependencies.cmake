@@ -26,10 +26,8 @@ function(configure_compiler_options TARGET_NAME)
             /wd4204  # 非标准扩展警告
         )
         
+        # 删除排除链接库的选项，这些会导致标准库函数缺失
         target_link_options(${TARGET_NAME} PRIVATE
-            /NODEFAULTLIB:libcmt.lib
-            /NODEFAULTLIB:libcmtd.lib
-            /NODEFAULTLIB:msvcrt.lib
             /ignore:4217
             /ignore:4286
         )
@@ -273,8 +271,19 @@ function(link_all_dependencies TARGET_NAME)
             ws2_32.lib
             gdi32.lib
             crypt32.lib
+            # 添加C运行时库
+            ucrt.lib
+            vcruntime.lib
+            msvcrt.lib
         )
         target_link_libraries(${TARGET_NAME} PRIVATE ${SYSTEM_LIBS})
+        
+        # 修改链接选项，删除NODEFAULTLIB:msvcrt.lib
+        target_link_options(${TARGET_NAME} PRIVATE
+            /DEFAULTLIB:ucrt.lib
+            /DEFAULTLIB:vcruntime.lib
+            /DEFAULTLIB:msvcrt.lib
+        )
     endif()
     
     # 链接所有VCPKG库

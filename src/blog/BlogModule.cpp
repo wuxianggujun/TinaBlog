@@ -188,13 +188,99 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
     *h = handleRequest;
     ngx_log_error(NGX_LOG_INFO, cf->log, 0, "请求处理器已注册");
 
-    // 获取全局配置中的博客路径设置
-    auto* config = static_cast<BlogModuleConfig*>(
+    // 获取位置配置
+    auto* loc_conf = static_cast<BlogModuleConfig*>(
         ngx_http_conf_get_module_loc_conf(cf, ngx_http_blog_module));
+        
+    // 获取主配置，用于获取全局数据库设置
+    auto* main_conf = static_cast<BlogModuleConfig*>(
+        ngx_http_conf_get_module_main_conf(cf, ngx_http_blog_module));
 
-    if (config && config->base_path.len > 0) {
+    // 首先初始化数据库连接（优先使用位置配置，如果没有则尝试使用主配置）
+    bool db_initialized = false;
+    
+    // 尝试使用位置配置中的数据库连接字符串
+    if (loc_conf && loc_conf->db_conn_str.len > 0) {
+        std::string connStr((char*)loc_conf->db_conn_str.data, loc_conf->db_conn_str.len);
+        
+        // 使用日志记录进度
+        ngx_log_error(NGX_LOG_INFO, cf->log, 0, 
+                    "初始化数据库连接(位置配置)，连接字符串: %s", connStr.c_str());
+                    
+        try {
+            auto& dbManager = DbManager::getInstance();
+            bool success = dbManager.initialize(connStr);
+            
+            ngx_log_error(NGX_LOG_INFO, cf->log, 0, 
+                        "数据库初始化%s", 
+                        success ? "成功" : "失败");
+                        
+        } catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, cf->log, 0, 
+                        "初始化数据库异常: %s", e.what());
+            return NGX_ERROR; // 如果初始化失败，直接返回错误
+        }
+        
+        db_initialized = true;
+    }
+    // 如果位置配置没有数据库连接字符串，尝试使用主配置
+    else if (main_conf && main_conf->db_conn_str.len > 0) {
+        std::string connStr((char*)main_conf->db_conn_str.data, main_conf->db_conn_str.len);
+        
+        // 使用日志记录进度
+        ngx_log_error(NGX_LOG_INFO, cf->log, 0, 
+                    "初始化数据库连接(主配置)，连接字符串: %s", connStr.c_str());
+                    
+        try {
+            auto& dbManager = DbManager::getInstance();
+            bool success = dbManager.initialize(connStr);
+            
+            ngx_log_error(NGX_LOG_INFO, cf->log, 0, 
+                        "数据库初始化%s", 
+                        success ? "成功" : "失败");
+                        
+            if (!success) {
+                return NGX_ERROR; // 如果初始化失败，直接返回错误
+            }
+                        
+        } catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, cf->log, 0, 
+                        "初始化数据库异常: %s", e.what());
+            return NGX_ERROR; // 如果初始化失败，直接返回错误
+        }
+        
+        db_initialized = true;
+    }
+    // 如果没有任何配置，使用默认值
+    else {
+        ngx_log_error(NGX_LOG_WARN, cf->log, 0, "数据库连接字符串未配置(主配置和位置配置)，使用默认值");
+        
+        try {
+            auto& dbManager = DbManager::getInstance();
+            // 使用默认连接字符串初始化数据库
+            std::string defaultConnStr = "mysqlx://root@127.0.0.1:3306/blog";
+            bool success = dbManager.initialize(defaultConnStr);
+            
+            ngx_log_error(NGX_LOG_INFO, cf->log, 0, 
+                        "使用默认设置初始化数据库%s", 
+                        success ? "成功" : "失败");
+                        
+            if (!success) {
+                return NGX_ERROR; // 如果初始化失败，直接返回错误
+            }
+        } catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, cf->log, 0, 
+                        "使用默认设置初始化数据库异常: %s", e.what());
+            return NGX_ERROR; // 如果初始化失败，直接返回错误
+        }
+        
+        db_initialized = true;
+    }
+
+    // 处理博客路径配置
+    if (loc_conf && loc_conf->base_path.len > 0) {
         // 初始化文章管理器
-        std::string basePath((char*)config->base_path.data, config->base_path.len);
+        std::string basePath((char*)loc_conf->base_path.data, loc_conf->base_path.len);
         std::string postsPath = basePath + "/posts";
         
         // 使用日志记录进度
@@ -218,7 +304,7 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
         }).detach();
 
         // 显式初始化路由一次
-        BlogConfig blogConfig(config);
+        BlogConfig blogConfig(loc_conf);
         ngx_log_error(NGX_LOG_INFO, cf->log, 0, "Initializing router, base path: %s", basePath.c_str());
         
         // 获取路由器实例并初始化
@@ -234,7 +320,7 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
         }
     } else {
         ngx_log_error(NGX_LOG_WARN, cf->log, 0, "Blog base path not configured, using default value");
-        
+                
         // 获取路由器实例并初始化
         auto& router = getBlogRouter();
         router.reset(); // 确保路由器是空的

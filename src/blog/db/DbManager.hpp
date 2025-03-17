@@ -80,7 +80,7 @@ private:
     bool parseConnectionString(const std::string& connStr);
 
 private:
-    // 数据库会话 - 使用裸指针，在close()中手动管理内存
+    // X DevAPI会话 - 使用裸指针，在close()中手动管理内存
     mysqlx::Session* session_;
     
     // 连接参数
