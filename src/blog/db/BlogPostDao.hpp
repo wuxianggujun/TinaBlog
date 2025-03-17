@@ -20,6 +20,7 @@ struct BlogPostRecord {
     std::string slug;          // URL友好的标识符
     std::string content;       // 内容
     std::string summary;       // 摘要
+    std::string author;        // 作者
     std::string created_at;    // 创建时间
     std::string updated_at;    // 更新时间
     bool published;            // 是否发布

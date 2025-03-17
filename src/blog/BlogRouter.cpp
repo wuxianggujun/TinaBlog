@@ -8,534 +8,237 @@
 #include "BlogPostManager.hpp"
 #include <fstream>
 #include <sstream>
+#include "db/BlogPostDao.hpp"
+#include <algorithm>
+#include <cstring>
+#include <regex>
 
-// 处理博客首页
-static ngx_int_t handleBlogIndex(ngx_http_request_t* r, const RouteParams& params) {
-    try {
-        // 封装请求
-        NgxRequest request(r);
-        
-        // 创建配置对象
-        BlogConfig config(request);
-        
-        // 使用NgxLog记录日志
-        NgxLog logger(r);
-        logger.info("处理博客首页请求");
-        
-        // 构建模板变量
-        std::unordered_map<std::string, std::string> variables;
-        variables["title"] = "我的博客";
-        variables["description"] = "欢迎访问我的技术博客";
-        variables["author"] = "管理员";
-        
-        // 添加博客基础路径到模板变量
-        variables["blog_base_path"] = config.getBasePath();
-        
-        // 从文章管理器获取文章列表
-        auto& manager = BlogPostManager::getInstance();
-        const auto posts = manager.getAllPosts(10); // 获取前10篇文章
-        
-        // 检查是否有文章
-        if (!posts.empty()) {
-            std::stringstream postsHtml;
-            
-            for (const auto* post : posts) {
-                postsHtml << "<article class=\"blog-post\">\n";
-                postsHtml << "  <a href=\"/blog/post/" << post->getId() << "\" class=\"post-title\">" 
-                          << post->getTitle() << "</a>\n";
-                postsHtml << "  <div class=\"post-meta\">\n";
-                postsHtml << "    <span>作者: " << post->getAuthor() << "</span> |\n";
-                postsHtml << "    <span>发布时间: " << post->getDate() << "</span> |\n";
-                postsHtml << "    <span>分类: " << post->getCategory() << "</span>\n";
-                postsHtml << "  </div>\n";
-                postsHtml << "  <div class=\"post-summary\">\n";
-                postsHtml << "    " << post->getSummary() << "\n";
-                postsHtml << "  </div>\n";
-                postsHtml << "  <a href=\"/blog/post/" << post->getId() 
-                          << "\" class=\"read-more\">阅读全文 &raquo;</a>\n";
-                postsHtml << "</article>\n";
-            }
-            
-            // 设置有文章的变量
-            variables["#posts"] = postsHtml.str();
-            variables["^posts"] = "";  // 无内容
-        } else {
-            // 设置无文章的变量
-            variables["#posts"] = "";  // 无内容
-            variables["^posts"] = "<div class=\"no-posts\">暂无文章</div>";
-            
-            // 如果尚未加载文章管理器，添加示例文章数据
-            if (!manager.isLoaded()) {
-                // 使用模拟文章列表作为示例
-                std::string postsHtml = R"(
-                    <article class="blog-post">
-                        <a href="/blog/post/1" class="post-title">第一篇文章</a>
-                        <div class="post-meta">
-                            <span>作者: 管理员</span> |
-                            <span>发布时间: 2023-05-15</span> |
-                            <span>分类: 技术</span>
-                        </div>
-                        <div class="post-summary">
-                            这是第一篇文章的摘要，介绍了TinaBlog的基本功能和使用方法。
-                        </div>
-                        <a href="/blog/post/1" class="read-more">阅读全文 &raquo;</a>
-                    </article>
-                    <article class="blog-post">
-                        <a href="/blog/post/2" class="post-title">第二篇文章</a>
-                        <div class="post-meta">
-                            <span>作者: 管理员</span> |
-                            <span>发布时间: 2023-05-20</span> |
-                            <span>分类: 教程</span>
-                        </div>
-                        <div class="post-summary">
-                            这是第二篇文章的摘要，详细讲解了如何定制模板和添加新功能。
-                        </div>
-                        <a href="/blog/post/2" class="read-more">阅读全文 &raquo;</a>
-                    </article>
-                )";
-                
-                // 使用示例数据
-                variables["#posts"] = postsHtml;
-                variables["^posts"] = "";
-            }
+// Route::parsePattern 实现
+void Route::parsePattern() {
+    std::string current;
+    bool inParam = false;
+
+    for (char c : pattern) {
+        if (c == ':' && !inParam) {
+            inParam = true;
+            current.clear();
         }
-        
-        // 使用模板引擎渲染响应
-        logger.info("使用模板渲染首页");
-        return BlogModule::serveTemplateWithVariables(r, "blog_index.html", variables);
+        else if (inParam && (c == '/' || c == '.')) {
+            if (!current.empty()) {
+                paramNames.push_back(std::move(current));
+            }
+            inParam = false;
+        }
+        else if (inParam) {
+            current += c;
+        }
     }
-    catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "处理博客首页异常: %s", e.what());
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+
+    if (inParam && !current.empty()) {
+        paramNames.push_back(std::move(current));
     }
 }
 
-// 处理博客文章页
-static ngx_int_t handleBlogPost(ngx_http_request_t* r, const RouteParams& params) {
-    try {
-        // 封装请求
-        NgxRequest request(r);
-        
-        // 创建配置对象
-        BlogConfig config(request);
-        
-        // 使用NgxLog记录日志
-        NgxLog logger(r);
-        
-        // 获取URI字符串
-        std::string uri_str = r->uri.data ? std::string((const char*)r->uri.data, r->uri.len) : "";
-        logger.info("处理博客文章请求: %s", uri_str.c_str());
-        
-        // 获取文章ID参数
-        auto it = params.find("id");
-        if (it == params.end()) {
-            logger.error("缺少文章ID参数");
-            return NGX_HTTP_BAD_REQUEST;
-        }
-        
-        std::string postId = it->second;
-        
-        // 检查ID格式
-        if (postId.empty()) {
-            logger.error("无效的文章ID: %s", postId.c_str());
-            return NGX_HTTP_BAD_REQUEST;
-        }
-        
-        // 构建模板变量
-        std::unordered_map<std::string, std::string> variables;
-        
-        // 从文章管理器获取文章
-        auto& manager = BlogPostManager::getInstance();
-        const BlogPost* post = manager.getPostById(postId);
-        
-        if (post) {
-            // 使用实际文章数据
-            variables["id"] = post->getId();
-            variables["title"] = post->getTitle();
-            variables["author"] = post->getAuthor();
-            variables["publish_date"] = post->getDate();
-            variables["category"] = post->getCategory();
-            variables["content"] = post->toHtml();  // 将Markdown转为HTML
-            variables["view_count"] = ""; // 可以添加浏览量统计
-            
-            // 添加标签
-            std::stringstream tagsHtml;
-            const auto& tags = post->getTags();
-            for (size_t i = 0; i < tags.size(); ++i) {
-                tagsHtml << "<a href=\"/blog/tag/" << tags[i] << "\" class=\"tag\">" 
-                         << tags[i] << "</a>";
-                if (i < tags.size() - 1) {
-                    tagsHtml << ", ";
-                }
-            }
-            variables["tags"] = tagsHtml.str();
-        } else {
-            // 文章不存在或文章管理器尚未初始化，使用示例数据
-            logger.warn("文章不存在或未初始化，使用示例数据: %s", postId.c_str());
-            
-            variables["id"] = postId;
-            variables["title"] = "博客文章 #" + postId;
-            variables["author"] = "管理员";
-            variables["publish_date"] = "2023-05-15";
-            variables["category"] = "技术";
-            variables["content"] = "这是博客文章 #" + postId + " 的内容。\n\n这里可以加载实际的文章内容。";
-            variables["view_count"] = "42";
-            variables["tags"] = "<a href=\"/blog/tag/示例\" class=\"tag\">示例</a>, <a href=\"/blog/tag/测试\" class=\"tag\">测试</a>";
-        }
-        
-        // 添加博客基础路径到模板变量
-        variables["blog_base_path"] = config.getBasePath();
-        
-        // 检查并使用缓存设置
-        if (config.isEnableCache()) {
-            variables["cache_enabled"] = "true";
-            variables["cache_time"] = std::to_string(config.getCacheTime());
-        } else {
-            variables["cache_enabled"] = "false";
-        }
-        
-        // 使用模板引擎渲染响应
-        logger.info("使用模板渲染文章页面");
-        return BlogModule::serveTemplateWithVariables(r, "blog_post.html", variables);
-    }
-    catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "处理博客文章异常: %s", e.what());
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-}
-
-// 处理博客分类页面
-static ngx_int_t handleBlogCategory(ngx_http_request_t* r, const RouteParams& params) {
-    try {
-        // 封装请求
-        NgxRequest request(r);
-        
-        // 创建配置对象
-        BlogConfig config(request);
-        
-        // 使用NgxLog记录日志
-        NgxLog logger(r);
-        
-        // 获取分类参数
-        auto it = params.find("category");
-        if (it == params.end()) {
-            logger.error("缺少分类参数");
-            return NGX_HTTP_BAD_REQUEST;
-        }
-        
-        std::string category = it->second;
-        logger.info("处理分类页面请求: %s", category.c_str());
-        
-        // 构建模板变量
-        std::unordered_map<std::string, std::string> variables;
-        variables["title"] = "分类: " + category;
-        variables["description"] = "查看" + category + "分类下的所有文章";
-        variables["category"] = category;
-        
-        // 添加博客基础路径到模板变量
-        variables["blog_base_path"] = config.getBasePath();
-        
-        // 从文章管理器获取该分类的文章
-        auto& manager = BlogPostManager::getInstance();
-        const auto posts = manager.getPostsByCategory(category, 10); // 获取前10篇文章
-        
-        // 检查是否有文章
-        if (!posts.empty()) {
-            std::stringstream postsHtml;
-            
-            for (const auto* post : posts) {
-                postsHtml << "<article class=\"blog-post\">\n";
-                postsHtml << "  <a href=\"/blog/post/" << post->getId() << "\" class=\"post-title\">" 
-                          << post->getTitle() << "</a>\n";
-                postsHtml << "  <div class=\"post-meta\">\n";
-                postsHtml << "    <span>作者: " << post->getAuthor() << "</span> |\n";
-                postsHtml << "    <span>发布时间: " << post->getDate() << "</span>\n";
-                postsHtml << "  </div>\n";
-                postsHtml << "  <div class=\"post-summary\">\n";
-                postsHtml << "    " << post->getSummary() << "\n";
-                postsHtml << "  </div>\n";
-                postsHtml << "  <a href=\"/blog/post/" << post->getId() 
-                          << "\" class=\"read-more\">阅读全文 &raquo;</a>\n";
-                postsHtml << "</article>\n";
-            }
-            
-            // 设置有文章的变量
-            variables["#posts"] = postsHtml.str();
-            variables["^posts"] = "";  // 无内容
-        } else {
-            // 设置无文章的变量
-            variables["#posts"] = "";  // 无内容
-            variables["^posts"] = "<div class=\"no-posts\">该分类下暂无文章</div>";
-        }
-        
-        // 使用模板引擎渲染响应
-        logger.info("使用模板渲染分类页面");
-        return BlogModule::serveTemplateWithVariables(r, "blog_category.html", variables);
-    } catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "处理分类页面异常: %s", e.what());
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-}
-
-// 添加新文章的表单处理
-static ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
-    // 只接受POST请求
-    if (r->method != NGX_HTTP_POST) {
-        // 显示添加文章的表单页面
-        std::unordered_map<std::string, std::string> variables;
-        variables["title"] = "添加新文章";
-        // 设置错误显示为隐藏
-        variables["error_display"] = "none";
-        variables["error_message"] = "";
-        
-        return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
+// Route::match 实现
+bool Route::match(const ngx_str_t& uri, RouteParams& params) const {
+    std::string uriStr(reinterpret_cast<const char*>(uri.data), uri.len);
+    
+    // 打印调试信息
+    ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+        "尝试匹配: URI=%s 与模式=%s", 
+        uriStr.c_str(), pattern.c_str());
+    
+    // 特殊处理根路径和/blog路径
+    if (pattern == "/" && (uriStr == "/" || uriStr.empty())) {
+        return true;
     }
     
-    try {
-        // 封装请求
-        NgxRequest request(r);
-        
-        // 创建日志对象
-        NgxLog logger(r);
-        logger.info("处理添加新文章请求");
-        
-        // 读取POST请求体
-        // 注意：这里需要实现请求体读取，简化起见仅给出概念实现
-        // 实际应用中需要处理请求体的读取和解析
-        
-        // 模拟获取表单数据
-        std::string title = "新文章标题";
-        std::string author = "管理员";
-        std::string category = "未分类";
-        std::string content = "这是新文章的内容。";
-        
-        // 创建新文章
-        auto& manager = BlogPostManager::getInstance();
-        std::string postId = manager.createPost(title, author, category, content);
-        
-        if (!postId.empty()) {
-            logger.info("成功创建新文章: %s", postId.c_str());
-            
-            // 重定向到新文章页面
-            ngx_table_elt_t* location = static_cast<ngx_table_elt_t*>(
-                ngx_list_push(&r->headers_out.headers));
-                
-            if (location == nullptr) {
-                logger.error("无法创建重定向响应头");
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
-            }
-            
-            // 设置Location头
-            location->hash = 1;
-            location->key.len = sizeof("Location") - 1;
-            location->key.data = (u_char*)"Location";
-            
-            // 设置重定向目标
-            std::string redirectUrl = "/blog/post/" + postId;
-            location->value.len = redirectUrl.length();
-            location->value.data = static_cast<u_char*>(ngx_palloc(r->pool, redirectUrl.length()));
-            ngx_memcpy(location->value.data, redirectUrl.c_str(), redirectUrl.length());
-            
-            // 设置303状态码（See Other）
-            r->headers_out.status = NGX_HTTP_SEE_OTHER;
-            
-            // 发送响应头
-            r->headers_out.location = location;
-            
-            // 设置内容长度为0
-            r->headers_out.content_length_n = 0;
-            
-            // 发送响应头并检查结果
-            ngx_int_t rc = ngx_http_send_header(r);
-            if (rc == NGX_ERROR || rc > NGX_OK) {
-                return rc;
-            }
-            
-            // 创建一个空的响应体
-            ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-            if (b == nullptr) {
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
-            }
-            
-            // 正确设置缓冲区
-            b->last_buf = 1;
-            b->last_in_chain = 1;
-            b->pos = b->last = nullptr;
-            b->sync = 1;
-            
-            ngx_chain_t out;
-            out.buf = b;
-            out.next = nullptr;
-            
-            return ngx_http_output_filter(r, &out);
-        } else {
-            logger.error("创建文章失败");
-            
-            // 返回错误页面
-            std::unordered_map<std::string, std::string> variables;
-            variables["title"] = "添加新文章";
-            variables["error_display"] = "block";
-            variables["error_message"] = "创建文章失败，请稍后重试";
-            
-            return BlogModule::serveTemplateWithVariables(r, "blog_add_post.html", variables);
-        }
-    } catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                     "处理添加文章请求异常: %s", e.what());
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    if (pattern == "/blog" && (uriStr == "/blog" || uriStr == "/blog/")) {
+        return true;
     }
+
+    // 如果模式不包含参数，直接比较
+    if (paramNames.empty()) {
+        // 完全相同的情况
+        if (uriStr == pattern) {
+            ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+                "完全匹配成功: URI=%s 与模式=%s", 
+                uriStr.c_str(), pattern.c_str());
+            return true;
+        }
+        
+        // 尾部斜杠的特殊处理
+        if (pattern.back() == '/' && uriStr == pattern.substr(0, pattern.length()-1)) {
+            ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+                "尾部斜杠匹配成功: URI=%s 与模式=%s", 
+                uriStr.c_str(), pattern.c_str());
+            return true;
+        }
+        
+        if (uriStr.back() == '/' && pattern == uriStr.substr(0, uriStr.length()-1)) {
+            ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+                "尾部斜杠匹配成功: URI=%s 与模式=%s", 
+                uriStr.c_str(), pattern.c_str());
+            return true;
+        }
+        
+        ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+            "匹配失败: URI=%s 与模式=%s", 
+            uriStr.c_str(), pattern.c_str());
+        return false;
+    }
+
+    // 将模式转换为正则表达式进行匹配
+    // 简化实现：仅支持基本的 /:param/ 格式
+    size_t patternPos = 0;
+    size_t uriPos = 0;
+
+    for (const auto& paramName : paramNames) {
+        // 找到参数前的静态部分
+        size_t paramPos = pattern.find(":" + paramName, patternPos);
+        if (paramPos == std::string::npos) continue;
+
+        // 检查静态部分是否匹配
+        std::string staticPart = pattern.substr(patternPos, paramPos - patternPos);
+        if (uriStr.substr(uriPos, staticPart.length()) != staticPart) {
+            ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+                "静态部分不匹配: URI=%s 部分=%s", 
+                uriStr.substr(uriPos, staticPart.length()).c_str(), staticPart.c_str());
+            return false;
+        }
+
+        // 移动位置
+        uriPos += staticPart.length();
+        patternPos = paramPos + paramName.length() + 1; // +1 for ':'
+
+        // 寻找参数结束位置
+        size_t paramEndPos;
+        if (patternPos >= pattern.length()) {
+            // 参数在结尾
+            paramEndPos = uriStr.length();
+        }
+        else {
+            // 参数后面有内容，查找下一个分隔符
+            char nextChar = pattern[patternPos];
+            paramEndPos = uriStr.find(nextChar, uriPos);
+            if (paramEndPos == std::string::npos) {
+                ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+                    "找不到参数结束位置: 字符=%c URI=%s", 
+                    nextChar, uriStr.c_str());
+                return false;
+            }
+        }
+
+        // 提取参数值
+        std::string paramValue = uriStr.substr(uriPos, paramEndPos - uriPos);
+        params[paramName] = paramValue;
+        
+        ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+            "提取参数: %s=%s", 
+            paramName.c_str(), paramValue.c_str());
+
+        // 更新位置
+        uriPos = paramEndPos;
+    }
+
+    // 检查路径末尾
+    std::string endPart = pattern.substr(patternPos);
+    bool result = uriStr.substr(uriPos) == endPart;
+    
+    if (result) {
+        ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+            "完整匹配成功: 剩余URI=%s 剩余模式=%s", 
+            uriStr.substr(uriPos).c_str(), endPart.c_str());
+    } else {
+        ngx_log_error(NGX_LOG_DEBUG, ngx_cycle->log, 0, 
+            "末尾不匹配: 剩余URI=%s 剩余模式=%s", 
+            uriStr.substr(uriPos).c_str(), endPart.c_str());
+    }
+    
+    return result;
 }
 
-// 处理博客首页重定向
-static ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& params) {
+// Router类实现
+void Router::addRoute(const Route& route) {
+    routes.push_back(route);
+}
+
+void Router::reset() {
+    routes.clear();
+}
+
+ngx_int_t Router::route(ngx_http_request_t* r) {
+    // 获取请求URI
+    std::string uri((char*)r->uri.data, r->uri.len);
+    
     NgxLog logger(r);
-    logger.info("从/blog/重定向到/");
+    logger.info("正在路由请求: %s, 方法: %d", uri.c_str(), r->method);
+    logger.info("当前路由器有 %d 条路由规则", routes.size());
     
-    // 创建重定向响应头
-    ngx_table_elt_t* location = static_cast<ngx_table_elt_t*>(
-        ngx_list_push(&r->headers_out.headers));
+    // 提取参数
+    RouteParams params;
     
-    if (location == nullptr) {
-        logger.error("无法创建重定向响应头");
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    
-    // 设置Location头
-    location->hash = 1;
-    location->key.len = sizeof("Location") - 1;
-    location->key.data = (u_char*)"Location";
-    
-    // 设置重定向目标
-    location->value.len = sizeof("/") - 1;
-    location->value.data = (u_char*)"/"; 
-    
-    // 设置301永久重定向状态码
-    r->headers_out.status = NGX_HTTP_MOVED_PERMANENTLY;
-    
-    // 设置响应头中的location属性
-    r->headers_out.location = location;
-    
-    // 设置内容长度为0
-    r->headers_out.content_length_n = 0;
-    
-    // 发送响应头并结束请求
-    ngx_int_t rc = ngx_http_send_header(r);
-    if (rc == NGX_ERROR || rc > NGX_OK) {
-        return rc;
-    }
-    
-    // 创建一个空的响应体，确保正确设置
-    ngx_buf_t* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-    if (b == nullptr) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    
-    // 标记为最后一个缓冲区，但不包含数据（只包含元数据）
-    b->last_buf = 1;      // 标记为最后一个缓冲区
-    b->last_in_chain = 1; // 标记为链中最后一个
-    b->pos = b->last = nullptr; // 明确指示这是一个零大小的缓冲区
-    b->sync = 1;          // 标记为同步操作
-    
-    ngx_chain_t out;
-    out.buf = b;
-    out.next = nullptr;
-    
-    return ngx_http_output_filter(r, &out);
-}
-
-// 处理博客管理页面
-static ngx_int_t handleAdmin(ngx_http_request_t* r, const RouteParams& params) {
-    try {
-        // 封装请求
-        NgxRequest request(r);
-        
-        // 创建配置对象
-        BlogConfig config(request);
-        
-        // 创建日志对象
-        NgxLog logger(r);
-        logger.info("处理博客管理页面请求");
-        
-        // 构建模板变量
-        std::unordered_map<std::string, std::string> variables;
-        
-        // 从文章管理器获取所有文章
-        auto& manager = BlogPostManager::getInstance();
-        const auto allPosts = manager.getAllPosts();
-        
-        if (!allPosts.empty()) {
-            std::stringstream postRows;
-            
-            for (const auto* post : allPosts) {
-                postRows << "<tr>\n";
-                postRows << "  <td>" << post->getId() << "</td>\n";
-                postRows << "  <td><a href=\"/blog/post/" << post->getId() << "\">" 
-                        << post->getTitle() << "</a></td>\n";
-                postRows << "  <td>" << post->getAuthor() << "</td>\n";
-                postRows << "  <td><a href=\"/blog/category/" << post->getCategory() << "\">" 
-                        << post->getCategory() << "</a></td>\n";
-                postRows << "  <td>" << post->getDate() << "</td>\n";
-                postRows << "  <td class=\"action-buttons\">\n";
-                postRows << "    <a href=\"/blog/admin/edit/" << post->getId() 
-                        << "\" class=\"btn\">编辑</a>\n";
-                postRows << "    <a href=\"/blog/admin/delete/" << post->getId() 
-                        << "\" class=\"btn btn-red\">删除</a>\n";
-                postRows << "  </td>\n";
-                postRows << "</tr>\n";
-            }
-            
-            variables["#posts"] = "true";
-            variables["posts"] = postRows.str();
-            variables["^posts"] = "";
-        } else {
-            variables["#posts"] = "";
-            variables["^posts"] = "true";
+    // 遍历所有路由，寻找匹配
+    for (const auto& route : routes) {
+        // 检查HTTP方法匹配
+        if (route.method != ANY_METHOD && route.method != r->method) {
+            logger.debug("路由 '%s' 的HTTP方法不匹配: %d != %d", 
+                      route.pattern.c_str(), route.method, r->method);
+            continue;
         }
         
-        // 使用模板引擎渲染响应
-        return BlogModule::serveTemplateWithVariables(r, "blog_admin.html", variables);
+        // 检查URI匹配
+        if (route.match(r->uri, params)) {
+            logger.info("找到匹配的路由: %s，参数数量: %d", 
+                      route.pattern.c_str(), params.size());
+            
+            // 查看提取的参数
+            for (const auto& param : params) {
+                logger.debug("参数: %s = %s", param.first.c_str(), param.second.c_str());
+            }
+            
+            // 调用处理器
+            return route.handler(r, params);
+        }
     }
-    catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                    "处理博客管理页面异常: %s", e.what());
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
+    
+    logger.warn("没有找到匹配的路由，共尝试 %d 条路由规则", routes.size());
+    return NGX_DECLINED;
 }
 
-// 初始化所有路由
-void initBlogRoutes() {
-    auto& router = getBlogRouter();
-    
-    // 清除之前的路由
-    router.reset();
-    
-    // 首页路由 - 只处理根路径
-    router.get("/", handleBlogIndex);  // 根路径
-    router.get("/index.html", handleBlogIndex);
-    
-    // 添加博客路径重定向到根路径
-    router.get("/blog", handleBlogRedirect);  // 博客主页重定向
-    router.get("/blog/", handleBlogRedirect);
-    router.get("/blog/index", handleBlogRedirect);
-    router.get("/blog/index.html", handleBlogRedirect);
-    
-    // 博客文章路由
-    router.get("/blog/post/:id", handleBlogPost);
-    
-    // 分类页面
-    router.get("/blog/category/:category", handleBlogCategory);
-    
-    // 文章管理路由
-    router.get("/blog/admin", handleAdmin);       // 管理首页
-    router.get("/blog/admin/add", handleAddPost); // 显示添加文章表单
-    router.post("/blog/admin/add", handleAddPost); // 处理添加文章请求
-    
-    // 使用NgxLog的静态方法记录日志
-    NgxLog::log_static(ngx_cycle->log, NGX_LOG_INFO, "博客路由初始化完成，共注册 %d 个路由", router.getRouteCount());
-    
-    // 打印所有已注册的路由，方便调试
-    router.dumpRoutes();
+size_t Router::getRouteCount() const {
+    return routes.size();
 }
+
+std::vector<std::string> Router::dumpRoutes() const {
+    std::vector<std::string> result;
+    
+    for (const auto& route : routes) {
+        std::string methodStr;
+        switch (route.method) {
+            case GET_METHOD: methodStr = "GET"; break;
+            case POST_METHOD: methodStr = "POST"; break;
+            case PUT_METHOD: methodStr = "PUT"; break;
+            case DELETE_METHOD: methodStr = "DELETE"; break;
+            case HEAD_METHOD: methodStr = "HEAD"; break;
+            case ANY_METHOD: methodStr = "ANY"; break;
+            default: methodStr = "UNKNOWN"; break;
+        }
+        
+        result.push_back(methodStr + " " + route.pattern);
+    }
+    
+    return result;
+}
+
+// 静态函数声明废弃，移动到BlogModule.cpp中实现
+// 将其他函数声明为extern，使其可在其他文件中使用
+extern ngx_int_t handleBlogIndex(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleBlogPost(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleBlogCategory(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleBlogTag(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleAdmin(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& params);

@@ -12,6 +12,9 @@
 #include <string>
 #include <optional>
 #include <string_view>
+#include <unordered_map>
+#include <algorithm>
+#include <sstream>
 
 
 /**
@@ -399,6 +402,84 @@ public:
         return ptr_->connection->log;
     }
 
+    /**
+     * @brief 获取请求的HTTP方法
+     * @return HTTP方法代码
+     */
+    [[nodiscard]] inline ngx_uint_t getMethod() const noexcept {
+        if (!valid()) {
+            return 0;
+        }
+        return ptr_->method;
+    }
+
+    /**
+     * @brief 获取请求体内容
+     * @return 请求体字符串
+     */
+    [[nodiscard]] inline std::string getRequestBody() const {
+        if (!valid()) {
+            return "";
+        }
+        
+        // 检查请求体是否已经读取
+        if (!ptr_->request_body) {
+            return "";
+        }
+        
+        std::string body;
+        if (ptr_->request_body->bufs) {
+            ngx_chain_t* chain;
+            for (chain = ptr_->request_body->bufs; chain; chain = chain->next) {
+                if (chain->buf && chain->buf->pos && chain->buf->pos < chain->buf->last) {
+                    size_t len = chain->buf->last - chain->buf->pos;
+                    body.append(reinterpret_cast<char*>(chain->buf->pos), len);
+                }
+            }
+        } else if (ptr_->request_body->temp_file) {
+            // 从临时文件读取请求体（大请求体情况）
+            // 本实现简化处理，实际应该根据需求决定是否支持
+            ngx_log_error(NGX_LOG_WARN, ptr_->connection->log, 0, 
+                "Request body was saved to temp file, not supported in this implementation");
+        }
+        
+        return body;
+    }
+
+    /**
+     * @brief 解析表单数据
+     * @param postData 表单数据字符串
+     * @return 解析后的表单字段映射
+     */
+    [[nodiscard]] inline std::unordered_map<std::string, std::string> parseFormData(const std::string& postData) const {
+        std::unordered_map<std::string, std::string> formData;
+        
+        if (postData.empty()) {
+            return formData;
+        }
+        
+        size_t pos = 0;
+        std::string token;
+        std::string data = postData;
+        
+        // 替换所有+为空格
+        std::replace(data.begin(), data.end(), '+', ' ');
+        
+        // 按&分割参数
+        while ((pos = data.find('&')) != std::string::npos) {
+            token = data.substr(0, pos);
+            parseKeyValue(token, formData);
+            data.erase(0, pos + 1);
+        }
+        
+        // 处理最后一个参数
+        if (!data.empty()) {
+            parseKeyValue(data, formData);
+        }
+        
+        return formData;
+    }
+
     // 友元声明，允许基类访问派生类的私有方法
     friend class NginxContextBase<ngx_http_request_t, NginxContext<ngx_http_request_t>>;
 
@@ -411,6 +492,49 @@ private:
         // 请求对象由Nginx管理，我们不需要清理它
         ptr_ = nullptr;
         owns_ptr_ = false;
+    }
+
+    /**
+     * @brief 解析键值对
+     * @param token 键值对字符串
+     * @param formData 表单数据映射
+     */
+    inline void parseKeyValue(const std::string& token, std::unordered_map<std::string, std::string>& formData) const {
+        size_t equalPos = token.find('=');
+        if (equalPos != std::string::npos) {
+            std::string key = token.substr(0, equalPos);
+            std::string value = token.substr(equalPos + 1);
+            
+            // URL解码
+            formData[urlDecode(key)] = urlDecode(value);
+        }
+    }
+    
+    /**
+     * @brief URL解码
+     * @param encoded 编码的字符串
+     * @return 解码后的字符串
+     */
+    [[nodiscard]] inline std::string urlDecode(const std::string& encoded) const {
+        std::string result;
+        result.reserve(encoded.length());
+        
+        for (size_t i = 0; i < encoded.length(); ++i) {
+            if (encoded[i] == '%' && i + 2 < encoded.length()) {
+                int value;
+                std::istringstream is(encoded.substr(i + 1, 2));
+                if (is >> std::hex >> value) {
+                    result += static_cast<char>(value);
+                    i += 2;
+                } else {
+                    result += encoded[i];
+                }
+            } else {
+                result += encoded[i];
+            }
+        }
+        
+        return result;
     }
 };
 

@@ -45,6 +45,21 @@ public:
     static const char* getModuleVersion();
 
     /**
+     * @brief 初始化博客模块
+     * 
+     * @param cycle Nginx周期对象
+     * @return ngx_int_t Nginx状态码
+     */
+    static ngx_int_t init(ngx_cycle_t* cycle);
+
+    /**
+     * @brief 获取静态资源路径
+     * 
+     * @return 静态资源路径
+     */
+    static std::string getStaticPath();
+
+    /**
      * @brief 加载并提供模板文件
      * 
      * @param r HTTP请求对象
@@ -174,6 +189,13 @@ public:
      * 内部使用NgxConf和NgxString封装类处理配置和字符串
      */
     static char* setDbAutoConnect(ngx_conf_t* cf, ngx_command_t* cmd, void* conf);
+
+public:
+    // 全局配置变量
+    static std::string basePath;   // 博客路径
+    static std::string version;    // 版本号
+    static std::string dataDir;    // 数据目录
+    static std::string staticPath; // 静态文件路径
 
 private:
     // 静态成员，防止多次创建
