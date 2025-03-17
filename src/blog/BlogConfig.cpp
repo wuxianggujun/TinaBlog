@@ -88,25 +88,6 @@ NgxString BlogConfig::getBasePathAsNgxString() const {
     return NgxString(config_->base_path, false);
 }
 
-// 获取模板路径
-std::string BlogConfig::getTemplatePath() const {
-    if (!valid() || !config_->template_path.data || config_->template_path.len == 0) {
-        return "";
-    }
-    
-    return std::string(reinterpret_cast<char*>(config_->template_path.data), 
-                     config_->template_path.len);
-}
-
-// 获取模板路径作为NgxString
-NgxString BlogConfig::getTemplatePathAsNgxString() const {
-    if (!valid()) {
-        return NgxString();
-    }
-    
-    return NgxString(config_->template_path, false);
-}
-
 // 检查缓存是否启用
 bool BlogConfig::isEnableCache() const noexcept {
     return valid() && config_->enable_cache;
@@ -115,26 +96,6 @@ bool BlogConfig::isEnableCache() const noexcept {
 // 获取缓存时间
 ngx_uint_t BlogConfig::getCacheTime() const noexcept {
     return valid() ? config_->cache_time : 0;
-}
-
-// 获取完整模板文件路径
-std::string BlogConfig::getFullTemplatePath(const std::string& templateName) const {
-    std::string pathStr = getTemplatePath();
-    
-    if (pathStr.empty()) {
-        if (request_ && request_->valid()) {
-            ngx_log_error(NGX_LOG_ERR, request_->get()->connection->log, 0, "模板路径未设置");
-        }
-        return "";
-    }
-    
-    // 确保路径以分隔符结尾
-    if (pathStr.back() != '/' && pathStr.back() != '\\') {
-        pathStr += '/';
-    }
-    
-    pathStr += templateName;
-    return pathStr;
 }
 
 // 检查是否有关联的请求

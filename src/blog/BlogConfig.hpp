@@ -20,9 +20,6 @@ extern ngx_module_t ngx_http_blog_module;
 // 完整声明BlogModuleConfig结构体
 struct BlogModuleConfig {
     ngx_str_t base_path;       // 博客基础路径
-    ngx_str_t template_path;   // 模板路径
-    ngx_str_t template_root;   // 模板根目录
-    ngx_str_t prefix;          // URL前缀
     ngx_flag_t enable_cache;   // 是否启用缓存
     ngx_uint_t cache_time;     // 缓存时间（秒）
     ngx_str_t db_conn_str;     // MySQL数据库连接字符串
@@ -92,20 +89,6 @@ public:
     NgxString getBasePathAsNgxString() const;
 
     /**
-     * @brief 获取模板路径
-     * 
-     * @return std::string 模板路径
-     */
-    std::string getTemplatePath() const;
-
-    /**
-     * @brief 获取模板路径作为NgxString
-     * 
-     * @return NgxString 模板路径
-     */
-    NgxString getTemplatePathAsNgxString() const;
-
-    /**
     * @brief 检查缓存是否启用
     * 
     * @return bool 缓存是否启用
@@ -118,14 +101,6 @@ public:
      * @return ngx_uint_t 缓存时间（秒）
      */
     ngx_uint_t getCacheTime() const noexcept;
-    
-    /**
-     * @brief 获取完整模板文件路径
-     * 
-     * @param templateName 模板文件名
-     * @return std::string 完整的模板文件路径
-     */
-    std::string getFullTemplatePath(const std::string& templateName) const;
     
     /**
      * @brief 获取数据库连接字符串

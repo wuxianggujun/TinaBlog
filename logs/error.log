@@ -130,3 +130,23 @@
 2025/03/17 17:12:19 [warn] 26556#7224: *1 No matching route found, tried 13 routes, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/17 17:12:19 [warn] 26556#7224: *1 No matching route found: /api/posts, client: 127.0.0.1, server: localhost, request: "POST /api/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/17 17:12:50 [info] 26556#7224: *1 client 127.0.0.1 closed keepalive connection
+2025/03/17 17:13:52 [notice] 26556#22456: console closing, exiting
+2025/03/17 19:06:07 [emerg] 3720#14632: unknown directive "blog_template_path" in C:\Users\wuxianggujun\CodeSpace\CMakeProjects\TinaBlog/conf/nginx.conf:64
+2025/03/17 19:06:46 [warn] 21636#3864: Blog base path not configured, using default value
+2025/03/17 19:06:46 [notice] 21636#3864: using the "select" event method
+2025/03/17 19:06:46 [notice] 21636#3864: nginx/1.27.5
+2025/03/17 19:06:46 [info] 21636#3864: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 19:06:46 [notice] 21636#3864: create thread 15652
+2025/03/17 20:21:59 [notice] 21636#17320: console closing, exiting
+2025/03/17 20:55:40 [warn] 22036#4220: Blog base path not configured, using default value
+2025/03/17 20:55:40 [notice] 22036#4220: using the "select" event method
+2025/03/17 20:55:40 [notice] 22036#4220: nginx/1.27.5
+2025/03/17 20:55:40 [info] 22036#4220: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 20:55:40 [notice] 22036#4220: create thread 5880
+2025/03/17 20:55:43 [notice] 22036#2500: console closing, exiting
+2025/03/17 21:09:23 [warn] 18320#5108: Blog base path not configured, using default value
+2025/03/17 21:09:23 [notice] 18320#5108: using the "select" event method
+2025/03/17 21:09:23 [notice] 18320#5108: nginx/1.27.5
+2025/03/17 21:09:23 [info] 18320#5108: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/17 21:09:23 [notice] 18320#5108: create thread 5192
+2025/03/17 21:09:25 [notice] 18320#19572: console closing, exiting
