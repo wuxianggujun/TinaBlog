@@ -10,6 +10,7 @@
 #include "db/DbManager.hpp"
 #include "NgxLog.hpp"
 #include "BlogConfig.hpp"
+#include "JsonResponse.hpp"
 #include <iostream>
 #include <cstring>
 #include <thread>
@@ -23,8 +24,11 @@
 #include <chrono>
 #include <ctime>
 #include <functional>
+#include <nlohmann/json.hpp>
 
 #include "BlogPostDao.hpp"
+
+using json = nlohmann::json;
 
 // 路由处理函数声明
 namespace {
@@ -38,6 +42,9 @@ namespace {
     ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params);
     ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params);
     ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& params);
+    ngx_int_t handleAdminStats(ngx_http_request_t* r, const RouteParams& params);
+    ngx_int_t handleGetPostForEdit(ngx_http_request_t* r, const RouteParams& params);
+    ngx_int_t handleOptionsRequest(ngx_http_request_t* r, const RouteParams& params);
     
     void initBlogTemplates();
 }
@@ -1195,13 +1202,7 @@ namespace {
             return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
     }
-
-    // 初始化博客模板
-    void initBlogTemplates() {
-        // 简单初始化，确保函数存在
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Initializing blog templates");
-    }
-
+    
     // 处理博客首页
     ngx_int_t handleBlogIndex(ngx_http_request_t* r, const RouteParams& params) {
         try {
@@ -1213,83 +1214,41 @@ namespace {
             
             // 使用NgxLog记录日志
             NgxLog logger(r);
-            logger.info("处理博客首页请求");
-            
-            // 构建模板变量
-            std::unordered_map<std::string, std::string> variables;
-            variables["title"] = "我的博客";
-            variables["description"] = "欢迎访问我的技术博客";
-            variables["author"] = "管理员";
-            
-            // 添加博客基础路径到模板变量
-            variables["blog_base_path"] = config.getBasePath();
+            logger.info("处理博客首页API请求");
             
             // 从数据库中获取文章列表
             BlogPostDao dao;
             std::vector<BlogPostRecord> posts = dao.getAllPosts(10); // 获取前10篇文章
             
-            // 检查是否有文章
-            if (!posts.empty()) {
-                std::stringstream postsHtml;
+            // 构建文章数据JSON
+            json postsJson = json::array();
+            for (const auto& post : posts) {
+                json postJson;
+                postJson["id"] = post.id;
+                postJson["title"] = post.title;
+                postJson["author"] = post.author;
+                postJson["summary"] = post.summary;
+                postJson["created_at"] = post.created_at;
+                postJson["updated_at"] = post.updated_at;
+                postJson["view_count"] = post.view_count;
+                postJson["categories"] = post.categories;
+                postJson["tags"] = post.tags;
                 
-                for (const auto& post : posts) {
-                    postsHtml << "<article class=\"blog-post\">\n";
-                    postsHtml << "  <a href=\"/blog/post/" << post.id << "\" class=\"post-title\">" 
-                              << post.title << "</a>\n";
-                    postsHtml << "  <div class=\"post-meta\">\n";
-                    postsHtml << "    <span>发布时间: " << post.created_at << "</span> | \n";
-                    postsHtml << "    <span>最后更新: " << post.updated_at << "</span> | \n";
-                    
-                    // 显示分类
-                    if (!post.categories.empty()) {
-                        postsHtml << "    <span>分类: ";
-                        for (size_t i = 0; i < post.categories.size(); ++i) {
-                            if (i > 0) postsHtml << ", ";
-                            postsHtml << "<a href=\"/blog/category/" << post.categories[i] << "\">" 
-                                      << post.categories[i] << "</a>";
-                        }
-                        postsHtml << "</span> | \n";
-                    }
-                    
-                    // 显示标签
-                    if (!post.tags.empty()) {
-                        postsHtml << "    <span>标签: ";
-                        for (size_t i = 0; i < post.tags.size(); ++i) {
-                            if (i > 0) postsHtml << ", ";
-                            postsHtml << "<a href=\"/blog/tag/" << post.tags[i] << "\">" 
-                                      << post.tags[i] << "</a>";
-                        }
-                        postsHtml << "</span> | \n";
-                    }
-                    
-                    postsHtml << "    <span>浏览: " << post.view_count << "次</span>\n";
-                    postsHtml << "  </div>\n";
-                    postsHtml << "  <div class=\"post-summary\">\n";
-                    postsHtml << "    " << (post.summary.empty() ? "无摘要" : post.summary) << "\n";
-                    postsHtml << "  </div>\n";
-                    postsHtml << "  <a href=\"/blog/post/" << post.id 
-                              << "\" class=\"read-more\">阅读全文 &raquo;</a>\n";
-                    postsHtml << "</article>\n";
-                }
-                
-                // 设置有文章的变量
-                variables["#posts"] = "true";
-                variables["posts"] = postsHtml.str();
-                variables["^posts"] = "";  // 无内容
-            } else {
-                // 设置无文章的变量
-                variables["#posts"] = "";  // 无内容
-                variables["^posts"] = "true";
-                variables["no_posts_message"] = "<div class=\"no-posts\">暂无文章</div>";
+                postsJson.push_back(postJson);
             }
             
-            // 使用模板引擎渲染响应
-            return BlogModule::serveTemplateWithVariables(r, "blog_index.html", variables);
+            // 使用JsonResponse创建成功响应
+            json data;
+            data["posts"] = postsJson;
+            
+            return JsonResponse::send(r, JsonResponse::success(data));
         }
         catch (const std::exception& e) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                        "处理博客首页异常: %s", e.what());
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                        "处理博客首页API异常: %s", e.what());
+            
+            // 使用JsonResponse创建错误响应
+            return JsonResponse::send(r, JsonResponse::error(e.what(), 500), NGX_HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -1299,7 +1258,7 @@ namespace {
             // 封装请求和日志
             NgxRequest request(r);
             NgxLog logger(r);
-            logger.info("处理博客文章详情请求");
+            logger.info("处理博客文章详情API请求");
 
             // 从路由参数中获取文章ID
             std::string postIdParam = params.at("id");
@@ -1308,65 +1267,48 @@ namespace {
             // 创建配置对象
             BlogConfig config(request);
             
-            // 构建模板变量
-            std::unordered_map<std::string, std::string> variables;
-            variables["blog_base_path"] = config.getBasePath();
-            
             // 从数据库获取文章
             BlogPostDao dao;
             auto post = dao.getPostById(postId);
             
+            // 判断文章是否存在
             if (post.has_value()) {
                 // 更新文章浏览量
                 dao.incrementViewCount(postId);
                 
-                // 设置文章信息
-                variables["title"] = post->title;
-                variables["content"] = post->content;
-                variables["description"] = post->summary.empty() ? "博客文章: " + post->title : post->summary;
-                variables["author"] = post->author;
-                variables["created_at"] = post->created_at;
-                variables["updated_at"] = post->updated_at;
-                variables["view_count"] = std::to_string(post->view_count + 1); // 已增加当前浏览
+                // 构建文章数据
+                json postData;
+                postData["id"] = post->id;
+                postData["title"] = post->title;
+                postData["content"] = post->content;
+                postData["summary"] = post->summary;
+                postData["author"] = post->author;
+                postData["created_at"] = post->created_at;
+                postData["updated_at"] = post->updated_at;
+                postData["view_count"] = post->view_count + 1; // 包括当前访问
+                postData["categories"] = post->categories;
+                postData["tags"] = post->tags;
                 
-                // 设置分类
-                std::stringstream categories;
-                for (size_t i = 0; i < post->categories.size(); ++i) {
-                    if (i > 0) categories << ", ";
-                    categories << "<a href=\"/blog/category/" << post->categories[i] << "\">" 
-                              << post->categories[i] << "</a>";
-                }
-                variables["categories"] = categories.str();
-                
-                // 设置标签
-                std::stringstream tags;
-                for (size_t i = 0; i < post->tags.size(); ++i) {
-                    if (i > 0) tags << ", ";
-                    tags << "<a href=\"/blog/tag/" << post->tags[i] << "\">" 
-                         << post->tags[i] << "</a>";
-                }
-                variables["tags"] = tags.str();
-                
-                // 设置文章存在的标志
-                variables["#post_exists"] = "true";
-                variables["^post_not_found"] = "";
+                // 返回成功响应
+                return JsonResponse::send(r, JsonResponse::success(postData));
             } else {
                 // 文章不存在
                 logger.warn("Post with ID %d not found", postId);
-                variables["title"] = "文章未找到";
-                variables["description"] = "请求的文章不存在";
-                variables["#post_exists"] = "";
-                variables["^post_not_found"] = "true";
-                variables["error_message"] = "抱歉，未找到ID为 " + postIdParam + " 的文章。";
+                
+                // 返回404错误
+                return JsonResponse::send(r, 
+                    JsonResponse::error("文章不存在", 404), 
+                    NGX_HTTP_NOT_FOUND);
             }
-            
-            // 使用模板引擎渲染响应
-            return BlogModule::serveTemplateWithVariables(r, "blog_post.html", variables);
         }
         catch (const std::exception& e) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理博客文章详情异常: %s", e.what());
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                         "处理博客文章详情API异常: %s", e.what());
+            
+            // 返回服务器错误
+            return JsonResponse::send(r, 
+                JsonResponse::error(e.what(), 500), 
+                NGX_HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -1386,63 +1328,50 @@ namespace {
             auto it = params.find("name");
             if (it == params.end()) {
                 logger.error("缺少分类参数");
-                return NGX_HTTP_BAD_REQUEST;
+                return JsonResponse::send(r, 
+                    JsonResponse::error("缺少分类参数", 400), 
+                    NGX_HTTP_BAD_REQUEST);
             }
             
             std::string category = it->second;
-            logger.info("处理分类页面请求: %s", category.c_str());
-            
-            // 构建模板变量
-            std::unordered_map<std::string, std::string> variables;
-            variables["title"] = "分类: " + category;
-            variables["description"] = "查看" + category + "分类下的所有文章";
-            variables["category"] = category;
-            
-            // 添加博客基础路径到模板变量
-            variables["blog_base_path"] = config.getBasePath();
+            logger.info("处理分类API请求: %s", category.c_str());
             
             // 从数据库获取该分类的文章
             BlogPostDao dao;
             auto posts = dao.getPostsByCategory(category, 10); // 获取前10篇文章
             
-            // 检查是否有文章
-            if (!posts.empty()) {
-                std::stringstream postsHtml;
+            // 构建文章列表JSON
+            json postsArray = json::array();
+            for (const auto& post : posts) {
+                json postJson;
+                postJson["id"] = post.id;
+                postJson["title"] = post.title;
+                postJson["author"] = post.author;
+                postJson["summary"] = post.summary;
+                postJson["created_at"] = post.created_at;
+                postJson["updated_at"] = post.updated_at;
+                postJson["view_count"] = post.view_count;
+                postJson["categories"] = post.categories;
+                postJson["tags"] = post.tags;
                 
-                for (const auto& post : posts) {
-                    postsHtml << "<article class=\"blog-post\">\n";
-                    postsHtml << "  <a href=\"/blog/post/" << post.id << "\" class=\"post-title\">" 
-                              << post.title << "</a>\n";
-                    postsHtml << "  <div class=\"post-meta\">\n";
-                    postsHtml << "    <span>作者: " << post.author << "</span> |\n";
-                    postsHtml << "    <span>发布时间: " << post.created_at << "</span>\n";
-                    postsHtml << "  </div>\n";
-                    postsHtml << "  <div class=\"post-summary\">\n";
-                    postsHtml << "    " << (post.summary.empty() ? "无摘要" : post.summary) << "\n";
-                    postsHtml << "  </div>\n";
-                    postsHtml << "  <a href=\"/blog/post/" << post.id 
-                              << "\" class=\"read-more\">阅读全文 &raquo;</a>\n";
-                    postsHtml << "</article>\n";
-                }
-                
-                // 设置有文章的变量
-                variables["#posts"] = "true";
-                variables["posts"] = postsHtml.str();
-                variables["^posts"] = "";  // 无内容
-            } else {
-                // 设置无文章的变量
-                variables["#posts"] = "";  // 无内容
-                variables["^posts"] = "true";
-                variables["no_posts_message"] = "<div class=\"no-posts\">该分类下暂无文章</div>";
+                postsArray.push_back(postJson);
             }
             
-            // 使用模板引擎渲染响应
-            logger.info("使用模板渲染分类页面");
-            return BlogModule::serveTemplateWithVariables(r, "blog_category.html", variables);
+            // 构建响应数据
+            json responseData;
+            responseData["category"] = category;
+            responseData["posts"] = postsArray;
+            
+            // 返回成功响应
+            return JsonResponse::send(r, JsonResponse::success(responseData));
         } catch (const std::exception& e) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理分类页面异常: %s", e.what());
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                         "处理分类API请求异常: %s", e.what());
+            
+            // 返回服务器错误
+            return JsonResponse::send(r, 
+                JsonResponse::error(e.what(), 500), 
+                NGX_HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -1462,63 +1391,59 @@ namespace {
             auto it = params.find("name");
             if (it == params.end()) {
                 logger.error("缺少标签参数");
-                return NGX_HTTP_BAD_REQUEST;
+                
+                json errorResponse;
+                errorResponse["success"] = false;
+                errorResponse["error"]["code"] = 400;
+                errorResponse["error"]["message"] = "缺少标签参数";
+                
+                return sendJsonResponse(r, errorResponse, NGX_HTTP_BAD_REQUEST);
             }
             
             std::string tag = it->second;
-            logger.info("处理标签页面请求: %s", tag.c_str());
-            
-            // 构建模板变量
-            std::unordered_map<std::string, std::string> variables;
-            variables["title"] = "标签: " + tag;
-            variables["description"] = "查看" + tag + "标签下的所有文章";
-            variables["tag"] = tag;
-            
-            // 添加博客基础路径到模板变量
-            variables["blog_base_path"] = config.getBasePath();
+            logger.info("处理标签API请求: %s", tag.c_str());
             
             // 从数据库获取该标签的文章
             BlogPostDao dao;
             auto posts = dao.getPostsByTag(tag, 10); // 获取前10篇文章
             
-            // 检查是否有文章
-            if (!posts.empty()) {
-                std::stringstream postsHtml;
+            // 使用nlohmann/json库构建响应
+            json response;
+            response["success"] = true;
+            response["data"]["tag"] = tag;
+            response["data"]["posts"] = json::array();
+            
+            for (const auto& post : posts) {
+                json postJson;
+                postJson["id"] = post.id;
+                postJson["title"] = post.title;
+                postJson["author"] = post.author;
+                postJson["summary"] = post.summary;
+                postJson["created_at"] = post.created_at;
+                postJson["updated_at"] = post.updated_at;
+                postJson["view_count"] = post.view_count;
                 
-                for (const auto& post : posts) {
-                    postsHtml << "<article class=\"blog-post\">\n";
-                    postsHtml << "  <a href=\"/blog/post/" << post.id << "\" class=\"post-title\">" 
-                              << post.title << "</a>\n";
-                    postsHtml << "  <div class=\"post-meta\">\n";
-                    postsHtml << "    <span>作者: " << post.author << "</span> |\n";
-                    postsHtml << "    <span>发布时间: " << post.created_at << "</span>\n";
-                    postsHtml << "  </div>\n";
-                    postsHtml << "  <div class=\"post-summary\">\n";
-                    postsHtml << "    " << (post.summary.empty() ? "无摘要" : post.summary) << "\n";
-                    postsHtml << "  </div>\n";
-                    postsHtml << "  <a href=\"/blog/post/" << post.id 
-                              << "\" class=\"read-more\">阅读全文 &raquo;</a>\n";
-                    postsHtml << "</article>\n";
-                }
+                // 添加分类和标签
+                postJson["categories"] = post.categories;
+                postJson["tags"] = post.tags;
                 
-                // 设置有文章的变量
-                variables["#posts"] = "true";
-                variables["posts"] = postsHtml.str();
-                variables["^posts"] = "";  // 无内容
-            } else {
-                // 设置无文章的变量
-                variables["#posts"] = "";  // 无内容
-                variables["^posts"] = "true";
-                variables["no_posts_message"] = "<div class=\"no-posts\">该标签下暂无文章</div>";
+                // 将文章添加到列表
+                response["data"]["posts"].push_back(postJson);
             }
             
-            // 使用模板引擎渲染响应
-            logger.info("使用模板渲染标签页面");
-            return BlogModule::serveTemplateWithVariables(r, "blog_tag.html", variables);
+            // 发送JSON响应
+            return sendJsonResponse(r, response);
         } catch (const std::exception& e) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                         "处理标签页面异常: %s", e.what());
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                         "处理标签API请求异常: %s", e.what());
+            
+            // 构建错误响应
+            json errorResponse;
+            errorResponse["success"] = false;
+            errorResponse["error"]["code"] = 500;
+            errorResponse["error"]["message"] = e.what();
+            
+            return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -1533,65 +1458,49 @@ namespace {
             
             // 创建日志对象
             NgxLog logger(r);
-            logger.info("处理博客管理页面请求");
-            
-            // 构建模板变量
-            std::unordered_map<std::string, std::string> variables;
-            variables["blog_base_path"] = config.getBasePath();
+            logger.info("处理博客管理API请求");
             
             // 从数据库获取所有文章
             BlogPostDao dao;
             auto posts = dao.getAllPosts();
             
-            if (!posts.empty()) {
-                std::stringstream postRows;
+            // 使用nlohmann/json库构建响应
+            json response;
+            response["success"] = true;
+            response["data"]["posts"] = json::array();
+            
+            for (const auto& post : posts) {
+                json postJson;
+                postJson["id"] = post.id;
+                postJson["title"] = post.title;
+                postJson["author"] = post.author;
+                postJson["summary"] = post.summary;
+                postJson["created_at"] = post.created_at;
+                postJson["updated_at"] = post.updated_at;
+                postJson["view_count"] = post.view_count;
                 
-                for (const auto& post : posts) {
-                    postRows << "<tr>\n";
-                    postRows << "  <td>" << post.id << "</td>\n";
-                    postRows << "  <td><a href=\"/blog/post/" << post.id << "\">" 
-                            << post.title << "</a></td>\n";
-                    postRows << "  <td>" << post.author << "</td>\n";
-                    
-                    // 显示分类
-                    postRows << "  <td>";
-                    if (!post.categories.empty()) {
-                        for (size_t i = 0; i < post.categories.size(); ++i) {
-                            if (i > 0) postRows << ", ";
-                            postRows << "<a href=\"/blog/category/" << post.categories[i] << "\">" 
-                                    << post.categories[i] << "</a>";
-                        }
-                    } else {
-                        postRows << "无分类";
-                    }
-                    postRows << "</td>\n";
-                    
-                    postRows << "  <td>" << post.created_at << "</td>\n";
-                    postRows << "  <td class=\"action-buttons\">\n";
-                    postRows << "    <a href=\"/blog/admin/edit/" << post.id 
-                            << "\" class=\"btn\">编辑</a>\n";
-                    postRows << "    <a href=\"/blog/admin/delete/" << post.id 
-                            << "\" class=\"btn btn-red\">删除</a>\n";
-                    postRows << "  </td>\n";
-                    postRows << "</tr>\n";
-                }
+                // 添加分类和标签
+                postJson["categories"] = post.categories;
+                postJson["tags"] = post.tags;
                 
-                variables["#posts"] = "true";
-                variables["posts"] = postRows.str();
-                variables["^posts"] = "";
-            } else {
-                variables["#posts"] = "";
-                variables["^posts"] = "true";
-                variables["no_posts_message"] = "<div class=\"no-posts\">暂无文章</div>";
+                // 将文章添加到列表
+                response["data"]["posts"].push_back(postJson);
             }
             
-            // 使用模板引擎渲染响应
-            return BlogModule::serveTemplateWithVariables(r, "blog_admin.html", variables);
+            // 发送JSON响应
+            return sendJsonResponse(r, response);
         }
         catch (const std::exception& e) {
             ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                        "处理博客管理页面异常: %s", e.what());
-            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+                         "处理博客管理API异常: %s", e.what());
+            
+            // 构建错误响应
+            json errorResponse;
+            errorResponse["success"] = false;
+            errorResponse["error"]["code"] = 500;
+            errorResponse["error"]["message"] = e.what();
+            
+            return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -1811,6 +1720,222 @@ namespace {
         
         return ngx_http_output_filter(r, &out);
     }
+    
+    // 处理管理面板统计数据API请求
+    ngx_int_t handleAdminStats(ngx_http_request_t* r, const RouteParams& params) {
+        try {
+            // 封装请求和日志
+            NgxRequest request(r);
+            NgxLog logger(r);
+            logger.info("处理管理面板统计数据API请求");
+            
+            // 创建配置对象
+            BlogConfig config(request);
+            
+            // 从数据库获取统计数据
+            BlogPostDao dao;
+            
+            // 获取总文章数
+            int totalPosts = dao.getPostCount();
+            
+            // 获取已发布文章数
+            int publishedPosts = dao.getPublishedPostCount();
+            
+            // 获取总浏览量
+            int totalViews = dao.getTotalViewCount();
+            
+            // 获取分类数量
+            int categoriesCount = dao.getCategoryCount();
+            
+            // 获取标签数量
+            int tagsCount = dao.getTagCount();
+            
+            // 获取最近文章
+            std::vector<BlogPostRecord> recentPosts = dao.getAllPosts(5); // 获取5篇最新文章
+            
+            // 构建响应数据
+            json statsData;
+            statsData["total_posts"] = totalPosts;
+            statsData["published_posts"] = publishedPosts;
+            statsData["total_views"] = totalViews;
+            statsData["categories_count"] = categoriesCount;
+            statsData["tags_count"] = tagsCount;
+            
+            // 构建最近文章数据
+            json recentPostsArray = json::array();
+            for (const auto& post : recentPosts) {
+                json postJson;
+                postJson["id"] = post.id;
+                postJson["title"] = post.title;
+                postJson["author"] = post.author;
+                postJson["created_at"] = post.created_at;
+                postJson["view_count"] = post.view_count;
+                
+                recentPostsArray.push_back(postJson);
+            }
+            
+            // 构建完整响应数据
+            json responseData;
+            responseData["stats"] = statsData;
+            responseData["recent_posts"] = recentPostsArray;
+            
+            // 发送JSON响应
+            return JsonResponse::send(r, JsonResponse::success(responseData));
+        }
+        catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                         "处理管理面板统计数据请求异常: %s", e.what());
+            
+            // 返回错误响应
+            return JsonResponse::send(r, JsonResponse::error(e.what(), 500), NGX_HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    // 处理获取文章编辑数据的请求
+    ngx_int_t handleGetPostForEdit(ngx_http_request_t* r, const RouteParams& params) {
+        try {
+            // 封装请求和日志
+            NgxRequest request(r);
+            NgxLog logger(r);
+            logger.info("处理获取文章编辑数据API请求");
+
+            // 从路由参数中获取文章ID
+            std::string postIdParam = params.at("id");
+            int postId = std::stoi(postIdParam);
+
+            // 创建配置对象
+            BlogConfig config(request);
+            
+            // 从数据库获取文章
+            BlogPostDao dao;
+            auto post = dao.getPostById(postId);
+            
+            // 检查文章是否存在
+            if (!post.has_value()) {
+                // 文章不存在
+                logger.warn("Post with ID %d not found", postId);
+                return JsonResponse::send(r, 
+                    JsonResponse::error("文章不存在", 404), 
+                    NGX_HTTP_NOT_FOUND);
+            }
+            
+            // 构建文章数据响应
+            json postData;
+            postData["id"] = post->id;
+            postData["title"] = post->title;
+            postData["content"] = post->content;
+            postData["summary"] = post->summary;
+            postData["author"] = post->author;
+            postData["created_at"] = post->created_at;
+            postData["updated_at"] = post->updated_at;
+            postData["published"] = post->published;
+            postData["categories"] = post->categories;
+            postData["tags"] = post->tags;
+            
+            // 返回成功响应
+            return JsonResponse::send(r, JsonResponse::success(postData));
+        }
+        catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                         "处理获取文章编辑数据请求异常: %s", e.what());
+            
+            // 返回错误响应
+            return JsonResponse::send(r, 
+                JsonResponse::error(e.what(), 500), 
+                NGX_HTTP_INTERNAL_SERVER_ERROR);
+        }
+    }
+    
+    // 处理OPTIONS请求，支持CORS预检请求
+    ngx_int_t handleOptionsRequest(ngx_http_request_t* r, const RouteParams& params) {
+        NgxLog logger(r);
+        logger.info("处理OPTIONS请求: %s", ((NgxRequest(r)).getUri()).c_str());
+        
+        // 设置响应头部
+        r->headers_out.status = NGX_HTTP_OK;
+        
+        // 设置CORS头，允许所有来源访问
+        ngx_table_elt_t *h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+        if (h == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        h->hash = 1;
+        h->key.len = sizeof("Access-Control-Allow-Origin") - 1;
+        h->key.data = (u_char *) "Access-Control-Allow-Origin";
+        h->value.len = sizeof("*") - 1;
+        h->value.data = (u_char *) "*";
+        
+        // 添加允许的方法
+        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+        if (h == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        h->hash = 1;
+        h->key.len = sizeof("Access-Control-Allow-Methods") - 1;
+        h->key.data = (u_char *) "Access-Control-Allow-Methods";
+        h->value.len = sizeof("GET, POST, PUT, DELETE, OPTIONS") - 1;
+        h->value.data = (u_char *) "GET, POST, PUT, DELETE, OPTIONS";
+        
+        // 添加允许的头部
+        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+        if (h == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        h->hash = 1;
+        h->key.len = sizeof("Access-Control-Allow-Headers") - 1;
+        h->key.data = (u_char *) "Access-Control-Allow-Headers";
+        h->value.len = sizeof("Content-Type, Authorization, X-Requested-With") - 1;
+        h->value.data = (u_char *) "Content-Type, Authorization, X-Requested-With";
+        
+        // 允许凭证
+        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+        if (h == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        h->hash = 1;
+        h->key.len = sizeof("Access-Control-Allow-Credentials") - 1;
+        h->key.data = (u_char *) "Access-Control-Allow-Credentials";
+        h->value.len = sizeof("true") - 1;
+        h->value.data = (u_char *) "true";
+        
+        // 设置最大缓存时间
+        h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+        if (h == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        h->hash = 1;
+        h->key.len = sizeof("Access-Control-Max-Age") - 1;
+        h->key.data = (u_char *) "Access-Control-Max-Age";
+        h->value.len = sizeof("86400") - 1; // 24小时
+        h->value.data = (u_char *) "86400";
+        
+        // 设置响应长度为0
+        r->headers_out.content_length_n = 0;
+        
+        // 发送HTTP头
+        ngx_int_t rc = ngx_http_send_header(r);
+        if (rc == NGX_ERROR || rc > NGX_OK) {
+            return rc;
+        }
+        
+        // 创建一个空的缓冲区表示响应体结束
+        ngx_buf_t *b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
+        if (b == NULL) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        
+        // 标记为最后一个缓冲区，但不包含数据
+        b->last_buf = 1;      // 标记为最后一个缓冲区
+        b->last_in_chain = 1; // 标记为链中最后一个
+        b->pos = b->last = nullptr; // 明确指示这是一个零大小的缓冲区
+        b->sync = 1;          // 标记为同步操作
+        
+        ngx_chain_t out;
+        out.buf = b;
+        out.next = nullptr;
+        
+        return ngx_http_output_filter(r, &out);
+    }
 }
 
 // 初始化博客路由
@@ -1868,9 +1993,9 @@ void initBlogRoutes(BlogRouter* router) {
         return handleBlogTag(r, params);
     }));
     
-    // API 路由 - 管理面板（可能需要身份验证）
-    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleAdmin(r, params);
+    // API 路由 - 管理面板统计数据
+    router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin/stats", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleAdminStats(r, params);
     }));
     
     // API 路由 - 添加新博客
@@ -1878,11 +2003,12 @@ void initBlogRoutes(BlogRouter* router) {
         return handleAddPost(r, params);
     }));
     
-    // API 路由 - 编辑博客
+    // API 路由 - 获取博客编辑数据
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts/:id/edit", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
-        return handleEditPost(r, params);
+        return handleGetPostForEdit(r, params);
     }));
     
+    // API 路由 - 更新博客
     router->addRoute(Route(HttpMethod::PUT_METHOD, basePath + "/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
         return handleEditPost(r, params);
     }));
@@ -1892,9 +2018,14 @@ void initBlogRoutes(BlogRouter* router) {
         return handleDeletePost(r, params);
     }));
     
+    // API 路由 - OPTIONS 请求处理
+    router->addRoute(Route(HttpMethod::OPTIONS_METHOD, basePath + "/*", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleOptionsRequest(r, params);
+    }));
+    
     // 打印所有路由以供调试
     std::vector<std::string> routes = router->dumpRoutes();
     for (const auto& route : routes) {
-        logger.info("Registered route: %s", route.c_str());
+        logger.info("Registered API route: %s", route.c_str());
     }
 }

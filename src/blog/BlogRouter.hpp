@@ -14,12 +14,20 @@
 #include <string>
 #include <functional>
 #include <unordered_map>
+#include <nlohmann/json.hpp>
 
 // 路由参数类型 (如 /blog/post/:id 中的 id => value)
 using RouteParams = std::unordered_map<std::string, std::string>;
 
 // 路由处理器类型
 using RouteHandler = std::function<ngx_int_t(ngx_http_request_t*, const RouteParams&)>;
+
+// 使用nlohmann json
+using json = nlohmann::json;
+
+// 发送JSON响应函数的声明 (向后兼容层，实际调用JsonResponse类)
+ngx_int_t sendJsonResponse(ngx_http_request_t* r, const std::string& jsonContent, ngx_uint_t status = NGX_HTTP_OK);
+ngx_int_t sendJsonResponse(ngx_http_request_t* r, const json& jsonObj, ngx_uint_t status = NGX_HTTP_OK);
 
 // 定义HTTP方法枚举
 enum HttpMethod
@@ -29,6 +37,7 @@ enum HttpMethod
     POST_METHOD = NGX_HTTP_POST,
     PUT_METHOD = NGX_HTTP_PUT,
     DELETE_METHOD = NGX_HTTP_DELETE,
+    OPTIONS_METHOD = NGX_HTTP_OPTIONS,
     ANY_METHOD = 0xFFFF
 };
 

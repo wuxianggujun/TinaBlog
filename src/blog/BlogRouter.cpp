@@ -13,6 +13,7 @@
 #include <cstring>
 #include <regex>
 #include <nlohmann/json.hpp>
+#include "JsonResponse.hpp"
 
 // 使用nlohmann/json命名空间
 using json = nlohmann::json;
@@ -246,67 +247,18 @@ extern ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params)
 extern ngx_int_t handleEditPost(ngx_http_request_t* r, const RouteParams& params);
 extern ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params);
 extern ngx_int_t handleBlogRedirect(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleGetPostForEdit(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleAdminStats(ngx_http_request_t* r, const RouteParams& params);
+extern ngx_int_t handleOptionsRequest(ngx_http_request_t* r, const RouteParams& params);
 
-// 辅助函数：发送JSON响应
-ngx_int_t sendJsonResponse(ngx_http_request_t* r, const std::string& jsonContent, ngx_uint_t status = NGX_HTTP_OK) {
-    // 设置响应头部
-    r->headers_out.status = status;
-    r->headers_out.content_type.len = sizeof("application/json") - 1;
-    r->headers_out.content_type.data = (u_char *) "application/json";
-    
-    // 设置CORS头，允许所有来源访问
-    ngx_table_elt_t *h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
-    if (h == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    h->hash = 1;
-    h->key.len = sizeof("Access-Control-Allow-Origin") - 1;
-    h->key.data = (u_char *) "Access-Control-Allow-Origin";
-    h->value.len = sizeof("*") - 1;
-    h->value.data = (u_char *) "*";
-    
-    // 设置响应长度
-    r->headers_out.content_length_n = jsonContent.length();
-    
-    // 发送HTTP头
-    ngx_int_t rc = ngx_http_send_header(r);
-    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
-        return rc;
-    }
-    
-    // 创建缓冲区
-    ngx_buf_t *b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
-    if (b == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    
-    // 复制数据到缓冲区
-    u_char *data = static_cast<u_char*>(ngx_palloc(r->pool, jsonContent.length()));
-    if (data == NULL) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    ngx_memcpy(data, jsonContent.c_str(), jsonContent.length());
-    
-    // 设置缓冲区
-    b->pos = data;
-    b->last = data + jsonContent.length();
-    b->memory = 1;    // 内存缓冲区
-    b->last_buf = 1;  // 最后一个缓冲区
-    
-    // 创建响应链
-    ngx_chain_t out;
-    out.buf = b;
-    out.next = NULL;
-    
-    // 发送响应体
-    return ngx_http_output_filter(r, &out);
+// 发送JSON响应的向后兼容函数 - 将调用转发给JsonResponse
+ngx_int_t sendJsonResponse(ngx_http_request_t* r, const std::string& jsonContent, ngx_uint_t status) {
+    return JsonResponse::send(r, jsonContent, status);
 }
 
-// 重载sendJsonResponse函数,直接接收json对象
-ngx_int_t sendJsonResponse(ngx_http_request_t* r, const json& jsonObj, ngx_uint_t status = NGX_HTTP_OK) {
-    // 将json对象转换为字符串并调用原来的函数
-    std::string jsonContent = jsonObj.dump(2); // 缩进2个空格
-    return sendJsonResponse(r, jsonContent, status);
+// 重载sendJsonResponse函数,直接接收json对象 - 将调用转发给JsonResponse
+ngx_int_t sendJsonResponse(ngx_http_request_t* r, const json& jsonObj, ngx_uint_t status) {
+    return JsonResponse::send(r, jsonObj, status);
 }
 
 // 处理博客首页
@@ -1009,6 +961,229 @@ ngx_int_t handleDeletePost(ngx_http_request_t* r, const RouteParams& params) {
     catch (const std::exception& e) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
                      "处理文章删除请求异常: %s", e.what());
+        
+        json errorResponse;
+        errorResponse["success"] = false;
+        errorResponse["error"]["code"] = 500;
+        errorResponse["error"]["message"] = e.what();
+        
+        return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+// 处理OPTIONS请求，支持CORS预检请求
+ngx_int_t handleOptionsRequest(ngx_http_request_t* r, const RouteParams& params) {
+    NgxLog logger(r);
+    logger.info("处理OPTIONS请求: %s", ((NgxRequest(r)).getUri()).c_str());
+    
+    // 设置响应头部
+    r->headers_out.status = NGX_HTTP_OK;
+    
+    // 设置CORS头，允许所有来源访问
+    ngx_table_elt_t *h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    h->hash = 1;
+    h->key.len = sizeof("Access-Control-Allow-Origin") - 1;
+    h->key.data = (u_char *) "Access-Control-Allow-Origin";
+    h->value.len = sizeof("*") - 1;
+    h->value.data = (u_char *) "*";
+    
+    // 添加允许的方法
+    h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    h->hash = 1;
+    h->key.len = sizeof("Access-Control-Allow-Methods") - 1;
+    h->key.data = (u_char *) "Access-Control-Allow-Methods";
+    h->value.len = sizeof("GET, POST, PUT, DELETE, OPTIONS") - 1;
+    h->value.data = (u_char *) "GET, POST, PUT, DELETE, OPTIONS";
+    
+    // 添加允许的头部
+    h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    h->hash = 1;
+    h->key.len = sizeof("Access-Control-Allow-Headers") - 1;
+    h->key.data = (u_char *) "Access-Control-Allow-Headers";
+    h->value.len = sizeof("Content-Type, Authorization, X-Requested-With") - 1;
+    h->value.data = (u_char *) "Content-Type, Authorization, X-Requested-With";
+    
+    // 允许凭证
+    h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    h->hash = 1;
+    h->key.len = sizeof("Access-Control-Allow-Credentials") - 1;
+    h->key.data = (u_char *) "Access-Control-Allow-Credentials";
+    h->value.len = sizeof("true") - 1;
+    h->value.data = (u_char *) "true";
+    
+    // 设置最大缓存时间
+    h = static_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    h->hash = 1;
+    h->key.len = sizeof("Access-Control-Max-Age") - 1;
+    h->key.data = (u_char *) "Access-Control-Max-Age";
+    h->value.len = sizeof("86400") - 1; // 24小时
+    h->value.data = (u_char *) "86400";
+    
+    // 设置响应长度为0
+    r->headers_out.content_length_n = 0;
+    
+    // 发送HTTP头
+    ngx_int_t rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK) {
+        return rc;
+    }
+    
+    // 创建一个空的缓冲区表示响应体结束
+    ngx_buf_t *b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
+    if (b == NULL) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    // 标记为最后一个缓冲区，但不包含数据
+    b->last_buf = 1;      // 标记为最后一个缓冲区
+    b->last_in_chain = 1; // 标记为链中最后一个
+    b->pos = b->last = nullptr; // 明确指示这是一个零大小的缓冲区
+    b->sync = 1;          // 标记为同步操作
+    
+    ngx_chain_t out;
+    out.buf = b;
+    out.next = nullptr;
+    
+    return ngx_http_output_filter(r, &out);
+}
+
+// 处理获取文章编辑数据的请求
+ngx_int_t handleGetPostForEdit(ngx_http_request_t* r, const RouteParams& params) {
+    try {
+        // 封装请求和日志
+        NgxRequest request(r);
+        NgxLog logger(r);
+        logger.info("处理获取文章编辑数据API请求");
+
+        // 从路由参数中获取文章ID
+        std::string postIdParam = params.at("id");
+        int postId = std::stoi(postIdParam);
+
+        // 创建配置对象
+        BlogConfig config(request);
+        
+        // 从数据库获取文章
+        BlogPostDao dao;
+        auto post = dao.getPostById(postId);
+        
+        // 使用nlohmann/json库构建响应
+        json response;
+        
+        if (post.has_value()) {
+            response["success"] = true;
+            response["data"]["id"] = post->id;
+            response["data"]["title"] = post->title;
+            response["data"]["content"] = post->content;
+            response["data"]["summary"] = post->summary;
+            response["data"]["author"] = post->author;
+            response["data"]["created_at"] = post->created_at;
+            response["data"]["updated_at"] = post->updated_at;
+            response["data"]["published"] = post->published;
+            
+            // 添加分类和标签
+            response["data"]["categories"] = post->categories;
+            response["data"]["tags"] = post->tags;
+        } else {
+            // 文章不存在
+            logger.warn("Post with ID %d not found", postId);
+            response["success"] = false;
+            response["error"]["code"] = 404;
+            response["error"]["message"] = "文章不存在";
+            
+            return sendJsonResponse(r, response, NGX_HTTP_NOT_FOUND);
+        }
+        
+        // 发送JSON响应
+        return sendJsonResponse(r, response);
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                     "处理获取文章编辑数据请求异常: %s", e.what());
+        
+        json errorResponse;
+        errorResponse["success"] = false;
+        errorResponse["error"]["code"] = 500;
+        errorResponse["error"]["message"] = e.what();
+        
+        return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
+    }
+}
+
+// 处理管理面板统计数据API请求
+ngx_int_t handleAdminStats(ngx_http_request_t* r, const RouteParams& params) {
+    try {
+        // 封装请求和日志
+        NgxRequest request(r);
+        NgxLog logger(r);
+        logger.info("处理管理面板统计数据API请求");
+        
+        // 创建配置对象
+        BlogConfig config(request);
+        
+        // 从数据库获取统计数据
+        BlogPostDao dao;
+        
+        // 获取总文章数
+        int totalPosts = dao.getPostCount();
+        
+        // 获取已发布文章数
+        int publishedPosts = dao.getPublishedPostCount();
+        
+        // 获取总浏览量
+        int totalViews = dao.getTotalViewCount();
+        
+        // 获取分类数量
+        int categoriesCount = dao.getCategoryCount();
+        
+        // 获取标签数量
+        int tagsCount = dao.getTagCount();
+        
+        // 获取最近文章
+        std::vector<BlogPostRecord> recentPosts = dao.getAllPosts(5); // 获取5篇最新文章
+        
+        // 构建响应
+        json response;
+        response["success"] = true;
+        response["data"]["stats"]["total_posts"] = totalPosts;
+        response["data"]["stats"]["published_posts"] = publishedPosts;
+        response["data"]["stats"]["total_views"] = totalViews;
+        response["data"]["stats"]["categories_count"] = categoriesCount;
+        response["data"]["stats"]["tags_count"] = tagsCount;
+        
+        // 添加最近文章
+        response["data"]["recent_posts"] = json::array();
+        for (const auto& post : recentPosts) {
+            json postJson;
+            postJson["id"] = post.id;
+            postJson["title"] = post.title;
+            postJson["author"] = post.author;
+            postJson["created_at"] = post.created_at;
+            postJson["view_count"] = post.view_count;
+            
+            response["data"]["recent_posts"].push_back(postJson);
+        }
+        
+        // 发送JSON响应
+        return sendJsonResponse(r, response);
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                     "处理管理面板统计数据请求异常: %s", e.what());
         
         json errorResponse;
         errorResponse["success"] = false;

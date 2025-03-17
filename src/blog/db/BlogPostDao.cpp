@@ -555,3 +555,125 @@ std::string BlogPostDao::generateSlug(const std::string& name) {
     
     return slug;
 }
+
+// 获取文章总数
+int BlogPostDao::getPostCount() {
+    try {
+        auto& session = getSession();
+        auto schema = session.getSchema("blog");
+        auto table = schema.getTable("blog_posts");
+        
+        // 执行COUNT查询
+        auto result = table.select("COUNT(*) as count").execute();
+        auto row = result.fetchOne();
+        
+        if (row) {
+            return static_cast<int>(row[0]);
+        }
+        
+        return 0;
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "获取文章总数异常: %s", e.what());
+        return 0;
+    }
+}
+
+// 获取已发布文章数
+int BlogPostDao::getPublishedPostCount() {
+    try {
+        auto& session = getSession();
+        auto schema = session.getSchema("blog");
+        auto table = schema.getTable("blog_posts");
+        
+        // 执行COUNT查询，带条件
+        auto result = table.select("COUNT(*) as count")
+                          .where("published = 1")
+                          .execute();
+        auto row = result.fetchOne();
+        
+        if (row) {
+            return static_cast<int>(row[0]);
+        }
+        
+        return 0;
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "获取已发布文章数异常: %s", e.what());
+        return 0;
+    }
+}
+
+// 获取总浏览量
+int BlogPostDao::getTotalViewCount() {
+    try {
+        auto& session = getSession();
+        auto schema = session.getSchema("blog");
+        auto table = schema.getTable("blog_posts");
+        
+        // 执行SUM查询
+        auto result = table.select("SUM(view_count) as total_views").execute();
+        auto row = result.fetchOne();
+        
+        if (row && !row[0].isNull()) {
+            return static_cast<int>(row[0]);
+        }
+        
+        return 0;
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "获取总浏览量异常: %s", e.what());
+        return 0;
+    }
+}
+
+// 获取分类数量
+int BlogPostDao::getCategoryCount() {
+    try {
+        auto& session = getSession();
+        auto schema = session.getSchema("blog");
+        auto table = schema.getTable("blog_categories");
+        
+        // 执行COUNT查询
+        auto result = table.select("COUNT(*) as count").execute();
+        auto row = result.fetchOne();
+        
+        if (row) {
+            return static_cast<int>(row[0]);
+        }
+        
+        return 0;
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "获取分类数量异常: %s", e.what());
+        return 0;
+    }
+}
+
+// 获取标签数量
+int BlogPostDao::getTagCount() {
+    try {
+        auto& session = getSession();
+        auto schema = session.getSchema("blog");
+        auto table = schema.getTable("blog_tags");
+        
+        // 执行COUNT查询
+        auto result = table.select("COUNT(*) as count").execute();
+        auto row = result.fetchOne();
+        
+        if (row) {
+            return static_cast<int>(row[0]);
+        }
+        
+        return 0;
+    }
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "获取标签数量异常: %s", e.what());
+        return 0;
+    }
+}

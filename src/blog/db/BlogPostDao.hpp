@@ -145,6 +145,36 @@ public:
      * @return 是否删除成功
      */
     bool deletePost(int id);
+    
+    /**
+     * 获取文章总数
+     * @return 文章总数
+     */
+    int getPostCount();
+    
+    /**
+     * 获取已发布文章数
+     * @return 已发布文章数
+     */
+    int getPublishedPostCount();
+    
+    /**
+     * 获取总浏览量
+     * @return 总浏览量
+     */
+    int getTotalViewCount();
+    
+    /**
+     * 获取分类数量
+     * @return 分类数量
+     */
+    int getCategoryCount();
+    
+    /**
+     * 获取标签数量
+     * @return 标签数量
+     */
+    int getTagCount();
 
 private:
     /**

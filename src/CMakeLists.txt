@@ -258,7 +258,7 @@ function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BL
         ${BLOG_DIR}/BlogConfig.cpp
         ${BLOG_DIR}/BlogModule.cpp
         ${BLOG_DIR}/BlogRouter.cpp
-        ${BLOG_DIR}/TemplateCacheManager.cpp
+        ${BLOG_DIR}/JsonResponse.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
     )
