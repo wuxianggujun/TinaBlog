@@ -988,18 +988,16 @@ namespace {
         std::string uri = request.getUri();
         logger.info("处理静态文件请求: %s", uri.c_str());
         
+        // 如果是API请求，直接返回DECLINED让API路由处理
+        if (uri.find("/api/") == 0) {
+            logger.debug("API请求，不由静态文件处理器处理: %s", uri.c_str());
+            return NGX_DECLINED;
+        }
+        
         // 构建前端页面目录的基础路径
         std::string frontendBasePath = "C:/Users/wuxianggujun/CodeSpace/CMakeProjects/TinaBlog/html";
         
-        // 原始URI可能是API路径或直接的HTML页面请求
-        // 如果是根路径，则提供index.html
-        if (uri == "/" || uri == "/index.html") {
-            std::string fullPath = frontendBasePath + "/index.html";
-            logger.info("提供首页文件: %s", fullPath.c_str());
-            return serveStaticFile(r, fullPath);
-        }
-        
-        // 检查是否是静态资源路径（css、js、images等）
+        // 处理常见静态资源类型
         if (uri.find("/static/") == 0 || 
             uri.find(".css") != std::string::npos || 
             uri.find(".js") != std::string::npos || 
@@ -1008,7 +1006,12 @@ namespace {
             uri.find(".jpeg") != std::string::npos || 
             uri.find(".gif") != std::string::npos || 
             uri.find(".svg") != std::string::npos || 
-            uri.find(".ico") != std::string::npos) {
+            uri.find(".ico") != std::string::npos ||
+            uri.find(".woff") != std::string::npos ||
+            uri.find(".woff2") != std::string::npos ||
+            uri.find(".ttf") != std::string::npos ||
+            uri.find(".eot") != std::string::npos ||
+            uri.find(".json") != std::string::npos) {
             
             // 构建完整文件路径
             std::string fullPath = frontendBasePath + uri;
@@ -1016,15 +1019,11 @@ namespace {
             return serveStaticFile(r, fullPath);
         }
         
-        // 如果是其他前端路由路径（不是API请求），提供index.html让前端框架接管路由
-        if (uri.find("/api/") != 0 && uri.find("/blog/") != 0) {
-            std::string fullPath = frontendBasePath + "/index.html";
-            logger.info("提供前端路由页面: %s (实际文件: %s)", uri.c_str(), fullPath.c_str());
-            return serveStaticFile(r, fullPath);
-        }
-        
-        // 不是静态文件请求，返回DECLINED让下一个处理程序处理
-        return NGX_DECLINED;
+        // 对于所有其他请求，提供index.html（SPA应用的入口点）
+        // 这样前端路由可以接管导航
+        std::string indexPath = frontendBasePath + "/index.html";
+        logger.info("提供SPA入口页面: %s (实际文件: %s)", uri.c_str(), indexPath.c_str());
+        return serveStaticFile(r, indexPath);
     }
     
     // 提供静态文件
@@ -1814,19 +1813,83 @@ static void initBlogRoutes(const std::string& basePath, Router& router) {
     router.addRoute(Route(apiPrefix + "/admin/posts/:id/edit", editPostHandler)); // 编辑文章
     router.addRoute(Route(apiPrefix + "/admin/posts/:id/delete", deletePostHandler)); // 删除文章
     
-    // 保留传统路由用于提供静态文件或重定向到前端页面
-    router.addRoute(Route("/", blogIndexHandler));                        // 首页重定向到前端页面
-    router.addRoute(Route(path, blogIndexHandler));                       // 博客首页
-    router.addRoute(Route(path + "/post/:id", blogPostHandler));          // 文章详情页
-    router.addRoute(Route(path + "/category/:name", blogCategoryHandler)); // 分类页
-    router.addRoute(Route(path + "/tag/:name", blogTagHandler));          // 标签页
-    router.addRoute(Route(path + "/admin", adminHandler));                // 管理页面
+    // 添加一个根路径处理程序，将请求重定向到前端静态文件
+    router.addRoute(Route("/", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        // 直接调用静态文件处理程序
+        return handleStaticRequest(r);
+    }));
     
-    logger.info("博客路由初始化完成");
+    logger.info("博客路由初始化完成，仅保留API路由");
     
     // 调试：输出注册的路由
     auto registeredRoutes = router.dumpRoutes();
     for (const auto& route : registeredRoutes) {
         logger.debug("已注册路由: %s", route.c_str());
+    }
+}
+
+// 初始化博客路由
+void initBlogRoutes(BlogRouter* router) {
+    if (!router) {
+        return;
+    }
+
+    // 清除现有路由并设置新的API路由
+    router->reset();
+    
+    // 静态文件服务路由 - 处理所有非API请求
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/*", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleStaticRequest(r);
+    }));
+    
+    // API 路由 - 博客文章列表
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleBlogIndex(r, params);
+    }));
+    
+    // API 路由 - 单篇博客文章
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleBlogPost(r, params);
+    }));
+    
+    // API 路由 - 按分类查看博客
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/categories/:category", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleBlogCategory(r, params);
+    }));
+    
+    // API 路由 - 按标签查看博客
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/tags/:tag", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleBlogTag(r, params);
+    }));
+    
+    // API 路由 - 管理面板（可能需要身份验证）
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/admin", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleAdmin(r, params);
+    }));
+    
+    // API 路由 - 添加新博客
+    router->addRoute(Route(HttpMethod::POST_METHOD, "/api/posts", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleAddPost(r, params);
+    }));
+    
+    // API 路由 - 编辑博客
+    router->addRoute(Route(HttpMethod::GET_METHOD, "/api/posts/:id/edit", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleEditPost(r, params);
+    }));
+    
+    router->addRoute(Route(HttpMethod::PUT_METHOD, "/api/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleEditPost(r, params);
+    }));
+    
+    // API 路由 - 删除博客
+    router->addRoute(Route(HttpMethod::DELETE_METHOD, "/api/posts/:id", [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t {
+        return handleDeletePost(r, params);
+    }));
+    
+    // 打印所有路由以供调试
+    NgxLog logger(ngx_cycle->log);
+    std::vector<std::string> routes = router->dumpRoutes();
+    for (const auto& route : routes) {
+        logger.info("路由: %s", route.c_str());
     }
 }
