@@ -188,7 +188,23 @@ void DbManager::close() {
 
 // 创建数据库表
 bool DbManager::createTables() {
-    // 博文表
+
+    // 创建作者表
+    std::string createAuthorsTable = 
+        "CREATE TABLE IF NOT EXISTS authors ("
+        "  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
+        "  username VARCHAR(50) NOT NULL UNIQUE,"
+        "  display_name VARCHAR(100) NOT NULL,"
+        "  email VARCHAR(100) NOT NULL UNIQUE,"
+        "  password_hash VARCHAR(255) NOT NULL,"
+        "  bio TEXT,"
+        "  profile_image VARCHAR(255),"
+        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+        "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+        "  is_admin BOOLEAN DEFAULT FALSE"
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
+    
+    // 博文表 - 使用author_id外键代替author字符串
     std::string createPostsTable = 
         "CREATE TABLE IF NOT EXISTS posts ("
         "  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
@@ -196,13 +212,14 @@ bool DbManager::createTables() {
         "  slug VARCHAR(255) NOT NULL UNIQUE,"
         "  content TEXT NOT NULL,"
         "  summary TEXT,"
-        "  author VARCHAR(100) NOT NULL,"
+        "  author_id INT UNSIGNED NOT NULL,"  // 外键字段
         "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
         "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
         "  published BOOLEAN DEFAULT TRUE,"
         "  view_count INT UNSIGNED DEFAULT 0,"
         "  INDEX idx_slug (slug),"
-        "  INDEX idx_created (created_at)"
+        "  INDEX idx_created (created_at),"
+        "  FOREIGN KEY (author_id) REFERENCES authors(id)"  // 外键关联
         ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
     
     // 分类表
@@ -244,6 +261,7 @@ bool DbManager::createTables() {
     
     try {
         // 执行创建表操作
+        session_->sql(createAuthorsTable).execute();
         session_->sql(createPostsTable).execute();
         session_->sql(createCategoriesTable).execute();
         session_->sql(createTagsTable).execute();

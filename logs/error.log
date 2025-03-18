@@ -891,3 +891,28 @@
 2025/03/18 14:11:16 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/18 14:11:16 [info] 24740#26024: *2 文章创建成功，ID: 12, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/18 14:11:16 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:15:37 [notice] 24740#11432: console closing, exiting
+2025/03/18 14:24:26 [error] 25164#25152: Error creating tables: CDK Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'FOREIGN KEY (author_id) REFERENCES authors(id)) ENGINE=InnoDB DEFAULT CHARSET=ut' at line 1
+2025/03/18 14:24:26 [error] 25164#25152: 创建数据库表失败
+2025/03/18 14:24:26 [error] 25164#25152: 连接过程中异常: resource deadlock would occur: resource deadlock would occur
+2025/03/18 14:24:26 [warn] 25164#25152: Blog base path not configured, using default value
+2025/03/18 14:24:26 [notice] 25164#25152: using the "select" event method
+2025/03/18 14:24:26 [notice] 25164#25152: nginx/1.27.5
+2025/03/18 14:24:26 [info] 25164#25152: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 14:24:26 [notice] 25164#25152: create thread 3224
+2025/03/18 14:25:31 [notice] 25164#7684: console closing, exiting
+2025/03/18 14:25:38 [error] 20532#25460: Error creating tables: CDK Error: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci' at line 1
+2025/03/18 14:25:38 [error] 20532#25460: 创建数据库表失败
+2025/03/18 14:25:38 [error] 20532#25460: 连接过程中异常: resource deadlock would occur: resource deadlock would occur
+2025/03/18 14:25:38 [warn] 20532#25460: Blog base path not configured, using default value
+2025/03/18 14:25:38 [notice] 20532#25460: using the "select" event method
+2025/03/18 14:25:38 [notice] 20532#25460: nginx/1.27.5
+2025/03/18 14:25:38 [info] 20532#25460: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 14:25:38 [notice] 20532#25460: create thread 26256
+2025/03/18 14:26:37 [notice] 20532#28420: console closing, exiting
+2025/03/18 14:26:43 [warn] 27292#27272: Blog base path not configured, using default value
+2025/03/18 14:26:43 [notice] 27292#27272: using the "select" event method
+2025/03/18 14:26:43 [notice] 27292#27272: nginx/1.27.5
+2025/03/18 14:26:43 [info] 27292#27272: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 14:26:43 [notice] 27292#27272: create thread 21748
+2025/03/18 14:28:29 [notice] 27292#25904: console closing, exiting
