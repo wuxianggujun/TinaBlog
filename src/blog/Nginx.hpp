@@ -34,7 +34,5 @@ extern "C" {
 #include <memory>
 #include <stdexcept>
 
-// ==================== Boost库 ====================
-#include <boost/core/ignore_unused.hpp>
 
 #endif //TINA_BLOG_NGINX_HPP

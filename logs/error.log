@@ -922,3 +922,12 @@
 2025/03/18 16:57:49 [info] 11164#17588: OS: 260200 build:9200, "", suite:100, type:1
 2025/03/18 16:57:49 [notice] 11164#17588: create thread 20364
 2025/03/18 16:57:51 [notice] 11164#29508: console closing, exiting
+2025/03/18 22:59:59 [notice] 18788#5136: Blog module pre-configuration
+2025/03/18 22:59:59 [emerg] 18788#5136: unknown directive "blog_db_connection" in C:\Users\wuxianggujun\CodeSpace\CMakeProjects\TinaBlog/conf/nginx.conf:40
+2025/03/18 23:09:37 [emerg] 3908#1340: unexpected ";" in C:\Users\wuxianggujun\CodeSpace\CMakeProjects\TinaBlog/conf/nginx.conf:11
+2025/03/18 23:09:45 [notice] 11040#8532: Blog module pre-configuration
+2025/03/18 23:09:45 [emerg] 11040#8532: unknown directive "blog_db_connection" in C:\Users\wuxianggujun\CodeSpace\CMakeProjects\TinaBlog/conf/nginx.conf:41
+2025/03/18 23:17:58 [notice] 20024#18852: åšå®¢æ¨¡å—å¼€å§‹é¢„é…ç½®
+2025/03/18 23:17:58 [notice] 20024#18852: åšå®¢æ¨¡å—å®Œæˆåé…ç½®
+2025/03/18 23:22:57 [notice] 6008#7864: ²©¿ÍÄ£¿é¿ªÊ¼Ô¤ÅäÖÃ
+2025/03/18 23:22:57 [notice] 6008#7864: ²©¿ÍÄ£¿éÍê³ÉºóÅäÖÃ

@@ -253,14 +253,7 @@ function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BL
     
     # Blog模块源文件
     set(BLOG_SOURCES
-        ${BLOG_DIR}/Nginx.cpp
-        ${BLOG_DIR}/NgxHeaders.cpp
-        ${BLOG_DIR}/HttpConfigHelper.cpp
-        ${BLOG_DIR}/BlogConfig.cpp
         ${BLOG_DIR}/BlogModule.cpp
-        ${BLOG_DIR}/BlogRouter.cpp
-        ${BLOG_DIR}/JsonResponse.cpp
-        ${BLOG_DIR}/NgxResponse.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
     )
