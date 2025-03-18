@@ -37,13 +37,6 @@ extern "C" {
 extern ngx_module_t ngx_http_blog_module;
 }
 
-void initBlogRouter(const BlogConfig& config);
-
-// 前向声明
-static void initBlogRoutes(const std::string& basePath, Router& router);
-// 新增前向声明
-void initBlogRoutes(BlogRouter* router);
-
 // 初始化静态成员变量
 bool BlogModule::isRegistered_ = false;
 ngx_module_t* BlogModule::blogModule_ = nullptr;
@@ -651,31 +644,6 @@ ngx_module_t ngx_http_blog_module = {
 }
 
 // MODULE_API中的函数定义
-
-// 初始化函数
-ngx_int_t BlogModule::init(ngx_cycle_t* cycle)
-{
-    try
-    {
-        // 设置日志
-        NgxLog logger(cycle->log);
-        logger.info("初始化博客模块...");
-
-        // 模板引擎将在需要时自动初始化
-
-        // 初始化博客配置默认值
-        BlogModule::basePath = "/blog";
-        BlogModule::version = "1.0.0";
-        BlogModule::dataDir = "/var/www/blog/data";
-
-        return NGX_OK;
-    }
-    catch (const std::exception& e)
-    {
-        ngx_log_error(NGX_LOG_ERR, cycle->log, 0, "初始化博客模块失败: %s", e.what());
-        return NGX_ERROR;
-    }
-}
 
 // 处理静态文件请求
 ngx_int_t BlogModule::handleStaticRequest(ngx_http_request_t* r)

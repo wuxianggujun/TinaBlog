@@ -26,13 +26,6 @@ public:
     //=====================================================================
     
     /**
-     * @brief 初始化模块
-     * @param cycle Nginx周期对象
-     * @return NGX_OK成功，NGX_ERROR失败
-     */
-    static ngx_int_t init(ngx_cycle_t* cycle);
-    
-    /**
      * @brief HTTP请求处理函数
      * @param r Nginx请求对象
      * @return Nginx状态码

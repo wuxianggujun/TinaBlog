@@ -120,3 +120,14 @@
 2025/03/17 23:49:17 [info] 21624#21388: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/17 23:49:17 [info] 21624#21388: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
 2025/03/17 23:49:17 [info] 21624#21388: *1 请求体未读取，现在自动读取, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 08:51:41 [warn] 10612#10796: Blog base path not configured, using default value
+2025/03/18 08:51:41 [notice] 10612#10796: using the "select" event method
+2025/03/18 08:51:41 [notice] 10612#10796: nginx/1.27.5
+2025/03/18 08:51:41 [info] 10612#10796: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 08:51:41 [notice] 10612#10796: create thread 20660
+2025/03/18 08:51:48 [notice] 10612#4564: console closing, exiting
+2025/03/18 10:50:26 [warn] 9184#16776: Blog base path not configured, using default value
+2025/03/18 10:50:26 [notice] 9184#16776: using the "select" event method
+2025/03/18 10:50:26 [notice] 9184#16776: nginx/1.27.5
+2025/03/18 10:50:26 [info] 9184#16776: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 10:50:26 [notice] 9184#16776: create thread 4972

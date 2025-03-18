@@ -6,219 +6,240 @@
 #define TINA_BLOG_BLOG_ROUTER_HPP
 
 #include "Nginx.hpp"
-#include "NgxString.hpp"
+#include "Router.hpp"
 #include "NgxRequest.hpp"
-#include "NgxLog.hpp"
-#include <utility>
-#include <vector>
-#include <string>
-#include <functional>
 #include <unordered_map>
-#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
-// 路由参数类型 (如 /blog/post/:id 中的 id => value)
-using RouteParams = std::unordered_map<std::string, std::string>;
+extern "C" {
+// 前向声明外部模块
+extern ngx_module_t ngx_http_blog_module;
+}
 
-// 路由处理器类型
-using RouteHandler = std::function<ngx_int_t(ngx_http_request_t*, const RouteParams&)>;
-
-// 使用nlohmann json
 using json = nlohmann::json;
 
 // 发送JSON响应函数的声明 (向后兼容层，实际调用JsonResponse类)
 ngx_int_t sendJsonResponse(ngx_http_request_t* r, const std::string& jsonContent, ngx_uint_t status = NGX_HTTP_OK);
 ngx_int_t sendJsonResponse(ngx_http_request_t* r, const json& jsonObj, ngx_uint_t status = NGX_HTTP_OK);
 
-// 定义HTTP方法枚举
-enum HttpMethod
-{
-    GET_METHOD = NGX_HTTP_GET,
-    HEAD_METHOD = NGX_HTTP_HEAD,
-    POST_METHOD = NGX_HTTP_POST,
-    PUT_METHOD = NGX_HTTP_PUT,
-    DELETE_METHOD = NGX_HTTP_DELETE,
-    OPTIONS_METHOD = NGX_HTTP_OPTIONS,
-    ANY_METHOD = 0xFFFF
-};
 
-// 路由定义结构
-struct Route
-{
-    HttpMethod method;
-    std::string pattern;
-    std::vector<std::string> paramNames;
-    RouteHandler handler;
-
-    Route(HttpMethod method, std::string pattern, RouteHandler handler): method(method),
-        pattern(std::move(pattern)), handler(std::move(handler))
-    {
-        parsePattern();
-    }
-    
-    // 新增：支持不指定HTTP方法的构造函数，默认为ANY_METHOD
-    Route(std::string pattern, RouteHandler handler): method(ANY_METHOD),
-        pattern(std::move(pattern)), handler(std::move(handler))
-    {
-        parsePattern();
-    }
-
-    void parsePattern();
-    
-    // 检查URI是否匹配该路由，并提取参数
-    bool match(const ngx_str_t& uri, RouteParams& params) const;
-};
-
-// 路由器类
-class Router
-{
-public:
-    // 虚析构函数，使得Router成为多态类
-    virtual ~Router() = default;
-    
-    // 添加路由
-    virtual void addRoute(const Route& route);
-    
-    // 重置所有路由
-    virtual void reset();
-    
-    // 路由处理
-    virtual ngx_int_t route(ngx_http_request_t* r);
-    
-    // 获取路由数量
-    virtual size_t getRouteCount() const;
-    
-    // 转储路由列表（用于调试）
-    virtual std::vector<std::string> dumpRoutes() const;
-    
-protected:
-    std::vector<Route> routes;
-};
-
-// 让BlogRouter可以转换为Router的兼容实现
+// 博客路由器，继承自Router基类
 class BlogRouter : public Router
 {
+
+
 public:
-    // 注册GET路由
-    void get(const std::string& pattern, const RouteHandler& handler)
+    static BlogRouter& getInstance()
     {
-        addRoute(Route(GET_METHOD, pattern, handler));
+        static BlogRouter instance;
+        return instance;
     }
 
-    // 注册POST路由
-    void post(const std::string& pattern, const RouteHandler& handler)
+    void addRoute(const Route& route) override
     {
-        addRoute(Route(POST_METHOD, pattern, handler));
-    }
-
-    // 注册支持任何HTTP方法的路由
-    void any(const std::string& pattern, const RouteHandler& handler)
-    {
-        addRoute(Route(ANY_METHOD, pattern, handler));
-    }
-
-    /**
-     * @brief 清除所有路由
-     */
-    void reset() 
-    {
-        Router::reset(); // 调用基类的reset方法
-    }
-
-    // 查找匹配的路由处理器
-    RouteHandler match(ngx_http_request_t* r, const std::string& uri, RouteParams& params)
-    {
-        NgxLog logger(r);
-        
-        // 临时创建ngx_str_t
-        ngx_str_t ngx_uri;
-        ngx_uri.data = (u_char*)uri.c_str();
-        ngx_uri.len = uri.length();
-        
-        logger.debug("Trying to match route: %s", uri.c_str());
-        
-        // 遍历所有路由并检查匹配（注：使用dumpRoutes只是为了日志）
-        std::vector<std::string> routesList = Router::dumpRoutes();
-        for (const auto& routeStr : routesList) {
-            logger.debug("Checking route: %s", routeStr.c_str());
+        if (methodRequiresBody(route.method()))
+        {
+            routesWithBody_.push_back(route);
         }
-        
-        // 遍历所有路由并检查匹配
-        // 使用基类的routes成员变量
-        for (const auto& route : routes) {
-            HttpMethod method = ANY_METHOD;
-            if (r != nullptr) {
-                method = static_cast<HttpMethod>(r->method);
-            }
-            
-            // 检查HTTP方法匹配 (ANY_METHOD匹配任何方法)
-            if (route.method != ANY_METHOD && route.method != method) {
-                logger.debug("HTTP method mismatch: %d != %d", route.method, method);
-                continue;
-            }
-            
-            // 清空前一个路由可能设置的参数
-            params.clear();
-            
-            // 尝试匹配路由模式
-            if (route.match(ngx_uri, params)) {
-                logger.debug("Found matching route: %s", route.pattern.c_str());
-                return route.handler;
-            }
+        else
+        {
+            routes_.push_back(route);
         }
-        
-        logger.debug("No matching route found");
-        return nullptr;  // 没有匹配的路由
     }
 
-    /**
-     * @brief 获取已注册的路由数量
-     * @return 路由数量
-     */
-    size_t getRouteCount() const 
+    // 添加新的方法，用于注册需要请求体的路由
+    void addRouteWithBody(const Route& route)
     {
-        return Router::getRouteCount();
+        routesWithBody_.push_back(route);
     }
-    
-    /**
-     * @brief 打印所有已注册的路由，方便调试
-     * @return 路由字符串列表
-     */
-    std::vector<std::string> dumpRoutes() const 
+
+    void reset() override
     {
-        // 先调用基类的方法获取路由字符串列表
-        std::vector<std::string> routeStrings = Router::dumpRoutes();
-        
-        // 打印日志
-        for (const auto& route : routes) {
-            // 将HTTP方法转换为可读字符串
-            std::string methodStr;
-            if (route.method == GET_METHOD) methodStr = "GET";
-            else if (route.method == POST_METHOD) methodStr = "POST";
-            else if (route.method == HEAD_METHOD) methodStr = "HEAD";
-            else if (route.method == PUT_METHOD) methodStr = "PUT";
-            else if (route.method == DELETE_METHOD) methodStr = "DELETE";
-            else methodStr = "ANY";
-            
-            // 打印路由信息
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                "Registered route: [%s] %s", 
-                methodStr.c_str(), 
-                route.pattern.c_str());
+        routes_.clear();
+        routesWithBody_.clear();
+    }
+
+    [[nodiscard]] size_t getRouteCount() const override
+    {
+        return routes_.size() + routesWithBody_.size();
+    }
+
+    ngx_int_t route(ngx_http_request_t* r) override
+    {
+        try
+        {
+            const NgxLog logger(r->connection->log);
+
+            // 获取URI
+            const std::string uri(reinterpret_cast<char*>(r->uri.data), r->uri.len);
+
+            // 匹配路由
+            RouteParams params;
+
+            if (const RouteHandler handler = match(r, uri, params))
+            {
+                logger.debug("*%ui 找到匹配的路由: %s", r->connection->number, uri.c_str());
+                return handler(r, params);
+            }
+
+            // 未找到路由
+            logger.warn("*%ui 未找到匹配的路由: %s", r->connection->number, uri.c_str());
+            return NGX_DECLINED;
         }
-        
-        return routeStrings;
+        catch (const std::exception& e)
+        {
+            NgxLog logger(r->connection->log);
+            logger.error("*%ui 路由处理异常: %s", r->connection->number, e.what());
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    }
+
+
+    RouteHandler match(ngx_http_request_t* r, const std::string& uri, RouteParams& params) override
+    {
+        const NgxLog logger(r);
+
+        // 首先匹配带请求体的路由
+        for (const auto& route : routesWithBody_)
+        {
+            if (route.match(r, uri, params))
+            {
+                // 如果需要读取请求体且请求体未读取
+                if (r->request_body == NULL)
+                {
+                    logger.debug("*%ui 找到需要请求体的路由: %s", r->connection->number, route.toString().c_str());
+
+                    // 保存路由和参数上下文
+                    auto* ctx = new RouteContext{route, params};
+
+                    // 创建清理回调，确保内存被释放
+                    ngx_http_cleanup_t* cln = ngx_http_cleanup_add(r, 0);
+                    if (cln)
+                    {
+                        cln->handler = [](void* data)
+                        {
+                            auto* ctx = static_cast<RouteContext*>(data);
+                            delete ctx;
+                        };
+                        cln->data = ctx;
+                    }
+
+                    // 保存上下文指针到请求中
+                    ngx_http_set_ctx(r, ctx, ngx_http_blog_module);
+
+                    // 设置请求体读取选项
+                    r->request_body_in_single_buf = 1;
+                    r->request_body_in_file_only = 0;
+
+                    // 读取请求体
+                    logger.debug("*%ui 开始读取请求体", r->connection->number);
+                    ngx_int_t rc = ngx_http_read_client_request_body(r, handleRequestBodyRead);
+
+                    if (rc >= NGX_HTTP_SPECIAL_RESPONSE)
+                    {
+                        // 返回空处理器，由Nginx处理特殊响应
+                        return nullptr;
+                    }
+
+                    // 请求体读取延迟处理，返回一个表示延迟状态的处理器
+                    return [](ngx_http_request_t*, const RouteParams&) -> ngx_int_t
+                    {
+                        return NGX_DONE;
+                    };
+                }
+
+                // 请求体已读取，返回实际处理函数
+                logger.debug("*%ui 找到已有请求体的路由: %s", r->connection->number, route.toString().c_str());
+                return route.handler();
+            }
+        }
+
+        // 然后匹配普通路由
+        for (const auto& route : routes_)
+        {
+            if (route.match(r, uri, params))
+            {
+                logger.debug("*%ui 找到普通路由: %s", r->connection->number, route.toString().c_str());
+                return route.handler();
+            }
+        }
+
+        // 未找到路由
+        return nullptr;
+    }
+
+    // 获取所有路由信息，用于调试（实现基类方法）
+    [[nodiscard]] std::vector<std::string> dumpRoutes() const override
+    {
+        std::vector<std::string> result;
+
+        for (const auto& route : routes_)
+        {
+            result.push_back(route.toString());
+        }
+
+        for (const auto& route : routesWithBody_)
+        {
+            result.push_back(route.toString() + " (需要请求体)");
+        }
+
+        return result;
     }
 
 private:
-    // 删除重复的成员变量，使用从Router继承的routes
-    // std::vector<Route> routes;
+    BlogRouter() = default;
+
+    // 禁止拷贝和移动
+    BlogRouter(const BlogRouter& other) = delete;
+    BlogRouter& operator=(const BlogRouter& other) = delete;
+    BlogRouter(BlogRouter&& other) = delete;
+    BlogRouter& operator=(BlogRouter&& other) = delete;
+
+    struct RouteContext
+    {
+        Route route;
+        RouteParams params;
+    };
+    
+    static void handleRequestBodyRead(ngx_http_request_t* r)
+    {
+        NgxLog logger(r);
+
+        logger.debug("*%ui 请求体读取完成", r->connection->number);
+
+        // 获取路由上下文
+        auto* ctx = static_cast<RouteContext*>(ngx_http_get_module_ctx(r, ngx_http_blog_module));
+
+        if (!ctx)
+        {
+            logger.error("*%ui 未找到路由上下文", r->connection->number);
+            ngx_http_finalize_request(r, NGX_HTTP_INTERNAL_SERVER_ERROR);
+            return;
+        }
+
+        // 执行路由处理函数
+        ngx_int_t rc;
+
+        try
+        {
+            rc = ctx->route.handler()(r, ctx->params);
+        }
+        catch (const std::exception& e)
+        {
+            logger.error("*%ui 路由处理器执行异常: %s", r->connection->number, e.what());
+            rc = NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+        // 完成请求处理
+        ngx_http_finalize_request(r, rc);
+    }
+
+    std::vector<Route> routes_;
+    std::vector<Route> routesWithBody_;
 };
 
-// 全局单例路由器
-inline BlogRouter& getBlogRouter()
-{
-    static BlogRouter router;
-    return router;
+// 获取全局路由器实例
+inline BlogRouter& getBlogRouter() {
+    return BlogRouter::getInstance();
 }
 
 #endif //TINA_BLOG_BLOG_ROUTER_HPP
