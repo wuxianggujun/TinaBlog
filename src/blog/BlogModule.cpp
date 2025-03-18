@@ -5,6 +5,13 @@
 #include <windows.h>
 #include <string>
 
+// 设置控制台编码为UTF-8
+static void setConsoleUTF8() {
+    // 设置控制台代码页为UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+}
+
 // 添加UTF8转GBK的辅助函数
 static std::string utf8_to_gbk(const char* utf8_str) {
     // 获取需要的缓冲区大小
@@ -118,8 +125,15 @@ ngx_module_t ngx_http_blog_module = {
     NGX_MODULE_V1_PADDING
 };
 
-// 配置创建函数 - 创建新的配置结构体并初始化默认值
+// 配置创建函数
 void* BlogModule::createLocConf(ngx_conf_t* cf) {
+    // 在第一次创建配置时设置控制台编码
+    static bool first_time = true;
+    if (first_time) {
+        setConsoleUTF8();
+        first_time = false;
+    }
+    
     auto* conf = static_cast<BlogModuleConfig*>(
         ngx_pcalloc(cf->pool, sizeof(BlogModuleConfig))
     );
@@ -221,27 +235,23 @@ char* BlogModule::setDbAutoConnect(ngx_conf_t* cf, ngx_command_t* cmd, void* con
 
 // 模块预配置函数
 ngx_int_t BlogModule::preConfiguration(ngx_conf_t* cf) {
-    std::string msg = utf8_to_gbk("博客模块开始预配置");
-    ngx_log_error(NGX_LOG_NOTICE, cf->log, 0, "%s", msg.c_str());
+    ngx_log_error(NGX_LOG_NOTICE, cf->log, 0, "博客模块开始预配置");
     return NGX_OK;
 }
 
 // 模块后配置函数
 ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
-    std::string msg = utf8_to_gbk("博客模块完成后配置");
-    ngx_log_error(NGX_LOG_NOTICE, cf->log, 0, "%s", msg.c_str());
+    ngx_log_error(NGX_LOG_NOTICE, cf->log, 0, "博客模块完成后配置");
     return NGX_OK;
 }
 
 // 进程初始化函数
 ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
-    std::string msg = utf8_to_gbk("博客模块进程初始化");
-    ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "%s", msg.c_str());
+    ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程初始化");
     return NGX_OK;
 }
 
 // 进程退出函数
 void BlogModule::exitProcess(ngx_cycle_t* cycle) {
-    std::string msg = utf8_to_gbk("博客模块进程退出");
-    ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "%s", msg.c_str());
+    ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程退出");
 }
