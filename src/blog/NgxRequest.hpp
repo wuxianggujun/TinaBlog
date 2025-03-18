@@ -9,6 +9,7 @@
 #include "NginxContext.hpp"
 #include "NgxString.hpp"
 #include "NgxPool.hpp"
+#include "NgxHeaders.hpp"
 #include <string>
 #include <optional>
 #include <string_view>
@@ -16,6 +17,26 @@
 #include <algorithm>
 #include <sstream>
 
+
+class NgxRequestBody final : public NginxContext<ngx_http_request_t> {
+public:
+    
+    [[nodiscard]] ngx_chain_t* bufs() const {
+        return get()->request_body ? get()->request_body->bufs : nullptr;
+    }
+
+    void discard() const {
+        auto rc = ngx_http_discard_request_body(get());
+        // NgxException::require(rc);
+    }
+
+    template<typename F>
+    ngx_int_t read(F f) const {
+        auto rc = ngx_http_read_client_request_body(get(), f);
+        // NgxException::fail(rc >= NGX_HTTP_SPECIAL_RESPONSE, rc);
+        return NGX_DONE;
+    }
+};
 
 /**
  * @brief 高性能Nginx HTTP请求(ngx_http_request_t)封装
