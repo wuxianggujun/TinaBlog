@@ -85,6 +85,7 @@ public:
      * @param title 标题
      * @param content 内容
      * @param summary 摘要，默认为空
+     * @param author 作者
      * @param categories 分类列表
      * @param tags 标签列表
      * @param published 是否发布，默认为true
@@ -94,6 +95,7 @@ public:
         const std::string& title,
         const std::string& content,
         const std::string& summary = "",
+        const std::string& author = "null",
         const std::vector<std::string>& categories = {},
         const std::vector<std::string>& tags = {},
         bool published = true
@@ -222,4 +224,8 @@ private:
      * @return 数据库会话
      */
     mysqlx::Session& getSession();
+
+    std::string createSlugFromTitle(const std::string& title);
+    bool isSlugExists(const std::string& slug);
+    std::string BlogPostDao::generateRandomString(size_t length);
 };

@@ -131,3 +131,763 @@
 2025/03/18 10:50:26 [notice] 9184#16776: nginx/1.27.5
 2025/03/18 10:50:26 [info] 9184#16776: OS: 260200 build:9200, "", suite:100, type:1
 2025/03/18 10:50:26 [notice] 9184#16776: create thread 4972
+2025/03/18 10:50:45 [info] 9184#4972: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:50:45 [debug] 9184#4972: *1 路由器中注册的路由数量: 13
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 10:50:45 [debug] 9184#4972: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 10:50:45 [debug] 9184#4972: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 10:50:45 [debug] 9184#4972: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 10:50:45 [debug] 9184#4972: *1 *1i 开始读取请求体
+2025/03/18 10:50:45 [debug] 9184#4972: *1 *1i 请求体读取完成
+2025/03/18 10:50:45 [info] 9184#4972: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:50:45 [info] 9184#4972: *1 成功读取请求体，长度: 205, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:50:45 [info] 9184#4972: *1 文章创建成功，ID: 1, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:50:45 [info] 9184#4972: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:03 [info] 9184#4972: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:03 [debug] 9184#4972: *1 路由器中注册的路由数量: 13
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 10:51:03 [debug] 9184#4972: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 10:51:03 [debug] 9184#4972: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 10:51:03 [debug] 9184#4972: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 10:51:03 [debug] 9184#4972: *1 *1i 开始读取请求体
+2025/03/18 10:51:03 [debug] 9184#4972: *1 *1i 请求体读取完成
+2025/03/18 10:51:03 [info] 9184#4972: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:03 [info] 9184#4972: *1 成功读取请求体，长度: 205, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:03 [error] 9184#4972: Error creating post: CDK Error: Duplicate entry '' for key 'posts.slug'
+2025/03/18 10:51:03 [error] 9184#4972: *1 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:03 [info] 9184#4972: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:05 [info] 9184#4972: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:05 [debug] 9184#4972: *1 路由器中注册的路由数量: 13
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 10:51:05 [debug] 9184#4972: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 10:51:05 [debug] 9184#4972: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 10:51:05 [debug] 9184#4972: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 10:51:05 [debug] 9184#4972: *1 *1i 开始读取请求体
+2025/03/18 10:51:05 [debug] 9184#4972: *1 *1i 请求体读取完成
+2025/03/18 10:51:05 [info] 9184#4972: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:05 [info] 9184#4972: *1 成功读取请求体，长度: 205, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:05 [error] 9184#4972: Error creating post: CDK Error: Duplicate entry '' for key 'posts.slug'
+2025/03/18 10:51:05 [error] 9184#4972: *1 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 10:51:05 [info] 9184#4972: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 11:00:31 [info] 9184#4972: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 11:00:31 [debug] 9184#4972: *2 路由器中注册的路由数量: 13
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 11:00:31 [debug] 9184#4972: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 11:00:31 [debug] 9184#4972: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 11:00:31 [debug] 9184#4972: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 11:00:31 [debug] 9184#4972: *2 *2i 开始读取请求体
+2025/03/18 11:00:31 [debug] 9184#4972: *2 *2i 请求体读取完成
+2025/03/18 11:00:31 [info] 9184#4972: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 11:00:31 [info] 9184#4972: *2 成功读取请求体，长度: 205, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 11:00:31 [error] 9184#4972: Error creating post: CDK Error: OpenSSL: error:00000000:lib(0)::reason(0)
+2025/03/18 11:00:31 [error] 9184#4972: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 11:00:31 [info] 9184#4972: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 11:17:41 [notice] 9184#10792: console closing, exiting
+2025/03/18 12:47:22 [warn] 25108#7180: Blog base path not configured, using default value
+2025/03/18 12:47:22 [notice] 25108#7180: using the "select" event method
+2025/03/18 12:47:22 [notice] 25108#7180: nginx/1.27.5
+2025/03/18 12:47:22 [info] 25108#7180: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 12:47:22 [notice] 25108#7180: create thread 27116
+2025/03/18 12:47:30 [info] 25108#27116: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 12:47:30 [debug] 25108#27116: *1 路由器中注册的路由数量: 13
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 12:47:30 [debug] 25108#27116: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 12:47:30 [debug] 25108#27116: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 12:47:30 [debug] 25108#27116: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 12:47:30 [debug] 25108#27116: *1 *1i 开始读取请求体
+2025/03/18 12:47:30 [debug] 25108#27116: *1 *1i 请求体读取完成
+2025/03/18 12:47:30 [info] 25108#27116: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 12:47:30 [info] 25108#27116: *1 成功读取请求体，长度: 205, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 12:47:30 [error] 25108#27116: *1 处理添加文章请求异常: [json.exception.type_error.302] type must be string, but is null, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 12:47:30 [info] 25108#27116: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:18 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:18 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:05:18 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:05:18 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:05:18 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:05:18 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:05:18 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:05:18 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:18 [info] 25108#27116: *2 成功读取请求体，长度: 218, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:18 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:05:18 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:18 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:29 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:29 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:05:29 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:05:29 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:05:29 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:05:29 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:05:29 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:05:29 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:29 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:29 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:05:29 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:29 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:51 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:51 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:05:51 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:05:51 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:05:51 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:05:51 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:05:51 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:05:51 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:51 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:51 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:05:51 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:05:51 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:07 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:07 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:07 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:07 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:07 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:07 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:07 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:07 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:07 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:07 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:07 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:07 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:11 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:11 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:11 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:11 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:11 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:11 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:11 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:11 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:11 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:11 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:11 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:11 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:38 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:38 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:38 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:38 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:38 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:38 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:38 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:38 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:38 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:38 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:38 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:38 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:39 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:39 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:39 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:39 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:39 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:39 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:39 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:39 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:39 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:39 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:39 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:39 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:40 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:40 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:40 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:40 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:40 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:40 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:40 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:40 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:40 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:40 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:40 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:40 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:41 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:41 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:41 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:41 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:41 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:41 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:41 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:41 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:41 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:41 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:41 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:41 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:43 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:43 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:43 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:43 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:43 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:43 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:43 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:43 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:43 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:43 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:43 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:43 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:44 [info] 25108#27116: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:44 [debug] 25108#27116: *2 路由器中注册的路由数量: 13
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:06:44 [debug] 25108#27116: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:44 [debug] 25108#27116: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:06:44 [debug] 25108#27116: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:06:44 [debug] 25108#27116: *2 *2i 开始读取请求体
+2025/03/18 13:06:44 [debug] 25108#27116: *2 *2i 请求体读取完成
+2025/03/18 13:06:44 [info] 25108#27116: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:44 [info] 25108#27116: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:44 [error] 25108#27116: Error creating post: CDK Error: Unknown column 'author' in 'field list'
+2025/03/18 13:06:44 [error] 25108#27116: *2 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:06:44 [info] 25108#27116: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:07:40 [notice] 25108#25476: console closing, exiting
+2025/03/18 13:07:44 [warn] 9500#20960: Blog base path not configured, using default value
+2025/03/18 13:07:44 [notice] 9500#20960: using the "select" event method
+2025/03/18 13:07:44 [notice] 9500#20960: nginx/1.27.5
+2025/03/18 13:07:44 [info] 9500#20960: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 13:07:44 [notice] 9500#20960: create thread 15084
+2025/03/18 13:07:58 [info] 9500#15084: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:07:58 [debug] 9500#15084: *1 路由器中注册的路由数量: 13
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 13:07:58 [debug] 9500#15084: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:07:58 [debug] 9500#15084: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 13:07:58 [debug] 9500#15084: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 13:07:58 [debug] 9500#15084: *1 *1i 开始读取请求体
+2025/03/18 13:07:58 [debug] 9500#15084: *1 *1i 请求体读取完成
+2025/03/18 13:07:58 [info] 9500#15084: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:07:58 [info] 9500#15084: *1 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:07:58 [error] 9500#15084: Error creating post: CDK Error: Unknown column 'is_published' in 'field list'
+2025/03/18 13:07:58 [error] 9500#15084: *1 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 13:07:58 [info] 9500#15084: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:02:46 [notice] 9500#26952: console closing, exiting
+2025/03/18 14:03:00 [warn] 25748#20904: Blog base path not configured, using default value
+2025/03/18 14:03:00 [notice] 25748#20904: using the "select" event method
+2025/03/18 14:03:00 [notice] 25748#20904: nginx/1.27.5
+2025/03/18 14:03:00 [info] 25748#20904: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 14:03:00 [notice] 25748#20904: create thread 20740
+2025/03/18 14:03:10 [info] 25748#20740: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:03:10 [debug] 25748#20740: *1 路由器中注册的路由数量: 13
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:03:10 [debug] 25748#20740: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:03:10 [debug] 25748#20740: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:03:10 [debug] 25748#20740: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:03:10 [debug] 25748#20740: *1 *1i 开始读取请求体
+2025/03/18 14:03:10 [debug] 25748#20740: *1 *1i 请求体读取完成
+2025/03/18 14:03:10 [info] 25748#20740: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:03:10 [info] 25748#20740: *1 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:03:10 [error] 25748#20740: Error creating post: CDK Error: Unknown column 'is_published' in 'field list'
+2025/03/18 14:03:10 [error] 25748#20740: *1 创建文章失败, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:03:10 [info] 25748#20740: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:03:57 [notice] 25748#10380: console closing, exiting
+2025/03/18 14:04:19 [warn] 24740#22416: Blog base path not configured, using default value
+2025/03/18 14:04:19 [notice] 24740#22416: using the "select" event method
+2025/03/18 14:04:19 [notice] 24740#22416: nginx/1.27.5
+2025/03/18 14:04:19 [info] 24740#22416: OS: 260200 build:9200, "", suite:100, type:1
+2025/03/18 14:04:19 [notice] 24740#22416: create thread 26024
+2025/03/18 14:05:30 [info] 24740#26024: *1 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:05:30 [debug] 24740#26024: *1 路由器中注册的路由数量: 13
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /*' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:05:30 [debug] 24740#26024: *1 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:05:30 [debug] 24740#26024: *1 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:05:30 [debug] 24740#26024: *1 *1i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:05:30 [debug] 24740#26024: *1 *1i 开始读取请求体
+2025/03/18 14:05:30 [debug] 24740#26024: *1 *1i 请求体读取完成
+2025/03/18 14:05:30 [info] 24740#26024: *1 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:05:30 [info] 24740#26024: *1 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:05:30 [info] 24740#26024: *1 文章创建成功，ID: 1, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:05:30 [info] 24740#26024: *1 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:42 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:42 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:10:42 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:10:42 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:10:42 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:10:42 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:10:42 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:10:42 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:42 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:42 [info] 24740#26024: *2 文章创建成功，ID: 2, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:42 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:52 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:52 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:10:52 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:10:52 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:10:52 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:10:52 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:10:52 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:10:52 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:52 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:52 [info] 24740#26024: *2 文章创建成功，ID: 3, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:10:52 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:08 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:08 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:08 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:08 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:08 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:08 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:08 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:08 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:08 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:08 [info] 24740#26024: *2 文章创建成功，ID: 4, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:08 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:09 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:09 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:09 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:09 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:09 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:09 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:09 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:09 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:09 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:09 [info] 24740#26024: *2 文章创建成功，ID: 5, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:09 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:10 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:10 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:10 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:10 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:10 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:10 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:10 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:10 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:10 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:10 [info] 24740#26024: *2 文章创建成功，ID: 6, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:10 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:11 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:11 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:11 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:11 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:11 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:11 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:11 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:11 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:11 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:11 [info] 24740#26024: *2 文章创建成功，ID: 7, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:11 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:12 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:12 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:12 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:12 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:12 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:12 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:12 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:12 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:12 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:12 [info] 24740#26024: *2 文章创建成功，ID: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:12 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:13 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:13 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:13 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:13 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:13 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:13 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:13 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:13 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:13 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:13 [info] 24740#26024: *2 文章创建成功，ID: 9, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:13 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:14 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:14 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:14 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:14 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:14 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:14 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:14 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:14 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:14 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:14 [info] 24740#26024: *2 文章创建成功，ID: 10, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:14 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:15 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:15 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:15 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:15 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:15 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:15 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:15 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:15 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:15 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:15 [info] 24740#26024: *2 文章创建成功，ID: 11, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:15 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:16 [info] 24740#26024: *2 处理请求: /api/admin/posts, 方法: 8, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:16 [debug] 24740#26024: *2 路由器中注册的路由数量: 13
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /*' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/posts/:id' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/categories/:category' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/tags/:tag' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/stats' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /api/admin/posts/:id/edit' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'GET /blog' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'OPTIONS /api/*' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'POST /api/admin/posts (需要请求体)' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'PUT /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试与路由 'DELETE /api/admin/posts/:id (需要请求体)' 匹配
+2025/03/18 14:11:16 [debug] 24740#26024: *2 尝试匹配: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:16 [debug] 24740#26024: *2 完全匹配成功: URI=/api/admin/posts 与模式=/api/admin/posts
+2025/03/18 14:11:16 [debug] 24740#26024: *2 *2i 找到需要请求体的路由: POST /api/admin/posts
+2025/03/18 14:11:16 [debug] 24740#26024: *2 *2i 开始读取请求体
+2025/03/18 14:11:16 [debug] 24740#26024: *2 *2i 请求体读取完成
+2025/03/18 14:11:16 [info] 24740#26024: *2 处理添加文章API请求, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:16 [info] 24740#26024: *2 成功读取请求体，长度: 211, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:16 [info] 24740#26024: *2 文章创建成功，ID: 12, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"
+2025/03/18 14:11:16 [info] 24740#26024: *2 找到匹配的路由处理器，执行处理, client: 127.0.0.1, server: localhost, request: "POST /api/admin/posts HTTP/1.1", host: "127.0.0.1"

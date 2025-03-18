@@ -400,9 +400,6 @@ ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
         NgxRequest request(r);
         NgxLog logger(r);
         
-        // 创建配置对象
-        BlogConfig config(request);
-        
         // 如果是GET请求，返回错误，因为API只支持POST
         if (request.getMethod() != NGX_HTTP_POST) {
             logger.warn("Add post API only supports POST requests");
@@ -428,6 +425,7 @@ ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
         std::string title = formData["title"];
         std::string content = formData["content"];
         std::string summary = formData["summary"];
+        std::string author = formData["author"];
         std::string categoriesStr = formData["categories"];
         std::string tagsStr = formData["tags"];
         bool isPublished = formData.find("publish") != formData.end() && formData["publish"] == "on";
@@ -478,7 +476,7 @@ ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
         
         // 使用DAO保存文章到数据库
         BlogPostDao dao;
-        int postId = dao.createPost(title, content, summary, categories, tags, isPublished);
+        int postId = dao.createPost(title, content, summary, author,categories, tags, isPublished);
         
         if (postId > 0) {
             logger.info("文章创建成功，ID: %d", postId);
@@ -491,17 +489,16 @@ ngx_int_t handleAddPost(ngx_http_request_t* r, const RouteParams& params) {
             response["data"]["message"] = "文章创建成功";
             
             return sendJsonResponse(r, response);
-        } else {
-            logger.error("创建文章失败");
-            
-            // 使用nlohmann/json库构建错误响应
-            json errorResponse;
-            errorResponse["success"] = false;
-            errorResponse["error"]["code"] = 500;
-            errorResponse["error"]["message"] = "保存文章失败，请重试！";
-            
-            return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
         }
+        logger.error("创建文章失败");
+            
+        // 使用nlohmann/json库构建错误响应
+        json errorResponse;
+        errorResponse["success"] = false;
+        errorResponse["error"]["code"] = 500;
+        errorResponse["error"]["message"] = "保存文章失败，请重试！";
+            
+        return sendJsonResponse(r, errorResponse, NGX_HTTP_INTERNAL_SERVER_ERROR);
     }
     catch (const std::exception& e) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 

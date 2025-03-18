@@ -67,9 +67,8 @@ bool DbManager::initialize(const std::string& connStr, bool autoInit) {
         // 显示MySQL服务器版本信息
         try {
             mysqlx::RowResult res = session_->sql("SHOW VARIABLES LIKE 'version'").execute();
-            mysqlx::Row row = res.fetchOne();
-            if (row) {
-                std::string version = row[1].get<std::string>();
+            if (mysqlx::Row row = res.fetchOne()) {
+                const auto version = row[1].get<std::string>();
                 ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "MySQL 服务器版本: %s", version.c_str());
             }
         } catch (const std::exception& ex) {
@@ -197,6 +196,7 @@ bool DbManager::createTables() {
         "  slug VARCHAR(255) NOT NULL UNIQUE,"
         "  content TEXT NOT NULL,"
         "  summary TEXT,"
+        "  author VARCHAR(100) NOT NULL,"
         "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
         "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
         "  published BOOLEAN DEFAULT TRUE,"

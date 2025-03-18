@@ -37,6 +37,7 @@ mysqlx::Session& BlogPostDao::getSession() {
     return DbManager::getInstance().getSession();
 }
 
+
 // 获取所有文章
 std::vector<BlogPostRecord> BlogPostDao::getAllPosts(int limit, int offset) {
     std::vector<BlogPostRecord> result;
@@ -253,6 +254,7 @@ int BlogPostDao::createPost(
     const std::string& title,
     const std::string& content,
     const std::string& summary,
+    const std::string& author,
     const std::vector<std::string>& categories,
     const std::vector<std::string>& tags,
     bool published
@@ -263,13 +265,13 @@ int BlogPostDao::createPost(
         // 生成slug
         std::string slug = generateSlug(title);
         
-        // 插入文章
-        std::string query =
-            "INSERT INTO posts (title, slug, content, summary, published) "
-            "VALUES (?, ?, ?, ?, ?)";
+        // SQL 插入语句添加 slug 字段,插入文章
+        std::string query = "INSERT INTO posts (title, slug, content, summary, author, published) "
+                         "VALUES (?, ?, ?, ?, ?, ?)";
+        
         
         mysqlx::SqlStatement stmt = session.sql(query);
-        stmt.bind(title, slug, content, summary, published).execute();
+        stmt.bind(title, slug, content, summary,author, published).execute();
         
         // 获取插入的ID
         int postId = static_cast<int>(DbManager::getInstance().getLastInsertId());
@@ -543,16 +545,13 @@ int BlogPostDao::getOrCreateTag(const std::string& name) {
 
 // 生成URL友好的slug
 std::string BlogPostDao::generateSlug(const std::string& name) {
-    // 转为小写
-    std::string slug = toLower(name);
-    
-    // 替换非字母数字字符为连字符
-    std::regex nonAlphaNum("[^a-z0-9]+");
-    slug = std::regex_replace(slug, nonAlphaNum, "-");
-    
-    // 去除头尾的连字符
-    slug = std::regex_replace(slug, std::regex("^-+|-+$"), "");
-    
+    // 生成唯一 slug（从标题转换）
+    std::string slug = createSlugFromTitle(name);
+    // 检查 slug 是否存在
+    if (isSlugExists(slug)) {
+        // 添加随机字符确保唯一性
+        slug += "-" + generateRandomString(5);
+    }
     return slug;
 }
 
@@ -676,4 +675,60 @@ int BlogPostDao::getTagCount() {
                      "获取标签数量异常: %s", e.what());
         return 0;
     }
+    
+    
+}
+
+// 辅助函数：从标题生成 slug
+std::string BlogPostDao::createSlugFromTitle(const std::string& title) {
+    std::string slug = title;
+    
+    // 转为小写
+    std::transform(slug.begin(), slug.end(), slug.begin(), 
+                   [](const unsigned char c){ return std::tolower(c); });
+    
+    // 替换空格为连字符
+    std::replace(slug.begin(), slug.end(), ' ', '-');
+    
+    // 移除非字母数字和连字符字符
+    slug.erase(std::remove_if(slug.begin(), slug.end(), 
+                             [](unsigned char c){ 
+                                return !(std::isalnum(c) || c == '-'); 
+                             }), 
+              slug.end());
+    
+    return slug;
+}
+
+// 检查 slug 是否已存在
+bool BlogPostDao::isSlugExists(const std::string& slug) {
+    try {
+        auto& session = getSession();
+        
+        auto result = session.sql("SELECT COUNT(*) FROM posts WHERE slug = ?")
+                      .bind(slug)
+                      .execute();
+        
+        auto row = result.fetchOne();
+        return row[0].get<int>() > 0;
+    } catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Error checking slug: %s", e.what());
+        return false;
+    }
+}
+
+// 生成随机字符串（用于确保 slug 唯一性）
+std::string BlogPostDao::generateRandomString(size_t length) {
+    static const char charset[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+    std::string result;
+    result.reserve(length);
+    
+    // 使用当前时间作为随机种子
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
+    
+    for (size_t i = 0; i < length; ++i) {
+        result += charset[std::rand() % (sizeof(charset) - 1)];
+    }
+    
+    return result;
 }

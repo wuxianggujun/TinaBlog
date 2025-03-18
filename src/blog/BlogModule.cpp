@@ -823,6 +823,10 @@ void BlogModule::initBlogRoutes(BlogRouter* router)
     std::string basePath = "/api"; // 前后端分离模式下使用/api作为基础路径
     logger.info("Initializing blog routes, API base path: %s", basePath.c_str());
 
+    //------------------------------------------------------------------
+    // 1. 静态文件处理路由
+    //------------------------------------------------------------------
+    
     // 静态文件服务路由 - 处理所有非API请求
     router->addRoute(Route(HttpMethod::GET_METHOD, "/*",
                            [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t
@@ -830,6 +834,10 @@ void BlogModule::initBlogRoutes(BlogRouter* router)
                                return handleStaticRequest(r);
                            }));
 
+    //------------------------------------------------------------------
+    // 2. GET方法的公共API路由
+    //------------------------------------------------------------------
+    
     // API 路由 - 博客文章列表
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/posts",
                            [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t
@@ -862,6 +870,10 @@ void BlogModule::initBlogRoutes(BlogRouter* router)
                                return handleBlogTag(response, params);
                            }));
 
+    //------------------------------------------------------------------
+    // 3. 管理面板的GET方法API路由
+    //------------------------------------------------------------------
+
     // API 路由 - 管理面板
     router->addRoute(Route(HttpMethod::GET_METHOD, basePath + "/admin",
                            [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t
@@ -886,6 +898,10 @@ void BlogModule::initBlogRoutes(BlogRouter* router)
                                return handleGetPostForEdit(response, params);
                            }));
 
+    //------------------------------------------------------------------
+    // 4. 需要请求体的POST/PUT/DELETE方法API路由
+    //------------------------------------------------------------------
+    
     // API 路由 - 添加博客文章
     router->addRoute(Route(HttpMethod::POST_METHOD, basePath + "/admin/posts",
                            [](ngx_http_request_t* r, const RouteParams& params) -> ngx_int_t
@@ -909,6 +925,10 @@ void BlogModule::initBlogRoutes(BlogRouter* router)
                                NgxResponse response(r);
                                return handleDeletePost(response, params);
                            }));
+
+    //------------------------------------------------------------------
+    // 5. 特殊路由
+    //------------------------------------------------------------------
 
     // 重定向路由
     router->addRoute(Route(HttpMethod::GET_METHOD, "/blog",
@@ -1314,7 +1334,8 @@ ngx_int_t BlogModule::handleAddPost(NgxResponse& response, const RouteParams& pa
         std::string title = postData["title"];
         std::string content = postData["content"];
         std::string summary = postData.contains("summary") ? postData["summary"] : "";
-        bool isPublished = postData.contains("is_published") ? postData["is_published"].get<bool>() : true;
+        std::string author = postData["author"];
+        bool isPublished = postData.contains("published") ? postData["published"].get<bool>() : true;
 
         // 获取分类和标签
         std::vector<std::string> categories;
@@ -1337,7 +1358,7 @@ ngx_int_t BlogModule::handleAddPost(NgxResponse& response, const RouteParams& pa
 
         // 使用DAO保存文章到数据库
         BlogPostDao dao;
-        int postId = dao.createPost(title, content, summary, categories, tags, isPublished);
+        int postId = dao.createPost(title, content, summary, author,categories, tags, isPublished);
 
         if (postId > 0)
         {
@@ -1358,7 +1379,7 @@ ngx_int_t BlogModule::handleAddPost(NgxResponse& response, const RouteParams& pa
                 responseData["tags"] = post->tags;
                 responseData["created_at"] = post->created_at;
                 responseData["updated_at"] = post->updated_at;
-                responseData["is_published"] = post->published;
+                responseData["published"] = post->published;
 
                 // 返回成功响应
                 json successResponse = JsonResponse::success(responseData);
@@ -1707,7 +1728,7 @@ ngx_int_t BlogModule::handleGetPostForEdit(NgxResponse& response, const RoutePar
         postData["tags"] = post->tags;
         postData["created_at"] = post->created_at;
         postData["updated_at"] = post->updated_at;
-        postData["is_published"] = post->published;
+        postData["published"] = post->published;
         postData["view_count"] = post->view_count;
 
         // 从现有数据中收集所有分类和标签信息
