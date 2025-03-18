@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <sstream>
 
+#include "NgxHeadersBase.hpp"
+
 
 class NgxRequestBody final : public NginxContext<ngx_http_request_t> {
 public:
@@ -525,8 +527,15 @@ public:
         return formData;
     }
 
+    void finalize(ngx_int_t rc = NGX_HTTP_INTERNAL_SERVER_ERROR) const
+    {
+        ngx_http_finalize_request(get(), rc);
+    }
+    
+    
     // 友元声明，允许基类访问派生类的私有方法
     friend class NginxContextBase<ngx_http_request_t, NginxContext<ngx_http_request_t>>;
+
 
 private:
     /**
@@ -581,6 +590,9 @@ private:
         
         return result;
     }
+
+    NgxHeadersIn m_headers_in;
+    NgxRequestBody m_request_body;
 };
 
 #endif // TINA_BLOG_NGX_REQUEST_HPP 

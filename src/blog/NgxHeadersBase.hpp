@@ -1,11 +1,11 @@
 //
 // Created by wuxianggujun on 2025/3/18.
 //
-#ifndef TINA_BLOG_NGX_HEADERS_HPP
-#define TINA_BLOG_NGX_HEADERS_HPP
+#ifndef TINA_BLOG_NGX_HEADERS_BASE_HPP
+#define TINA_BLOG_NGX_HEADERS_BASE_HPP
 
 #include "Nginx.hpp"
-#include "NginxContext.hpp"
+#include "NgxPool.hpp"
 #include <string>
 #include <optional>
 #include <vector>
@@ -142,7 +142,7 @@ public:
      * @param r HTTP请求指针
      */
     explicit NgxHeadersOut(ngx_http_request_t* r) noexcept
-        : NgxHeadersBase<ngx_http_headers_out_t>(&r->headers_out, false)
+        : NgxHeadersBase<ngx_http_headers_out_t>(&r->headers_out, false),pool_(r->pool)
     {
     }
 
@@ -172,8 +172,8 @@ public:
         {
             return *this;
         }
-
-        ngx_table_elt_t* h = ngx_list_push(&this->ptr_->headers);
+        
+        ngx_table_elt_t* h = static_cast<ngx_table_elt_t*>(ngx_list_push(&this->ptr_->headers));
         if (!h)
         {
             return *this;
@@ -181,7 +181,7 @@ public:
 
         h->hash = 1;
         h->key.len = name.length();
-        h->key.data = ngx_pnalloc(request_->pool, name.length());
+        h->key.data = static_cast<u_char*>(pool_.palloc(name.length()));
         if (!h->key.data)
         {
             return *this;
@@ -189,7 +189,7 @@ public:
         ngx_memcpy(h->key.data, name.c_str(), name.length());
 
         h->value.len = value.length();
-        h->value.data = ngx_pnalloc(request_->pool, value.length());
+        h->value.data = static_cast<u_char*>(pool_.palloc(value.length()));
         if (!h->value.data)
         {
             return *this;
@@ -200,7 +200,7 @@ public:
     }
 
 private:
-    ngx_http_request_t* request_; // 保留对请求的引用，用于内存分配
+   NgxPool pool_;
 };
 
-#endif // TINA_BLOG_NGX_HEADERS_HPP
+#endif // TINA_BLOG_NGX_HEADERS_BASE_HPP
