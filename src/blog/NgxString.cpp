@@ -2,6 +2,14 @@
 #include <algorithm>
 #include "NgxPool.hpp"
 
+NgxString::NgxString(NgxPool& pool) {
+    ptr_ = static_cast<ngx_str_t*>(pool.alloc(sizeof(ngx_str_t)));
+    if (ptr_) {
+        ptr_->len = 0;
+        ptr_->data = nullptr;
+    }
+}
+
 NgxString::NgxString(const ngx_str_t& str, NgxPool& pool) {
     ptr_ = static_cast<ngx_str_t*>(pool.alloc(sizeof(ngx_str_t)));
     if (ptr_) {
@@ -17,6 +25,7 @@ NgxString::NgxString(const ngx_str_t& str, NgxPool& pool) {
 
 NgxString::NgxString(const u_char* data, size_t len, NgxPool& pool) {
     if (!data || len == 0) {
+        ptr_ = nullptr;
         return;
     }
     
@@ -30,6 +39,53 @@ NgxString::NgxString(const u_char* data, size_t len, NgxPool& pool) {
             ptr_ = nullptr;
         }
     }
+}
+
+void NgxString::set(const u_char* data, size_t len) {
+    if (ptr_) {
+        ptr_->data = const_cast<u_char*>(data);
+        ptr_->len = len;
+    }
+}
+
+int NgxString::compare(const char* str) const noexcept {
+    if (!ptr_ || !str) {
+        return ptr_ ? 1 : (str ? -1 : 0);
+    }
+    
+    size_t str_len = strlen(str);
+    int result = ngx_strncmp(ptr_->data, reinterpret_cast<const u_char*>(str), 
+                            std::min(ptr_->len, str_len));
+    
+    if (result != 0) {
+        return result;
+    }
+    
+    return ptr_->len - str_len;
+}
+
+int NgxString::compare(const NgxString& other) const noexcept {
+    if (!ptr_ || !other.ptr_) {
+        return ptr_ ? 1 : (other.ptr_ ? -1 : 0);
+    }
+    
+    int result = ngx_strncmp(ptr_->data, other.ptr_->data,
+                            std::min(ptr_->len, other.ptr_->len));
+    
+    if (result != 0) {
+        return result;
+    }
+    
+    return ptr_->len - other.ptr_->len;
+}
+
+const char* NgxString::c_str() const noexcept {
+    if (!ptr_) {
+        return "";
+    }
+    
+    temp_str_ = std::string(reinterpret_cast<const char*>(ptr_->data), ptr_->len);
+    return temp_str_.c_str();
 }
 
 NgxString NgxString::create(const std::string& str, NgxPool& pool) {

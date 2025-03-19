@@ -17,14 +17,24 @@ class NgxPool;  // 前向声明
  */
 class NgxString : public NgxPtr<ngx_str_t> {
 public:
+    static const size_t npos = std::string::npos;
+    
     // 继承基类的构造函数
     using NgxPtr<ngx_str_t>::NgxPtr;
     
-    // 自定义构造函数：从ngx_str_t引用构造（浅拷贝）
-    explicit NgxString(const ngx_str_t& str, NgxPool& pool);
-    
-    // 自定义构造函数：直接从数据和长度构造
+    // 构造函数
+    NgxString() noexcept : NgxPtr<ngx_str_t>(nullptr) {}
+    explicit NgxString(NgxPool& pool);
     NgxString(const u_char* data, size_t len, NgxPool& pool);
+    NgxString(const ngx_str_t& str, NgxPool& pool);
+    
+    // 比较操作
+    int compare(const char* str) const noexcept;
+    int compare(const NgxString& other) const noexcept;
+    
+    // 字符串操作
+    void set(const u_char* data, size_t len);
+    const char* c_str() const noexcept;
     
     // 工厂方法：从std::string创建并分配内存
     static NgxString create(const std::string& str, NgxPool& pool);
@@ -71,4 +81,7 @@ public:
     
 private:
     friend class NgxPool;
+    
+    // 临时字符串缓冲区，用于 c_str() 方法
+    mutable std::string temp_str_;
 }; // class NgxString

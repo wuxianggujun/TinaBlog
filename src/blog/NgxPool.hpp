@@ -121,9 +121,6 @@ public:
         return NgxLog(ptr_ ? ptr_->log : nullptr);
     }
 
-    // 析构函数
-    ~NgxPool() override
-    {
-        cleanup();
-    }
+    // 析构函数 - 不再调用 cleanup
+    ~NgxPool() override = default;
 }; // class NgxPool

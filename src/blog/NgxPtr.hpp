@@ -10,8 +10,7 @@
  * 这个类提供了：
  * 1. 统一的指针管理接口
  * 2. 移动语义支持
- * 3. 禁用拷贝操作
- * 4. 基本的有效性检查
+ * 3. 基本的有效性检查
  */
 template<typename T>
 class NgxPtr {
@@ -21,6 +20,17 @@ public:
     
     // 从原始指针构造
     explicit NgxPtr(T* ptr) noexcept : ptr_(ptr) {}
+    
+    // 拷贝构造函数
+    NgxPtr(const NgxPtr& other) noexcept : ptr_(other.ptr_) {}
+    
+    // 拷贝赋值运算符
+    NgxPtr& operator=(const NgxPtr& other) noexcept {
+        if (this != &other) {
+            ptr_ = other.ptr_;
+        }
+        return *this;
+    }
     
     // 移动构造函数
     NgxPtr(NgxPtr&& other) noexcept : ptr_(other.ptr_) {
@@ -35,10 +45,6 @@ public:
         }
         return *this;
     }
-    
-    // 禁用拷贝
-    NgxPtr(const NgxPtr&) = delete;
-    NgxPtr& operator=(const NgxPtr&) = delete;
     
     // 析构函数 - 内存由pool管理，不需要手动释放
     virtual ~NgxPtr() = default;

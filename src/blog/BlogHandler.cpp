@@ -1,5 +1,7 @@
 #include "BlogHandler.hpp"
 #include "BlogModule.hpp"
+#include "NgxString.hpp"
+#include "NgxPool.hpp"
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -21,18 +23,22 @@ ngx_int_t BlogHandler::handleRequest(ngx_http_request_t* r) {
 }
 
 ngx_int_t BlogHandler::handleGet(ngx_http_request_t* r) {
-    std::string path = getRequestPath(r);
+    if (!r || !r->pool) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    NgxPool pool(r->pool);
+    NgxString path = getRequestPath(r);
+    
     try {
         json response;
         
-        if (path == "/api/posts") {
-            // 获取文章列表
+        if (path.compare("/api/posts") == 0) {
             response = {
                 {"message", "获取文章列表的API"}
             };
         } 
         else if (path.find("/api/posts/") == 0) {
-            // 获取单篇文章
             response = {
                 {"message", "获取单篇文章的API"}
             };
@@ -49,21 +55,21 @@ ngx_int_t BlogHandler::handleGet(ngx_http_request_t* r) {
 }
 
 ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
-    std::string path = getRequestPath(r);
+    NgxString path = getRequestPath(r);
     
-    if (path != "/api/posts") {
+    if (path.compare("/api/posts") != 0) {
         return sendError(r, NGX_HTTP_NOT_FOUND, "API not found");
     }
     
     // 读取请求体
-    std::string body;
+    NgxString body(NgxPool(r->pool));
     ngx_int_t rc = parseRequestBody(r, body);
     if (rc != NGX_OK) {
         return rc;
     }
     
     try {
-        json request = json::parse(body);
+        json request = json::parse(body.str());
         json response = {
             {"message", "创建文章的API"},
             {"received", request}
@@ -71,30 +77,30 @@ ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
         
         return sendJsonResponse(r, response.dump());
     }
-    catch (const json::exception& e) {
+    catch (const json::exception&) {
         return sendError(r, NGX_HTTP_BAD_REQUEST, "Invalid JSON format");
     }
-    catch (const std::exception& e) {
-        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
+    catch (const std::exception&) {
+        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, "Internal server error");
     }
 }
 
 ngx_int_t BlogHandler::handlePut(ngx_http_request_t* r) {
-    std::string path = getRequestPath(r);
+    NgxString path = getRequestPath(r);
     
     if (path.find("/api/posts/") != 0) {
         return sendError(r, NGX_HTTP_NOT_FOUND, "API not found");
     }
     
     // 读取请求体
-    std::string body;
+    NgxString body(NgxPool(r->pool));
     ngx_int_t rc = parseRequestBody(r, body);
     if (rc != NGX_OK) {
         return rc;
     }
     
     try {
-        json request = json::parse(body);
+        json request = json::parse(body.str());
         json response = {
             {"message", "更新文章的API"},
             {"received", request}
@@ -111,7 +117,7 @@ ngx_int_t BlogHandler::handlePut(ngx_http_request_t* r) {
 }
 
 ngx_int_t BlogHandler::handleDelete(ngx_http_request_t* r) {
-    std::string path = getRequestPath(r);
+    NgxString path = getRequestPath(r);
     
     if (path.find("/api/posts/") != 0) {
         return sendError(r, NGX_HTTP_NOT_FOUND, "API not found");
@@ -130,24 +136,33 @@ ngx_int_t BlogHandler::handleDelete(ngx_http_request_t* r) {
 }
 
 ngx_int_t BlogHandler::sendJsonResponse(ngx_http_request_t* r, const std::string& json) {
+    if (!r || !r->pool) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    NgxPool pool(r->pool);
+    
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_type_len = sizeof("application/json") - 1;
     r->headers_out.content_type.len = sizeof("application/json") - 1;
     r->headers_out.content_type.data = (u_char*)"application/json";
     r->headers_out.content_length_n = json.length();
     
-    auto* b = static_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
+    // 使用 pool.alloc 替代 ngx_pcalloc
+    auto* b = static_cast<ngx_buf_t*>(pool.alloc(sizeof(ngx_buf_t)));
     if (b == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+    ngx_memzero(b, sizeof(ngx_buf_t));
     
-    auto* out = static_cast<ngx_chain_t*>(ngx_pcalloc(r->pool, sizeof(ngx_chain_t)));
+    auto* out = static_cast<ngx_chain_t*>(pool.alloc(sizeof(ngx_chain_t)));
     if (out == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+    ngx_memzero(out, sizeof(ngx_chain_t));
     
     // 分配响应体内存并复制数据
-    u_char* data = static_cast<u_char*>(ngx_pcalloc(r->pool, json.length()));
+    u_char* data = static_cast<u_char*>(pool.alloc(json.length()));
     if (data == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
@@ -170,6 +185,10 @@ ngx_int_t BlogHandler::sendJsonResponse(ngx_http_request_t* r, const std::string
 }
 
 ngx_int_t BlogHandler::sendError(ngx_http_request_t* r, ngx_uint_t status, const std::string& message) {
+    if (!r) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
     json error = {
         {"error", message}
     };
@@ -178,7 +197,7 @@ ngx_int_t BlogHandler::sendError(ngx_http_request_t* r, ngx_uint_t status, const
     return sendJsonResponse(r, error.dump());
 }
 
-ngx_int_t BlogHandler::parseRequestBody(ngx_http_request_t* r, std::string& body) {
+ngx_int_t BlogHandler::parseRequestBody(ngx_http_request_t* r, NgxString& body) {
     if (r->request_body == nullptr) {
         return NGX_HTTP_BAD_REQUEST;
     }
@@ -188,31 +207,47 @@ ngx_int_t BlogHandler::parseRequestBody(ngx_http_request_t* r, std::string& body
     }
     
     ngx_buf_t* buf = r->request_body->bufs->buf;
-    body = std::string((char*)buf->pos, buf->last - buf->pos);
+    if (!buf) {
+        return NGX_HTTP_BAD_REQUEST;
+    }
     
+    body.set(buf->pos, buf->last - buf->pos);
     return NGX_OK;
 }
 
-std::string BlogHandler::getRequestPath(ngx_http_request_t* r) {
-    return std::string((char*)r->uri.data, r->uri.len);
+NgxString BlogHandler::getRequestPath(ngx_http_request_t* r) {
+    if (!r || !r->pool || !r->uri.data || r->uri.len == 0) {
+        return NgxString();
+    }
+    
+    NgxPool pool(r->pool);
+    return NgxString(r->uri.data, r->uri.len, pool);
 }
 
-std::string BlogHandler::getQueryParam(ngx_http_request_t* r, const std::string& name) {
-    if (r->args.len == 0) {
-        return "";
+NgxString BlogHandler::getQueryParam(ngx_http_request_t* r, const NgxString& name) {
+    if (!r || !r->pool || !r->args.data || r->args.len == 0) {
+        return NgxString();
     }
     
-    std::string args((char*)r->args.data, r->args.len);
-    size_t pos = args.find(name + "=");
+    NgxPool pool(r->pool);
+    NgxString args(r->args.data, r->args.len, pool);
+    auto search_str = pool.create_string("=");
+    
+    NgxString search = name;
+    if (!search.append(search_str.c_str(), pool)) {
+        return NgxString();
+    }
+    
+    size_t pos = args.find(search.c_str());
     if (pos == std::string::npos) {
-        return "";
+        return NgxString(pool);
     }
     
-    pos += name.length() + 1;
-    size_t end = args.find('&', pos);
+    pos += search.length();
+    size_t end = args.find("&", pos);
     if (end == std::string::npos) {
         end = args.length();
     }
     
-    return args.substr(pos, end - pos);
+    return args.substr(pos, end - pos, pool);
 } 
