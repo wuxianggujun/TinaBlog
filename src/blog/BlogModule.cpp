@@ -1,7 +1,5 @@
 #include "BlogModule.hpp"
-#include <ngx_config.h>
-#include <ngx_core.h>
-#include <ngx_http.h>
+#include "BlogHandler.hpp"
 #include <windows.h>
 #include <string>
 
@@ -242,7 +240,136 @@ ngx_int_t BlogModule::preConfiguration(ngx_conf_t* cf) {
 // 模块后配置函数
 ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
     ngx_log_error(NGX_LOG_NOTICE, cf->log, 0, "博客模块完成后配置");
+    
+    // 获取HTTP核心模块配置
+    ngx_http_core_main_conf_t* cmcf = static_cast<ngx_http_core_main_conf_t*>(
+        ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module)
+    );
+    
+    // 注册请求处理函数
+    ngx_http_handler_pt* h = static_cast<ngx_http_handler_pt*>(
+        ngx_array_push(&cmcf->phases[NGX_HTTP_CONTENT_PHASE].handlers)
+    );
+    
+    if (h == nullptr) {
+        return NGX_ERROR;
+    }
+    
+    *h = handleRequest;
+    
     return NGX_OK;
+}
+
+// 请求处理函数
+ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
+    // 获取location配置
+    auto* lcf = static_cast<BlogModuleConfig*>(
+        ngx_http_get_module_loc_conf(r, ngx_http_blog_module)
+    );
+    
+    if (lcf == nullptr) {
+        return NGX_DECLINED;
+    }
+    
+    // 检查请求路径是否以/api/开头
+    if (r->uri.len >= 5 && ngx_strncmp(r->uri.data, (u_char*)"/api/", 5) == 0) {
+        // API请求，交给BlogHandler处理
+        return BlogHandler::handleRequest(r);
+    }
+    
+    // 非API请求，尝试作为静态文件处理
+    ngx_str_t path;
+    
+    // 计算文件完整路径
+    path.len = lcf->base_path.len + r->uri.len;
+    path.data = static_cast<u_char*>(ngx_palloc(r->pool, path.len + 1));
+    
+    if (path.data == nullptr) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    ngx_cpystrn(path.data, lcf->base_path.data, lcf->base_path.len + 1);
+    ngx_cpystrn(path.data + lcf->base_path.len, r->uri.data, r->uri.len + 1);
+    
+    // 打开文件
+    ngx_open_file_info_t of;
+    ngx_memzero(&of, sizeof(ngx_open_file_info_t));
+    
+    of.read_ahead = 1;
+    of.directio = NGX_MAX_OFF_T_VALUE;
+    of.valid = 60 * 1000;  // 缓存1分钟
+    of.min_uses = 1;
+    of.errors = 1;
+    of.events = 1;
+    
+    // 获取核心配置
+    auto* clcf = static_cast<ngx_http_core_loc_conf_t*>(
+        ngx_http_get_module_loc_conf(r, ngx_http_core_module)
+    );
+    
+    if (ngx_http_set_disable_symlinks(r, clcf, &path, &of) != NGX_OK) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    if (ngx_open_cached_file(clcf->open_file_cache, &path, &of, r->pool) != NGX_OK) {
+        switch (of.err) {
+            case 0:
+                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+            case NGX_ENOENT:
+            case NGX_ENOTDIR:
+            case NGX_ENAMETOOLONG:
+                return NGX_HTTP_NOT_FOUND;
+            case NGX_EACCES:
+                return NGX_HTTP_FORBIDDEN;
+            default:
+                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    }
+    
+    // 设置响应头
+    r->root_tested = 1;
+    r->allow_ranges = 1;
+    r->headers_out.status = NGX_HTTP_OK;
+    r->headers_out.content_length_n = of.size;
+    r->headers_out.last_modified_time = of.mtime;
+    
+    if (ngx_http_set_content_type(r) != NGX_OK) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    // 发送响应头
+    ngx_int_t rc = ngx_http_send_header(r);
+    if (rc == NGX_ERROR || rc > NGX_OK || r->header_only) {
+        return rc;
+    }
+    
+    // 发送文件内容
+    ngx_buf_t* b = reinterpret_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
+    if (b == nullptr) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    b->file = reinterpret_cast<ngx_file_t*>(ngx_pcalloc(r->pool, sizeof(ngx_file_t)));
+    if (b->file == nullptr) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    
+    b->file_pos = 0;
+    b->file_last = of.size;
+    
+    b->in_file = 1;
+    b->last_buf = 1;
+    b->last_in_chain = 1;
+    
+    b->file->fd = of.fd;
+    b->file->name = path;
+    b->file->log = r->pool->log;
+    
+    ngx_chain_t out;
+    out.buf = b;
+    out.next = nullptr;
+    
+    return ngx_http_output_filter(r, &out);
 }
 
 // 进程初始化函数

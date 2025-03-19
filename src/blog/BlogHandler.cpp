@@ -22,12 +22,6 @@ ngx_int_t BlogHandler::handleRequest(ngx_http_request_t* r) {
 
 ngx_int_t BlogHandler::handleGet(ngx_http_request_t* r) {
     std::string path = getRequestPath(r);
-    
-    // 获取配置
-    auto* lcf = static_cast<BlogModuleConfig*>(
-        ngx_http_get_module_loc_conf(r, ngx_http_blog_module)
-    );
-    
     try {
         json response;
         

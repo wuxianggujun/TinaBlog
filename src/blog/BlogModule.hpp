@@ -34,6 +34,9 @@ public:
     static ngx_int_t postConfiguration(ngx_conf_t* cf);      // 后配置
     static ngx_int_t initProcess(ngx_cycle_t* cycle);        // 进程初始化
     static void exitProcess(ngx_cycle_t* cycle);             // 进程退出
+    
+    // 请求处理函数
+    static ngx_int_t handleRequest(ngx_http_request_t* r);   // 请求处理
 };
 
 

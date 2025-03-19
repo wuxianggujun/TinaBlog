@@ -25,6 +25,9 @@ extern "C" {
 #include <ngx_hash.h>
 #include <ngx_queue.h>
 #include <ngx_file.h>
+#include <ngx_config.h>
+#include <ngx_http_core_module.h>
+#include <ngx_open_file_cache.h>
 }
 
 // ==================== C++标准库 ====================
