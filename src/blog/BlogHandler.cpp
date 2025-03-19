@@ -80,8 +80,8 @@ ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
     catch (const json::exception&) {
         return sendError(r, NGX_HTTP_BAD_REQUEST, "Invalid JSON format");
     }
-    catch (const std::exception&) {
-        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, "Internal server error");
+    catch (const std::exception& e) {
+        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
     }
 }
 
@@ -148,31 +148,28 @@ ngx_int_t BlogHandler::sendJsonResponse(ngx_http_request_t* r, const std::string
     r->headers_out.content_type.data = (u_char*)"application/json";
     r->headers_out.content_length_n = json.length();
     
-    // 使用 pool.alloc 替代 ngx_pcalloc
-    auto* b = static_cast<ngx_buf_t*>(pool.alloc(sizeof(ngx_buf_t)));
+    ngx_buf_t *b = (ngx_buf_t *)ngx_pcalloc(r->pool, sizeof(ngx_buf_t));
     if (b == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-    ngx_memzero(b, sizeof(ngx_buf_t));
-    
-    auto* out = static_cast<ngx_chain_t*>(pool.alloc(sizeof(ngx_chain_t)));
+
+    ngx_chain_t *out = (ngx_chain_t *)ngx_pcalloc(r->pool, sizeof(ngx_chain_t));
     if (out == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
-    ngx_memzero(out, sizeof(ngx_chain_t));
-    
-    // 分配响应体内存并复制数据
-    u_char* data = static_cast<u_char*>(pool.alloc(json.length()));
+
+    u_char *data = (u_char *)ngx_pcalloc(r->pool, json.length());
     if (data == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+
     ngx_memcpy(data, json.c_str(), json.length());
-    
+
     b->pos = data;
     b->last = data + json.length();
     b->memory = 1;
     b->last_buf = 1;
-    
+
     out->buf = b;
     out->next = nullptr;
     
@@ -234,11 +231,11 @@ NgxString BlogHandler::getQueryParam(ngx_http_request_t* r, const NgxString& nam
     auto search_str = pool.create_string("=");
     
     NgxString search = name;
-    if (!search.append(search_str.c_str(), pool)) {
+    if (!search.append(search_str.str().c_str(), pool)) {
         return NgxString();
     }
     
-    size_t pos = args.find(search.c_str());
+    size_t pos = args.find(search.str().c_str());
     if (pos == std::string::npos) {
         return NgxString(pool);
     }

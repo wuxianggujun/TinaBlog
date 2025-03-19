@@ -34,7 +34,6 @@ public:
     
     // 字符串操作
     void set(const u_char* data, size_t len);
-    const char* c_str() const noexcept;
     
     // 工厂方法：从std::string创建并分配内存
     static NgxString create(const std::string& str, NgxPool& pool);
@@ -81,7 +80,4 @@ public:
     
 private:
     friend class NgxPool;
-    
-    // 临时字符串缓冲区，用于 c_str() 方法
-    mutable std::string temp_str_;
 }; // class NgxString

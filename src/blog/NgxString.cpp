@@ -79,15 +79,6 @@ int NgxString::compare(const NgxString& other) const noexcept {
     return ptr_->len - other.ptr_->len;
 }
 
-const char* NgxString::c_str() const noexcept {
-    if (!ptr_) {
-        return "";
-    }
-    
-    temp_str_ = std::string(reinterpret_cast<const char*>(ptr_->data), ptr_->len);
-    return temp_str_.c_str();
-}
-
 NgxString NgxString::create(const std::string& str, NgxPool& pool) {
     if (str.empty()) {
         return NgxString();
