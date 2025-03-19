@@ -55,6 +55,11 @@ ngx_int_t BlogHandler::handleGet(ngx_http_request_t* r) {
 }
 
 ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
+    if (!r || !r->pool) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    NgxPool pool(r->pool);
     NgxString path = getRequestPath(r);
     
     if (path.compare("/api/posts") != 0) {
@@ -62,7 +67,7 @@ ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
     }
     
     // 读取请求体
-    NgxString body(NgxPool(r->pool));
+    NgxString body(pool);  // 使用已创建的 pool 对象
     ngx_int_t rc = parseRequestBody(r, body);
     if (rc != NGX_OK) {
         return rc;
@@ -86,6 +91,11 @@ ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
 }
 
 ngx_int_t BlogHandler::handlePut(ngx_http_request_t* r) {
+    if (!r || !r->pool) {
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+
+    NgxPool pool(r->pool);
     NgxString path = getRequestPath(r);
     
     if (path.find("/api/posts/") != 0) {
@@ -93,7 +103,7 @@ ngx_int_t BlogHandler::handlePut(ngx_http_request_t* r) {
     }
     
     // 读取请求体
-    NgxString body(NgxPool(r->pool));
+    NgxString body(pool);  // 使用已创建的 pool 对象
     ngx_int_t rc = parseRequestBody(r, body);
     if (rc != NGX_OK) {
         return rc;
