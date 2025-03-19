@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
+
 # 配置vcpkg支持 - 必须在project()命令之前设置toolchain文件
 set(VCPKG_ROOT "D:/Programs/vcpkg" CACHE PATH "vcpkg根目录")
 if (EXISTS "${VCPKG_ROOT}")
@@ -13,10 +15,44 @@ else()
     Linux/Mac: 您可以从 https://github.com/microsoft/vcpkg 克隆vcpkg并运行bootstrap-vcpkg.sh")
 endif ()
 
+# 设置默认构建类型为RelWithDebInfo
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
+endif()
+
+# 设置可选的构建类型
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS 
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+
 project(TinaBlog LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# 根据不同构建类型设置编译选项
+if(MSVC)
+    # Windows MSVC编译器选项
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "/MD /Zi /O2 /Ob1 /DNDEBUG")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "/MD /Zi /O2 /Ob1 /DNDEBUG")
+    
+    # 为所有配置添加/utf-8选项
+    add_compile_options(/utf-8)
+    
+    # 添加调试信息
+    set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /DEBUG /OPT:REF /OPT:ICF")
+else()
+    # GCC/Clang编译器选项
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
+    
+    # 添加警告选项
+    add_compile_options(-Wall -Wpedantic)
+endif()
+
+# 输出构建配置信息
+message(STATUS "当前构建类型: ${CMAKE_BUILD_TYPE}")
+message(STATUS "C编译选项: ${CMAKE_C_FLAGS_${CMAKE_BUILD_TYPE}}")
+message(STATUS "C++编译选项: ${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}}")
 
 # 设置vcpkg的查找路径优先级 
 list(APPEND CMAKE_PREFIX_PATH "${VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}")
