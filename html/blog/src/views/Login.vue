@@ -108,24 +108,72 @@ export default {
     }
   },
   methods: {
-    handleLogin() {
-      // 这里简单模拟登录成功
-      alert('登录成功！')
-      this.$router.push('/')
-    },
-    handleRegister() {
-      if (this.registerForm.password !== this.registerForm.confirmPassword) {
-        alert('两次输入的密码不一致！')
-        return
+    async handleLogin() {
+      try {
+        // 这里替换成您的实际API地址
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            username: this.loginForm.username,
+            password: this.loginForm.password
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          // 登录成功，可以存储token
+          localStorage.setItem('token', data.token);
+          alert('登录成功！');
+          this.$router.push('/');
+        } else {
+          alert(data.message || '登录失败，请检查用户名和密码');
+        }
+      } catch (error) {
+        console.error('登录出错：', error);
+        alert('登录失败，请稍后重试');
       }
-      // 这里简单模拟注册成功
-      alert('注册成功！')
-      this.activeTab = 'login'
-      this.registerForm = {
-        username: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
+    },
+    async handleRegister() {
+      if (this.registerForm.password !== this.registerForm.confirmPassword) {
+        alert('两次输入的密码不一致！');
+        return;
+      }
+
+      try {
+        // 这里替换成您的实际API地址
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            username: this.registerForm.username,
+            email: this.registerForm.email,
+            password: this.registerForm.password
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('注册成功！');
+          this.activeTab = 'login';
+          this.registerForm = {
+            username: '',
+            email: '',
+            password: '',
+            confirmPassword: ''
+          };
+        } else {
+          alert(data.message || '注册失败，请稍后重试');
+        }
+      } catch (error) {
+        console.error('注册出错：', error);
+        alert('注册失败，请稍后重试');
       }
     }
   }
