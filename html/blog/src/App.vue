@@ -1,5 +1,6 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import './assets/base.css'
 </script>
 
 <template>
@@ -43,30 +44,29 @@ body {
 }
 
 .app {
-  min-height: 100vh;
   width: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .nav {
+  width: 100%;
   background: white;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 1rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
-  width: 100%;
 }
 
 .nav-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1920px;
   margin: 0 auto;
-  padding: 0 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 1rem 2rem;
 }
 
 .nav-brand {
@@ -98,13 +98,13 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
 }
 
 @media (max-width: 768px) {
   .nav-container {
     flex-direction: column;
     gap: 1rem;
+    padding: 1rem;
   }
 
   .nav-links {

@@ -81,16 +81,17 @@ export default {
   display: flex;
   justify-content: center;
   background-color: #f5f5f5;
-  padding: 2rem 1rem;
+  padding: 0 1rem;
 }
 
 .main-container {
   width: 100%;
-  max-width: 1200px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 2rem;
+  max-width: 1920px;
   margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(300px, 1fr);
+  gap: 2rem;
+  padding: 2rem;
 }
 
 .content {
@@ -99,11 +100,16 @@ export default {
 }
 
 .content-card {
+  width: 100%;
   background: white;
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar {
   width: 100%;
+  min-width: 300px;
 }
 
 .section-title {
@@ -225,13 +231,31 @@ export default {
   color: #6366f1;
 }
 
+@media (max-width: 1600px) {
+  .main-container {
+    max-width: 1440px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .main-container {
+    max-width: 1200px;
+  }
+}
+
 @media (max-width: 768px) {
   .home-container {
-    padding: 1rem;
+    padding: 0;
   }
 
   .main-container {
     grid-template-columns: 1fr;
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .sidebar {
+    min-width: 100%;
   }
 }
 </style> 
