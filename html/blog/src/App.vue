@@ -13,6 +13,7 @@ import './assets/base.css'
           <router-link to="/categories">分类</router-link>
           <router-link to="/archives">归档</router-link>
           <router-link to="/about">关于</router-link>
+          <router-link to="/login" class="login-link">登录</router-link>
         </div>
       </div>
     </nav>
@@ -84,6 +85,7 @@ body {
 .nav-links {
   display: flex;
   gap: 2rem;
+  align-items: center;
 }
 
 .nav-links a {
@@ -91,6 +93,8 @@ body {
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s;
+  line-height: 1;
+  padding: 0.5rem 0;
 }
 
 .nav-links a:hover,
@@ -135,6 +139,24 @@ body {
 
 .footer-content a:hover {
   color: #6366f1;
+}
+
+.login-link {
+  background-color: #6366f1;
+  color: white !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  margin-left: 0.5rem;
+}
+
+.login-link:hover {
+  background-color: #4f46e5;
+}
+
+.nav-links .login-link.router-link-active {
+  background-color: #4f46e5;
+  color: white !important;
 }
 
 @media (max-width: 768px) {
