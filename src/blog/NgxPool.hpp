@@ -35,13 +35,13 @@ public:
     }
 
     // 分配未初始化的内存
-    [[nodiscard]] void* nalloc(size_t size) const
+    [[nodiscard]] void* nalloc(const size_t size) const
     {
         return ngx_pnalloc(ptr_, size);
     }
 
     // 分配对齐的内存
-    [[nodiscard]] void* memalign(size_t alignment, size_t size) const
+    [[nodiscard]] void* memalign(const size_t alignment, const size_t size) const
     {
         return ngx_pmemalign(ptr_, alignment, size);
     }

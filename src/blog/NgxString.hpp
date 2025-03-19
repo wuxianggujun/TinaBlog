@@ -21,29 +21,19 @@ public:
     using NgxPtr<ngx_str_t>::NgxPtr;
     
     // 自定义构造函数：从ngx_str_t引用构造（浅拷贝）
-    explicit NgxString(const ngx_str_t& str, ngx_pool_t* pool) {
-        ptr_ = allocate(pool, str.len);
-        if (ptr_) {
-            ngx_memcpy(ptr_->data, str.data, str.len);
-        }
-    }
+    explicit NgxString(const ngx_str_t& str, NgxPool& pool);
     
     // 自定义构造函数：直接从数据和长度构造
-    NgxString(const u_char* data, size_t len, ngx_pool_t* pool) {
-        ptr_ = allocate(pool, len);
-        if (ptr_ && data) {
-            ngx_memcpy(ptr_->data, data, len);
-        }
-    }
+    NgxString(const u_char* data, size_t len, NgxPool& pool);
     
     // 工厂方法：从std::string创建并分配内存
-    static NgxString create(const std::string& str, ngx_pool_t* pool);
+    static NgxString create(const std::string& str, NgxPool& pool);
     
     // 工厂方法：从C字符串创建并分配内存
-    static NgxString create(const char* str, ngx_pool_t* pool);
+    static NgxString create(const char* str, NgxPool& pool);
     
     // 工厂方法：从string_view创建并分配内存
-    static NgxString create(std::string_view sv, ngx_pool_t* pool);
+    static NgxString create(std::string_view sv, NgxPool& pool);
     
     // 转换为std::string_view (零拷贝)
     [[nodiscard]] std::string_view view() const noexcept {
@@ -66,9 +56,6 @@ public:
     // 比较操作符
     bool operator==(const NgxString& other) const noexcept;
     bool operator!=(const NgxString& other) const noexcept;
-    
-    // 从pool中创建新的ngx_str_t并分配内存
-    static ngx_str_t* allocate(ngx_pool_t* pool, size_t len);
     
     // 追加字符串
     bool append(const NgxString& other, NgxPool& pool);
