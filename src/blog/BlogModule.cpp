@@ -2,6 +2,7 @@
 #include "BlogHandler.hpp"
 #include <windows.h>
 #include <string>
+#include <sodium.h>
 
 // 设置控制台编码为UTF-8
 static void setConsoleUTF8() {
@@ -234,6 +235,13 @@ char* BlogModule::setDbAutoConnect(ngx_conf_t* cf, ngx_command_t* cmd, void* con
 // 模块预配置函数
 ngx_int_t BlogModule::preConfiguration(ngx_conf_t* cf) {
     ngx_log_error(NGX_LOG_NOTICE, cf->log, 0, "博客模块开始预配置");
+    
+    // 初始化libsodium
+    if (sodium_init() < 0) {
+        ngx_log_error(NGX_LOG_ERR, cf->log, 0, "Failed to initialize libsodium");
+        return NGX_ERROR;
+    }
+    
     return NGX_OK;
 }
 

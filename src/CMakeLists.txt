@@ -32,6 +32,8 @@ set(COMMON_INCLUDE_DIRS
         # 自己的模块
         ${BLOG_DIR}
         ${BLOG_DIR}/db  # 添加数据库相关目录
+        ${BLOG_DIR}/service
+        ${BLOG_DIR}/utils
 
         # 添加libpqxx的包含目录
         ${CMAKE_SOURCE_DIR}/third_party/libpqxx/include
@@ -259,6 +261,8 @@ function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BL
         ${BLOG_DIR}/NgxString.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
+        ${BLOG_DIR}/service/UserService.cpp
+        ${BLOG_DIR}/utils/JwtUtils.cpp
     )
     
     # Windows平台特定源文件

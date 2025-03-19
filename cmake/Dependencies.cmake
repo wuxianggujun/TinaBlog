@@ -9,6 +9,8 @@ set(VCPKG_LIBS
     "OpenSSL"   # SSL库
     "MySQL-Connector-C++"  # MySQL Connector C++
     "nlohmann-json"  # JSON库
+    "jwt-cpp"  # jwt库
+    "sodium"
 )
 
 set(LOCAL_LIBS
@@ -94,6 +96,12 @@ function(find_all_dependencies)
             set(nlohmann-json_IMPLICIT_CONVERSIONS OFF)
             find_package(nlohmann_json CONFIG REQUIRED)
             message(STATUS "找到nlohmann-json库")
+        elseif(LIB STREQUAL "jwt-cpp")
+            find_package(jwt-cpp CONFIG REQUIRED)
+            message(STATUS "找到jwt-cpp库")
+        elseif (LIB STREQUAL "sodium")
+            find_package(unofficial-sodium CONFIG REQUIRED)
+            message(STATUS "找到sodium库")
         endif()
     endforeach()
     
@@ -309,6 +317,10 @@ function(link_all_dependencies TARGET_NAME)
             target_link_libraries(${TARGET_NAME} PRIVATE 
                 nlohmann_json::nlohmann_json
             )
+        elseif (LIB STREQUAL "jwt-cpp")
+            target_link_libraries(${PROJECT_NAME} PRIVATE jwt-cpp::jwt-cpp)
+        elseif (LIB STREQUAL "sodium")
+            target_link_libraries(${PROJECT_NAME} PRIVATE unofficial-sodium::sodium)
         endif()
     endforeach()
     

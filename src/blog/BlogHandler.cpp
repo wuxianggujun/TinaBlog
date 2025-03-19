@@ -2,6 +2,7 @@
 #include "BlogModule.hpp"
 #include "NgxString.hpp"
 #include "NgxPool.hpp"
+#include "service/UserService.hpp"
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -62,22 +63,123 @@ ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
     NgxPool pool(r->pool);
     NgxString path = getRequestPath(r);
     
-    if (path.compare("/api/posts") != 0) {
+    try {
+        if (path.compare("/api/auth/login") == 0) {
+            return handleLogin(r);
+        }
+        else if (path.compare("/api/auth/register") == 0) {
+            return handleRegister(r);
+        }
+        else if (path.compare("/api/posts") == 0) {
+            return handleCreatePost(r);
+        }
+        
         return sendError(r, NGX_HTTP_NOT_FOUND, "API not found");
     }
-    
+    catch (const std::exception& e) {
+        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
+    }
+}
+
+ngx_int_t BlogHandler::handleLogin(ngx_http_request_t* r) {
     // 读取请求体
-    NgxString body(pool);  // 使用已创建的 pool 对象
+    NgxPool pool(r->pool);
+    NgxString body(pool);
     ngx_int_t rc = parseRequestBody(r, body);
     if (rc != NGX_OK) {
         return rc;
     }
     
     try {
+        // 解析JSON
         json request = json::parse(body.str());
+        
+        // 验证必要字段
+        if (!request.contains("username") || !request.contains("password")) {
+            return sendError(r, NGX_HTTP_BAD_REQUEST, "Missing username or password");
+        }
+        
+        std::string username = request["username"];
+        std::string password = request["password"];
+        
+        // 调用登录服务
+        auto token = UserService::getInstance().login(username, password);
+        
+        if (!token) {
+            return sendError(r, NGX_HTTP_UNAUTHORIZED, "Invalid username or password");
+        }
+        
+        // 获取用户信息
+        auto userInfo = UserService::getInstance().getUserInfo(username);
+        if (!userInfo) {
+            return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, "Failed to get user info");
+        }
+        
+        // 构造响应
         json response = {
-            {"message", "创建文章的API"},
-            {"received", request}
+            {"token", *token},
+            {"user", *userInfo}
+        };
+        
+        return sendJsonResponse(r, response.dump());
+    }
+    catch (const json::exception&) {
+        return sendError(r, NGX_HTTP_BAD_REQUEST, "Invalid JSON format");
+    }
+    catch (const std::exception& e) {
+        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
+    }
+}
+
+ngx_int_t BlogHandler::handleRegister(ngx_http_request_t* r) {
+    // 读取请求体
+    NgxPool pool(r->pool);
+    NgxString body(pool);
+    ngx_int_t rc = parseRequestBody(r, body);
+    if (rc != NGX_OK) {
+        return rc;
+    }
+    
+    try {
+        // 解析JSON
+        json request = json::parse(body.str());
+        
+        // 验证必要字段
+        if (!request.contains("username") || !request.contains("password") ||
+            !request.contains("email") || !request.contains("displayName")) {
+            return sendError(r, NGX_HTTP_BAD_REQUEST, "Missing required fields");
+        }
+        
+        std::string username = request["username"];
+        std::string password = request["password"];
+        std::string email = request["email"];
+        std::string displayName = request["displayName"];
+        
+        // 创建用户
+        bool success = UserService::getInstance().createUser(
+            username, password, displayName, email
+        );
+        
+        if (!success) {
+            return sendError(r, NGX_HTTP_BAD_REQUEST, "Username or email already exists");
+        }
+        
+        // 自动登录
+        auto token = UserService::getInstance().login(username, password);
+        if (!token) {
+            return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, "Failed to login after registration");
+        }
+        
+        // 获取用户信息
+        auto userInfo = UserService::getInstance().getUserInfo(username);
+        if (!userInfo) {
+            return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, "Failed to get user info");
+        }
+        
+        // 构造响应
+        json response = {
+            {"token", *token},
+            {"user", *userInfo}
         };
         
         return sendJsonResponse(r, response.dump());
@@ -139,6 +241,46 @@ ngx_int_t BlogHandler::handleDelete(ngx_http_request_t* r) {
         };
         
         return sendJsonResponse(r, response.dump());
+    }
+    catch (const std::exception& e) {
+        return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
+    }
+}
+
+ngx_int_t BlogHandler::handleCreatePost(ngx_http_request_t* r) {
+    // 读取请求体
+    NgxPool pool(r->pool);
+    NgxString body(pool);
+    ngx_int_t rc = parseRequestBody(r, body);
+    if (rc != NGX_OK) {
+        return rc;
+    }
+    
+    try {
+        // 解析JSON
+        json request = json::parse(body.str());
+        
+        // 验证必要字段
+        if (!request.contains("title") || !request.contains("content")) {
+            return sendError(r, NGX_HTTP_BAD_REQUEST, "Missing title or content");
+        }
+        
+        // TODO: 实现文章创建逻辑
+        // 这里暂时返回一个模拟响应
+        json response = {
+            {"message", "文章创建成功"},
+            {"post", {
+                {"id", 1},  // 模拟ID
+                {"title", request["title"]},
+                {"content", request["content"]},
+                {"created_at", std::time(nullptr)}
+            }}
+        };
+        
+        return sendJsonResponse(r, response.dump());
+    }
+    catch (const json::exception&) {
+        return sendError(r, NGX_HTTP_BAD_REQUEST, "Invalid JSON format");
     }
     catch (const std::exception& e) {
         return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
