@@ -81,17 +81,16 @@ export default {
   display: flex;
   justify-content: center;
   background-color: #f5f5f5;
-  padding: 0 1rem;
+  padding: 2rem 1rem;
+  overflow-y: auto;
 }
 
 .main-container {
   width: 100%;
-  max-width: 1920px;
-  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 4fr) minmax(300px, 1fr);
   gap: 2rem;
-  padding: 2rem;
+  margin-bottom: 2rem;
 }
 
 .content {
@@ -105,11 +104,16 @@ export default {
   border-radius: 8px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar {
   width: 100%;
   min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }
 
 .section-title {
@@ -123,32 +127,40 @@ export default {
 .post-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
+  flex: 1;
 }
 
 .post-card {
   background: white;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: 1.25rem;
   border: 1px solid #eee;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .post-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.post-header {
+  margin-bottom: 0.75rem;
 }
 
 .post-title {
   font-size: 1.3rem;
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.5rem;
   color: #1a1a1a;
 }
 
 .post-meta {
   font-size: 0.9rem;
   color: #666;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
   display: flex;
   gap: 1rem;
 }
@@ -156,7 +168,7 @@ export default {
 .post-excerpt {
   color: #4a4a4a;
   line-height: 1.6;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .read-more {
@@ -164,7 +176,6 @@ export default {
   color: #6366f1;
   text-decoration: none;
   font-weight: 500;
-  margin-top: auto;
 }
 
 .read-more:hover {
@@ -177,7 +188,6 @@ export default {
   padding: 2rem;
   border-radius: 8px;
   text-align: center;
-  margin-bottom: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -195,7 +205,6 @@ export default {
   background: white;
   border-radius: 8px;
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -233,25 +242,19 @@ export default {
 
 @media (max-width: 1600px) {
   .main-container {
-    max-width: 1440px;
-  }
-}
-
-@media (max-width: 1200px) {
-  .main-container {
-    max-width: 1200px;
+    max-width: 100%;
   }
 }
 
 @media (max-width: 768px) {
   .home-container {
-    padding: 0;
+    padding: 1rem;
   }
 
   .main-container {
     grid-template-columns: 1fr;
     gap: 1rem;
-    padding: 1rem;
+    margin-bottom: 1rem;
   }
 
   .sidebar {

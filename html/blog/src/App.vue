@@ -20,6 +20,13 @@ import './assets/base.css'
     <main class="main">
       <router-view />
     </main>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <p>© 2024 Tina Blog. All rights reserved.</p>
+        <p><a href="https://beian.miit.gov.cn/" target="_blank">浙ICP备xxxxxxxx号-1</a></p>
+      </div>
+    </footer>
   </div>
 </template>
 
@@ -61,12 +68,10 @@ body {
 
 .nav-container {
   width: 100%;
-  max-width: 1920px;
-  margin: 0 auto;
+  padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
 }
 
 .nav-brand {
@@ -98,6 +103,38 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.footer {
+  width: 100%;
+  background: white;
+  padding: 1rem 0;
+  box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.footer-content {
+  width: 100%;
+  padding: 0 2rem;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.footer-content p {
+  margin: 0.25rem 0;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.footer-content a {
+  color: #666;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-content a:hover {
+  color: #6366f1;
 }
 
 @media (max-width: 768px) {
