@@ -31,6 +31,7 @@ set(COMMON_INCLUDE_DIRS
         ${STREAM_DIR}
         # 自己的模块
         ${BLOG_DIR}
+        ${BLOG_DIR}/api
         ${BLOG_DIR}/db  # 添加数据库相关目录
         ${BLOG_DIR}/service
         ${BLOG_DIR}/utils
@@ -257,13 +258,18 @@ function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BL
     set(BLOG_SOURCES
         ${BLOG_DIR}/BlogModule.cpp
         ${BLOG_DIR}/BlogHandler.cpp
+        ${BLOG_DIR}/BlogRoute.cpp
         ${BLOG_DIR}/NgxPool.cpp
         ${BLOG_DIR}/NgxString.cpp
         ${BLOG_DIR}/NgxArray.cpp
         ${BLOG_DIR}/NgxRequest.cpp
+        ${BLOG_DIR}/api/AuthController.cpp
+        ${BLOG_DIR}/api/HealthController.cpp
+        ${BLOG_DIR}/api/PostController.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
         ${BLOG_DIR}/service/UserService.cpp
+        ${BLOG_DIR}/service/JwtService.cpp
         ${BLOG_DIR}/utils/JwtUtils.cpp
     )
     

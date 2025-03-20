@@ -3,6 +3,14 @@
 #include <windows.h>
 #include <string>
 #include <sodium.h>
+#include <nlohmann/json.hpp>
+#include "db/BlogPostDao.hpp"
+#include "service/UserService.hpp"
+#include "api/AuthController.hpp"
+#include "api/PostController.hpp"
+#include "api/HealthController.hpp"
+
+using json = nlohmann::json;
 
 // 设置控制台编码为UTF-8
 static void setConsoleUTF8() {
@@ -287,8 +295,8 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     // 检查请求路径是否以/api/开头
     std::string uri_str = std::string(req.get_uri());
     if (uri_str.length() >= 5 && uri_str.substr(0, 5) == "/api/") {
-        // API请求，交给BlogHandler处理
-        return BlogHandler::handleRequest(r);
+        // API请求，交给BlogRoute处理
+        return BlogRoute::getInstance().handle_request(r);
     }
     
     // 非API请求，尝试作为静态文件处理
@@ -580,8 +588,14 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
     
     ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程初始化");
     
-    // 初始化BlogHandler的路由
-    BlogHandler::initRoutes();
+    // 初始化JWT服务
+    JwtService::getInstance().init("blog_module_secret_key_change_in_production", 86400); // 24小时过期
+    
+    // 初始化路由系统
+    BlogRoute::getInstance().init(cycle->pool);
+    
+    // 注册API路由
+    registerApiRoutes();
     
     // 尝试从配置中获取数据库连接信息
     BlogModuleConfig* lcf = nullptr;
@@ -644,5 +658,21 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
 // 进程退出函数
 void BlogModule::exitProcess(ngx_cycle_t* cycle) {
     ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程退出");
+}
+
+// 注册API路由
+void BlogModule::registerApiRoutes() {
+    auto& router = BlogRoute::getInstance();
+    
+    // 注册健康检查API
+    HealthController::getInstance().registerRoutes(router);
+    
+    // 注册认证相关API
+    AuthController::getInstance().registerRoutes(router);
+    
+    // 注册文章相关API
+    PostController::getInstance().registerRoutes(router);
+    
+    ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "API路由注册完成");
 }
 

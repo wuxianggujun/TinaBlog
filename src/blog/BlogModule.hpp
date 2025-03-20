@@ -2,6 +2,8 @@
 
 #include "Nginx.hpp"
 #include "db/DbManager.hpp"
+#include "BlogRoute.hpp"
+#include "service/JwtService.hpp"
 
 extern "C"{
     // 声明模块变量
@@ -38,6 +40,9 @@ public:
     
     // 请求处理函数
     static ngx_int_t handleRequest(ngx_http_request_t* r);   // 请求处理
+    
+    // API路由注册
+    static void registerApiRoutes();                        // 注册API路由
 };
 
 
