@@ -270,22 +270,23 @@ ngx_int_t BlogModule::postConfiguration(ngx_conf_t* cf) {
 
 // 请求处理函数
 ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
+    // 创建NgxRequest包装器
+    NgxRequest req(r);
+    
     // 获取location配置
-    auto* lcf = static_cast<BlogModuleConfig*>(
-        ngx_http_get_module_loc_conf(r, ngx_http_blog_module)
-    );
+    auto* lcf = req.get_loc_conf<BlogModuleConfig>(ngx_http_blog_module);
     
     if (lcf == nullptr) {
         return NGX_DECLINED;
     }
 
-    // 在handleRequest函数中添加关键位置的日志
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-        "Handling request: %V, base_path: %V", 
-        &r->uri, &lcf->base_path);
+    req.get_log().debug("Handling request: %s, base_path: %s", 
+                        std::string(req.get_uri()).c_str(), 
+                        std::string(reinterpret_cast<char*>(lcf->base_path.data), lcf->base_path.len).c_str());
     
     // 检查请求路径是否以/api/开头
-    if (r->uri.len >= 5 && ngx_strncmp(r->uri.data, (u_char*)"/api/", 5) == 0) {
+    std::string uri_str = std::string(req.get_uri());
+    if (uri_str.length() >= 5 && uri_str.substr(0, 5) == "/api/") {
         // API请求，交给BlogHandler处理
         return BlogHandler::handleRequest(r);
     }
@@ -301,16 +302,14 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         uri.data = (u_char*)"/index.html";
         uri.len = sizeof("/index.html") - 1;
         
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-            "Root path detected, serving index.html");
+        req.get_log().debug("Root path detected, serving index.html");
     } else if (r->uri.len > 1 && r->uri.data[0] == '/' && !ngx_strchr(r->uri.data, '.')) {
         // 没有扩展名的路径，可能是Vue路由，直接使用index.html
         uri.data = (u_char*)"/index.html";
         uri.len = sizeof("/index.html") - 1;
         
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-            "Route without extension, serving index.html for path: %V", 
-            &r->uri);
+        req.get_log().debug("Route without extension, serving index.html for path: %s", 
+                           std::string(req.get_uri()).c_str());
     }
     
     // 计算文件完整路径
@@ -325,8 +324,8 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     ngx_cpystrn(path.data, lcf->base_path.data, lcf->base_path.len + 1);
     ngx_cpystrn(path.data + lcf->base_path.len, uri.data, uri.len + 1);
     
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-        "Attempting to open file: %V", &path);
+    req.get_log().debug("Attempting to open file: %s", 
+                       std::string(reinterpret_cast<char*>(path.data), path.len).c_str());
     
     // 检查请求的文件是否存在
     ngx_open_file_info_t of;
@@ -346,9 +345,8 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     
     if (ngx_open_cached_file(clcf->open_file_cache, &path, &of, r->pool) != NGX_OK) {
         // 文件不存在，尝试返回index.html
-
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-            "File not found, trying index.html: %V", &path);
+        req.get_log().debug("File not found, trying index.html: %s", 
+                           std::string(reinterpret_cast<char*>(path.data), path.len).c_str());
             
         // 这是SPA应用，任何不存在的路径都返回index.html
         ngx_str_t index_path;
@@ -362,13 +360,13 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         ngx_cpystrn(index_path.data, lcf->base_path.data, lcf->base_path.len + 1);
         ngx_cpystrn(index_path.data + lcf->base_path.len, (u_char*)"/index.html", sizeof("/index.html"));
 
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-            "Trying to serve index.html: %V", &index_path);
+        req.get_log().debug("Trying to serve index.html: %s", 
+                           std::string(reinterpret_cast<char*>(index_path.data), index_path.len).c_str());
 
         // 重新打开index.html
         if (ngx_open_cached_file(clcf->open_file_cache, &index_path, &of, r->pool) != NGX_OK) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "Index.html not found: %V", &index_path);
+            req.get_log().error("Index.html not found: %s", 
+                              std::string(reinterpret_cast<char*>(index_path.data), index_path.len).c_str());
             return NGX_HTTP_NOT_FOUND;
         }
         path = index_path;
@@ -376,8 +374,8 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     
     // 如果是目录，尝试返回index.html
     if (of.is_dir) {
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-            "Path is a directory, trying index.html: %V", &path);
+        req.get_log().debug("Path is a directory, trying index.html: %s", 
+                           std::string(reinterpret_cast<char*>(path.data), path.len).c_str());
         
         // 构建index.html路径
         ngx_str_t index_path;
@@ -402,8 +400,8 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
             ngx_cpystrn(index_path.data + path.len, (u_char*)"index.html", sizeof("index.html"));
         }
         
-        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-            "Trying to serve index.html in directory: %V", &index_path);
+        req.get_log().debug("Trying to serve index.html in directory: %s", 
+                           std::string(reinterpret_cast<char*>(index_path.data), index_path.len).c_str());
         
         // 尝试打开目录下的index.html
         ngx_memzero(&of, sizeof(ngx_open_file_info_t));
@@ -415,8 +413,8 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         of.events = 1;
         
         if (ngx_open_cached_file(clcf->open_file_cache, &index_path, &of, r->pool) != NGX_OK) {
-            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-                "Index.html not found in directory: %V", &index_path);
+            req.get_log().error("Index.html not found in directory: %s", 
+                              std::string(reinterpret_cast<char*>(index_path.data), index_path.len).c_str());
             return NGX_HTTP_NOT_FOUND;
         }
         
@@ -424,20 +422,20 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     }
     
     if (of.fd == NGX_INVALID_FILE) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "Invalid file: %V, fd: %d", &path, of.fd);
+        req.get_log().error("Invalid file: %s, fd: %d", 
+                           std::string(reinterpret_cast<char*>(path.data), path.len).c_str(), of.fd);
         return NGX_HTTP_NOT_FOUND;
     }
     
     if (of.size == 0) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "File size is zero: %V", &path);
+        req.get_log().error("File size is zero: %s", 
+                           std::string(reinterpret_cast<char*>(path.data), path.len).c_str());
         return NGX_HTTP_NOT_FOUND;
     }
     
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-        "Successfully opened file: %V, size: %O, fd: %d", 
-        &path, of.size, of.fd);
+    req.get_log().debug("Successfully opened file: %s, size: %d, fd: %d", 
+                       std::string(reinterpret_cast<char*>(path.data), path.len).c_str(), 
+                       static_cast<int>(of.size), of.fd);
     
     // 设置响应头和发送文件内容
     r->root_tested = 1;
@@ -452,40 +450,41 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     r->headers_out.content_type_len = type.len;
     
     // 对于不同类型的文件，设置不同的Content-Type
-    if (ngx_strstr(path.data, ".css") != NULL) {
+    std::string path_str(reinterpret_cast<const char*>(path.data), path.len);
+    if (path_str.find(".css") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("text/css") - 1;
         r->headers_out.content_type.data = (u_char *) "text/css";
-    } else if (ngx_strstr(path.data, ".js") != NULL) {
+    } else if (path_str.find(".js") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("application/javascript") - 1;
         r->headers_out.content_type.data = (u_char *) "application/javascript";
-    } else if (ngx_strstr(path.data, ".html") != NULL || ngx_strstr(path.data, ".htm") != NULL) {
+    } else if (path_str.find(".html") != std::string::npos || path_str.find(".htm") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("text/html") - 1;
         r->headers_out.content_type.data = (u_char *) "text/html";
-    } else if (ngx_strstr(path.data, ".jpg") != NULL || ngx_strstr(path.data, ".jpeg") != NULL) {
+    } else if (path_str.find(".jpg") != std::string::npos || path_str.find(".jpeg") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("image/jpeg") - 1;
         r->headers_out.content_type.data = (u_char *) "image/jpeg";
-    } else if (ngx_strstr(path.data, ".png") != NULL) {
+    } else if (path_str.find(".png") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("image/png") - 1;
         r->headers_out.content_type.data = (u_char *) "image/png";
-    } else if (ngx_strstr(path.data, ".gif") != NULL) {
+    } else if (path_str.find(".gif") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("image/gif") - 1;
         r->headers_out.content_type.data = (u_char *) "image/gif";
-    } else if (ngx_strstr(path.data, ".svg") != NULL) {
+    } else if (path_str.find(".svg") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("image/svg+xml") - 1;
         r->headers_out.content_type.data = (u_char *) "image/svg+xml";
-    } else if (ngx_strstr(path.data, ".json") != NULL) {
+    } else if (path_str.find(".json") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("application/json") - 1;
         r->headers_out.content_type.data = (u_char *) "application/json";
-    } else if (ngx_strstr(path.data, ".woff") != NULL) {
+    } else if (path_str.find(".woff") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("font/woff") - 1;
         r->headers_out.content_type.data = (u_char *) "font/woff";
-    } else if (ngx_strstr(path.data, ".woff2") != NULL) {
+    } else if (path_str.find(".woff2") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("font/woff2") - 1;
         r->headers_out.content_type.data = (u_char *) "font/woff2";
-    } else if (ngx_strstr(path.data, ".ttf") != NULL) {
+    } else if (path_str.find(".ttf") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("font/ttf") - 1;
         r->headers_out.content_type.data = (u_char *) "font/ttf";
-    } else if (ngx_strstr(path.data, ".ico") != NULL) {
+    } else if (path_str.find(".ico") != std::string::npos) {
         r->headers_out.content_type.len = sizeof("image/x-icon") - 1;
         r->headers_out.content_type.data = (u_char *) "image/x-icon";
     } else {
@@ -496,7 +495,7 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     }
     
     // 添加其他重要的HTTP头
-    ngx_table_elt_t *h =reinterpret_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    ngx_table_elt_t *h = reinterpret_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
     if (h != NULL) {
         h->hash = 1;
         ngx_str_set(&h->key, "X-Content-Type-Options");
@@ -510,7 +509,7 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         ngx_str_set(&h->key, "Cache-Control");
         
         // 为静态资源设置缓存
-        if (ngx_strstr(path.data, "/assets/") != NULL) {
+        if (path_str.find("/assets/") != std::string::npos) {
             ngx_str_set(&h->value, "public, max-age=31536000"); // 1年
         } else {
             ngx_str_set(&h->value, "no-cache, no-store, must-revalidate");
@@ -526,20 +525,19 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     // 发送文件内容
     ngx_buf_t* b = reinterpret_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
     if (b == nullptr) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate buffer");
+        req.get_log().error("Failed to allocate buffer");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
     b->file = reinterpret_cast<ngx_file_t*>(ngx_pcalloc(r->pool, sizeof(ngx_file_t)));
     if (b->file == nullptr) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate file structure");
+        req.get_log().error("Failed to allocate file structure");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
     // 添加更多的调试日志
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-        "File size: %O, FD: %d", 
-        of.size, of.fd);
+    req.get_log().debug("File size: %d, FD: %d", 
+                       static_cast<int>(of.size), of.fd);
     
     b->file_pos = 0;
     b->file_last = of.size;
@@ -552,24 +550,38 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     b->file->log = r->connection->log;
     
     // 创建输出链
-    ngx_chain_t* out = (ngx_chain_t *)ngx_pcalloc(r->pool, sizeof(ngx_chain_t));
+    ngx_chain_t* out = reinterpret_cast<ngx_chain_t*>(ngx_pcalloc(r->pool, sizeof(ngx_chain_t)));
     if (out == nullptr) {
-        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate chain link");
+        req.get_log().error("Failed to allocate chain link");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     out->buf = b;
     out->next = nullptr;
     
-    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
-    "Setting content type for file: %V to %V", 
-    &path, &r->headers_out.content_type);
+    req.get_log().debug("Setting content type for file: %s to %s", 
+                      std::string(reinterpret_cast<char*>(path.data), path.len).c_str(),
+                      std::string(reinterpret_cast<char*>(r->headers_out.content_type.data), 
+                                r->headers_out.content_type.len).c_str());
     
     return ngx_http_output_filter(r, out);
 }
 
 // 进程初始化函数
 ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
+    // 使用静态变量确保只初始化一次
+    static bool initialized = false;
+    
+    if (initialized) {
+        ngx_log_error(NGX_LOG_INFO, cycle->log, 0, "博客模块已经初始化");
+        return NGX_OK;
+    }
+    
+    initialized = true;
+    
     ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程初始化");
+    
+    // 初始化BlogHandler的路由
+    BlogHandler::initRoutes();
     
     // 尝试从配置中获取数据库连接信息
     BlogModuleConfig* lcf = nullptr;
@@ -592,10 +604,11 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
                 try {
                     ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
                                 "Initializing database connection with: %s", connStr.c_str());
-                    
-                    bool success = DbManager::getInstance().initialize(connStr);
-                    
-                    if (success) {
+
+                    if (DbManager::getInstance().initialize(connStr)) {
+                        ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
+                                    "Database connection successful");
+                        
                         // 数据库连接成功后，创建数据表
                         if (DbManager::getInstance().createTables()) {
                             ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 

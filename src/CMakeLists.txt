@@ -259,6 +259,8 @@ function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BL
         ${BLOG_DIR}/BlogHandler.cpp
         ${BLOG_DIR}/NgxPool.cpp
         ${BLOG_DIR}/NgxString.cpp
+        ${BLOG_DIR}/NgxArray.cpp
+        ${BLOG_DIR}/NgxRequest.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
         ${BLOG_DIR}/service/UserService.cpp

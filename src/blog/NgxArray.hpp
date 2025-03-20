@@ -22,27 +22,27 @@ public:
     using NgxPtr<ngx_array_t>::NgxPtr;
     
     // 获取元素数量
-    size_type size() const noexcept {
-        return ptr_ ? ptr_->nelts : 0;
+    [[nodiscard]] size_type size() const noexcept {
+        return get() ? get()->nelts : 0;
     }
     
     // 获取容量
-    size_type capacity() const noexcept {
-        return ptr_ ? ptr_->nalloc : 0;
+    [[nodiscard]] size_type capacity() const noexcept {
+        return get() ? get()->nalloc : 0;
     }
     
     // 是否为空
-    bool empty() const noexcept {
+    [[nodiscard]] bool empty() const noexcept {
         return size() == 0;
     }
     
     // 获取数据指针
     pointer data() noexcept {
-        return ptr_ ? static_cast<pointer>(ptr_->elts) : nullptr;
+        return get() ? static_cast<pointer>(get()->elts) : nullptr;
     }
     
     const_pointer data() const noexcept {
-        return ptr_ ? static_cast<const_pointer>(ptr_->elts) : nullptr;
+        return get() ? static_cast<const_pointer>(get()->elts) : nullptr;
     }
     
     // 访问元素
