@@ -230,15 +230,34 @@ ngx_int_t BlogRoute::handle_request(ngx_http_request_t* r)
 
 ngx_int_t BlogRoute::handle_method(NgxRequest& req, HttpMethod method)
 {
+    // 添加CORS头支持
+    req.add_header("Access-Control-Allow-Origin", "*");
+    req.add_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    req.add_header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    
     // 如果是POST或PUT请求，需要先读取请求体
     if (method == HttpMethod::POST_METHOD || method == HttpMethod::PUT_METHOD)
     {
         if (req.get()->request_body == nullptr)
         {
+            // 获取日志对象
+            NgxLog log(req.get()->connection->log);
+            log.debug("Reading request body for %s request", methodToString(method));
+            
+            // 设置更短的lingering_timeout (Nginx默认为60秒)
+            // 不直接设置timeout，而是在回调中处理超时逻辑
+            
+            // 添加请求体读取回调
             ngx_int_t rc = ngx_http_read_client_request_body(req.get(), [](ngx_http_request_t* r)
             {
                 // 请求体读取完成后的回调
-                BlogRoute::getInstance().handle_request(r);
+                NgxLog log(r->connection->log);
+                log.debug("Request body read complete, processing now");
+                
+                ngx_int_t result = BlogRoute::getInstance().handle_request(r);
+                if (result != NGX_DONE) {
+                    ngx_http_finalize_request(r, result);
+                }
             });
 
             if (rc >= NGX_HTTP_SPECIAL_RESPONSE)

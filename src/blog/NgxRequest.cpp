@@ -422,15 +422,12 @@ ngx_int_t NgxRequest::send_file(const std::string& file_path) {
 ngx_int_t NgxRequest::send_error(ngx_uint_t status_code, const std::string& message) {
     if (!get()) return NGX_ERROR;
     
-    // 如果提供了错误消息，则发送包含错误信息的HTML
+    // 如果提供了错误消息
     if (!message.empty()) {
-        std::string html = "<html><head><title>Error</title></head><body><h1>Error ";
-        html += std::to_string(status_code);
-        html += "</h1><p>";
-        html += message;
-        html += "</p></body></html>";
-        
-        return send_html(html, status_code);
+            // API请求返回JSON格式错误
+            std::string json = "{\"error\": \"" + message + "\", \"status\": " + 
+                              std::to_string(status_code) + "}";
+            return send_json(json, status_code);
     }
     
     // 否则简单发送状态码
