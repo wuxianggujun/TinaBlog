@@ -278,6 +278,11 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     if (lcf == nullptr) {
         return NGX_DECLINED;
     }
+
+    // 在handleRequest函数中添加关键位置的日志
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Handling request: %V, base_path: %V", 
+        &r->uri, &lcf->base_path);
     
     // 检查请求路径是否以/api/开头
     if (r->uri.len >= 5 && ngx_strncmp(r->uri.data, (u_char*)"/api/", 5) == 0) {
@@ -288,18 +293,36 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     // 非API请求，尝试作为静态文件处理
     ngx_str_t path;
     
+    // 处理URI以确保安全
+    ngx_str_t uri = r->uri;
+    
+    // 在处理URI之前添加这段代码
+    if (r->uri.len > 1 && r->uri.data[0] == '/' && !ngx_strchr(r->uri.data, '.')) {
+        // 没有扩展名的路径，可能是Vue路由，直接使用index.html
+        uri.data = (u_char*)"/index.html";
+        uri.len = sizeof("/index.html") - 1;
+        
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Route without extension, serving index.html for path: %V", 
+            &r->uri);
+    }
+    
     // 计算文件完整路径
-    path.len = lcf->base_path.len + r->uri.len;
+    path.len = lcf->base_path.len + uri.len;
     path.data = static_cast<u_char*>(ngx_palloc(r->pool, path.len + 1));
     
     if (path.data == nullptr) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
+    // 构建完整路径 - 确保路径正确拼接
     ngx_cpystrn(path.data, lcf->base_path.data, lcf->base_path.len + 1);
-    ngx_cpystrn(path.data + lcf->base_path.len, r->uri.data, r->uri.len + 1);
+    ngx_cpystrn(path.data + lcf->base_path.len, uri.data, uri.len + 1);
     
-    // 打开文件
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Attempting to open file: %V", &path);
+    
+    // 检查请求的文件是否存在
     ngx_open_file_info_t of;
     ngx_memzero(&of, sizeof(ngx_open_file_info_t));
     
@@ -315,34 +338,129 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         ngx_http_get_module_loc_conf(r, ngx_http_core_module)
     );
     
-    if (ngx_http_set_disable_symlinks(r, clcf, &path, &of) != NGX_OK) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
-    }
-    
     if (ngx_open_cached_file(clcf->open_file_cache, &path, &of, r->pool) != NGX_OK) {
-        switch (of.err) {
-            case 0:
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
-            case NGX_ENOENT:
-            case NGX_ENOTDIR:
-            case NGX_ENAMETOOLONG:
-                return NGX_HTTP_NOT_FOUND;
-            case NGX_EACCES:
-                return NGX_HTTP_FORBIDDEN;
-            default:
-                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        // 文件不存在，尝试返回index.html
+
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "File not found, trying index.html: %V", &path);
+            
+        // 这是SPA应用，任何不存在的路径都返回index.html
+        ngx_str_t index_path;
+        index_path.len = lcf->base_path.len + sizeof("/index.html") - 1;
+        index_path.data = static_cast<u_char*>(ngx_palloc(r->pool, index_path.len + 1));
+
+        if (index_path.data == nullptr) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
         }
+
+        ngx_cpystrn(index_path.data, lcf->base_path.data, lcf->base_path.len + 1);
+        ngx_cpystrn(index_path.data + lcf->base_path.len, (u_char*)"/index.html", sizeof("/index.html"));
+
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Trying to serve index.html: %V", &index_path);
+
+        // 重新打开index.html
+        if (ngx_open_cached_file(clcf->open_file_cache, &index_path, &of, r->pool) != NGX_OK) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Index.html not found: %V", &index_path);
+            return NGX_HTTP_NOT_FOUND;
+        }
+        path = index_path;
     }
     
-    // 设置响应头
+    if (of.fd == NGX_INVALID_FILE || of.is_dir) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Invalid file or is directory: %V, fd: %d, is_dir: %d", 
+            &path, of.fd, of.is_dir);
+        return NGX_HTTP_NOT_FOUND;
+    }
+    
+    if (of.size == 0) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "File size is zero: %V", &path);
+        return NGX_HTTP_NOT_FOUND;
+    }
+    
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Successfully opened file: %V, size: %O, fd: %d", 
+        &path, of.size, of.fd);
+    
+    // 设置响应头和发送文件内容
     r->root_tested = 1;
     r->allow_ranges = 1;
     r->headers_out.status = NGX_HTTP_OK;
     r->headers_out.content_length_n = of.size;
     r->headers_out.last_modified_time = of.mtime;
     
-    if (ngx_http_set_content_type(r) != NGX_OK) {
-        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    // 设置Content-Type头
+    ngx_str_t type = ngx_string("text/html");
+    r->headers_out.content_type = type;
+    r->headers_out.content_type_len = type.len;
+    
+    // 对于不同类型的文件，设置不同的Content-Type
+    if (ngx_strstr(path.data, ".css") != NULL) {
+        r->headers_out.content_type.len = sizeof("text/css") - 1;
+        r->headers_out.content_type.data = (u_char *) "text/css";
+    } else if (ngx_strstr(path.data, ".js") != NULL) {
+        r->headers_out.content_type.len = sizeof("application/javascript") - 1;
+        r->headers_out.content_type.data = (u_char *) "application/javascript";
+    } else if (ngx_strstr(path.data, ".html") != NULL || ngx_strstr(path.data, ".htm") != NULL) {
+        r->headers_out.content_type.len = sizeof("text/html") - 1;
+        r->headers_out.content_type.data = (u_char *) "text/html";
+    } else if (ngx_strstr(path.data, ".jpg") != NULL || ngx_strstr(path.data, ".jpeg") != NULL) {
+        r->headers_out.content_type.len = sizeof("image/jpeg") - 1;
+        r->headers_out.content_type.data = (u_char *) "image/jpeg";
+    } else if (ngx_strstr(path.data, ".png") != NULL) {
+        r->headers_out.content_type.len = sizeof("image/png") - 1;
+        r->headers_out.content_type.data = (u_char *) "image/png";
+    } else if (ngx_strstr(path.data, ".gif") != NULL) {
+        r->headers_out.content_type.len = sizeof("image/gif") - 1;
+        r->headers_out.content_type.data = (u_char *) "image/gif";
+    } else if (ngx_strstr(path.data, ".svg") != NULL) {
+        r->headers_out.content_type.len = sizeof("image/svg+xml") - 1;
+        r->headers_out.content_type.data = (u_char *) "image/svg+xml";
+    } else if (ngx_strstr(path.data, ".json") != NULL) {
+        r->headers_out.content_type.len = sizeof("application/json") - 1;
+        r->headers_out.content_type.data = (u_char *) "application/json";
+    } else if (ngx_strstr(path.data, ".woff") != NULL) {
+        r->headers_out.content_type.len = sizeof("font/woff") - 1;
+        r->headers_out.content_type.data = (u_char *) "font/woff";
+    } else if (ngx_strstr(path.data, ".woff2") != NULL) {
+        r->headers_out.content_type.len = sizeof("font/woff2") - 1;
+        r->headers_out.content_type.data = (u_char *) "font/woff2";
+    } else if (ngx_strstr(path.data, ".ttf") != NULL) {
+        r->headers_out.content_type.len = sizeof("font/ttf") - 1;
+        r->headers_out.content_type.data = (u_char *) "font/ttf";
+    } else if (ngx_strstr(path.data, ".ico") != NULL) {
+        r->headers_out.content_type.len = sizeof("image/x-icon") - 1;
+        r->headers_out.content_type.data = (u_char *) "image/x-icon";
+    } else {
+        // 默认使用 ngx_http_set_content_type
+        if (ngx_http_set_content_type(r) != NGX_OK) {
+            return NGX_HTTP_INTERNAL_SERVER_ERROR;
+        }
+    }
+    
+    // 添加其他重要的HTTP头
+    ngx_table_elt_t *h =reinterpret_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h != NULL) {
+        h->hash = 1;
+        ngx_str_set(&h->key, "X-Content-Type-Options");
+        ngx_str_set(&h->value, "nosniff");
+    }
+    
+    // 设置缓存控制头
+    h = reinterpret_cast<ngx_table_elt_t*>(ngx_list_push(&r->headers_out.headers));
+    if (h != NULL) {
+        h->hash = 1;
+        ngx_str_set(&h->key, "Cache-Control");
+        
+        // 为静态资源设置缓存
+        if (ngx_strstr(path.data, "/assets/") != NULL) {
+            ngx_str_set(&h->value, "public, max-age=31536000"); // 1年
+        } else {
+            ngx_str_set(&h->value, "no-cache, no-store, must-revalidate");
+        }
     }
     
     // 发送响应头
@@ -354,30 +472,45 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     // 发送文件内容
     ngx_buf_t* b = reinterpret_cast<ngx_buf_t*>(ngx_pcalloc(r->pool, sizeof(ngx_buf_t)));
     if (b == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate buffer");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
     
     b->file = reinterpret_cast<ngx_file_t*>(ngx_pcalloc(r->pool, sizeof(ngx_file_t)));
     if (b->file == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate file structure");
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+
+    // 添加更多的调试日志
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "File size: %O, FD: %d", 
+        of.size, of.fd);
     
     b->file_pos = 0;
     b->file_last = of.size;
-    
-    b->in_file = 1;
+    b->in_file = 1;  // 确保设置为1
     b->last_buf = 1;
     b->last_in_chain = 1;
     
     b->file->fd = of.fd;
     b->file->name = path;
-    b->file->log = r->pool->log;
+    b->file->log = r->connection->log;
     
-    ngx_chain_t out;
-    out.buf = b;
-    out.next = nullptr;
+    // 创建输出链
+    ngx_chain_t* out = (ngx_chain_t *)ngx_pcalloc(r->pool, sizeof(ngx_chain_t));
+    if (out == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, "Failed to allocate chain link");
+        return NGX_HTTP_INTERNAL_SERVER_ERROR;
+    }
+    out->buf = b;
+    out->next = nullptr;
     
-    return ngx_http_output_filter(r, &out);
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+    "Setting content type for file: %V to %V", 
+    &path, &r->headers_out.content_type);
+    
+    return ngx_http_output_filter(r, out);
 }
 
 // 进程初始化函数
@@ -390,3 +523,4 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
 void BlogModule::exitProcess(ngx_cycle_t* cycle) {
     ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程退出");
 }
+
