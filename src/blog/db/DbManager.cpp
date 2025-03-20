@@ -5,6 +5,7 @@
 #include <vector>
 #include <mutex>
 #include <regex>
+#include <thread>
 
 // 单例实例
 DbManager& DbManager::getInstance() {
@@ -162,27 +163,131 @@ mysqlx::Session& DbManager::getSession() {
 
 // 执行SQL查询
 mysqlx::RowResult DbManager::executeQuery(const std::string& sql) {
-    try {
-        mysqlx::Session& sess = getSession();
-        return sess.sql(sql).execute();
-    } catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Error executing query: %s", e.what());
-        throw;
+    const int MAX_RETRIES = 3;
+    int retry_count = 0;
+    
+    while (retry_count < MAX_RETRIES) {
+        try {
+            mysqlx::Session& sess = getSession();
+            return sess.sql(sql).execute();
+        } catch (const mysqlx::Error& e) {
+            // 获取错误信息并记录
+            std::string errorMsg = e.what();
+            ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, 
+                         "Database error (attempt %d/%d): %s", 
+                         retry_count + 1, MAX_RETRIES, errorMsg.c_str());
+            
+            // 检查错误消息，判断是否是连接错误或死锁错误
+            bool isConnectionError = 
+                errorMsg.find("server has gone away") != std::string::npos || 
+                errorMsg.find("Lost connection") != std::string::npos;
+                
+            bool isDeadlockError = 
+                errorMsg.find("deadlock") != std::string::npos || 
+                errorMsg.find("Deadlock") != std::string::npos;
+                
+            if (isConnectionError || isDeadlockError) {
+                // 如果是连接错误，重新连接
+                if (isConnectionError) {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    session.reset();
+                    if (!connect()) {
+                        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                                     "Failed to reconnect to database");
+                        throw;
+                    }
+                }
+                
+                // 如果是死锁错误，等待一小段时间
+                if (isDeadlockError) {
+                    // 随机延迟，避免所有线程同时重试
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100 * (retry_count + 1)));
+                }
+                
+                retry_count++;
+                continue;
+            }
+            
+            // 其他错误直接抛出
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                         "Error executing query: %s", e.what());
+            throw;
+        } catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                         "Error executing query: %s", e.what());
+            throw;
+        }
     }
+    
+    // 达到最大重试次数，仍然失败
+    ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                 "Failed to execute query after %d retries", MAX_RETRIES);
+    throw std::runtime_error("Failed to execute query after maximum retries");
 }
 
 // 执行SQL更新
 int DbManager::executeUpdate(const std::string& sql) {
-    try {
-        mysqlx::Session& sess = getSession();
-        mysqlx::SqlResult result = sess.sql(sql).execute();
-        return result.getAffectedItemsCount();
-    } catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Error executing update: %s", e.what());
-        return -1;
+    const int MAX_RETRIES = 3;
+    int retry_count = 0;
+    
+    while (retry_count < MAX_RETRIES) {
+        try {
+            mysqlx::Session& sess = getSession();
+            mysqlx::SqlResult result = sess.sql(sql).execute();
+            return result.getAffectedItemsCount();
+        } catch (const mysqlx::Error& e) {
+            // 获取错误信息并记录
+            std::string errorMsg = e.what();
+            ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, 
+                         "Database update error (attempt %d/%d): %s", 
+                         retry_count + 1, MAX_RETRIES, errorMsg.c_str());
+            
+            // 检查错误消息，判断是否是连接错误或死锁错误
+            bool isConnectionError = 
+                errorMsg.find("server has gone away") != std::string::npos || 
+                errorMsg.find("Lost connection") != std::string::npos;
+                
+            bool isDeadlockError = 
+                errorMsg.find("deadlock") != std::string::npos || 
+                errorMsg.find("Deadlock") != std::string::npos;
+                
+            if (isConnectionError || isDeadlockError) {
+                // 如果是连接错误，重新连接
+                if (isConnectionError) {
+                    std::lock_guard<std::mutex> lock(mutex);
+                    session.reset();
+                    if (!connect()) {
+                        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                                     "Failed to reconnect to database");
+                        return -1;
+                    }
+                }
+                
+                // 如果是死锁错误，等待一小段时间
+                if (isDeadlockError) {
+                    // 随机延迟，避免所有线程同时重试
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100 * (retry_count + 1)));
+                }
+                
+                retry_count++;
+                continue;
+            }
+            
+            // 其他错误记录并返回失败
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                         "Error executing update: %s", e.what());
+            return -1;
+        } catch (const std::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                         "Error executing update: %s", e.what());
+            return -1;
+        }
     }
+    
+    // 达到最大重试次数，仍然失败
+    ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                 "Failed to execute update after %d retries", MAX_RETRIES);
+    return -1;
 }
 
 // 获取上一个插入的ID

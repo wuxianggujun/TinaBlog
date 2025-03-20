@@ -62,6 +62,8 @@ ngx_int_t AuthController::handleLogin(NgxRequest& req, const NgxRouteParams& par
         std::string username = requestData["username"];
         std::string password = requestData["password"];
         
+        req.get_log().debug("Attempting login for user: %s", username.c_str());
+        
         // 验证登录
         auto token = UserService::getInstance().login(username, password);
         
@@ -78,11 +80,20 @@ ngx_int_t AuthController::handleLogin(NgxRequest& req, const NgxRouteParams& par
         return req.send_json(response.dump());
     }
     catch (const json::exception& e) {
+        req.get_log().error("JSON parsing error: %s", e.what());
         return req.send_error(NGX_HTTP_BAD_REQUEST, std::string("Invalid JSON: ") + e.what());
+    }
+    catch (const std::runtime_error& e) {
+        req.get_log().error("Runtime error during login: %s", e.what());
+        return req.send_error(NGX_HTTP_INTERNAL_SERVER_ERROR, "Internal server error: database operation failed");
     }
     catch (const std::exception& e) {
         req.get_log().error("Login error: %s", e.what());
         return req.send_error(NGX_HTTP_INTERNAL_SERVER_ERROR, "Internal server error");
+    }
+    catch (...) {
+        req.get_log().error("Unknown error during login");
+        return req.send_error(NGX_HTTP_INTERNAL_SERVER_ERROR, "Unknown internal server error");
     }
 }
 

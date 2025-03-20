@@ -1,6 +1,9 @@
 #include "UserService.hpp"
 #include <sstream>
 #include <sodium.h>
+#include <mutex>
+#include <algorithm>
+#include "../NgxLog.hpp"
 
 UserService& UserService::getInstance() {
     static UserService instance;
@@ -9,17 +12,36 @@ UserService& UserService::getInstance() {
 
 std::optional<std::string> UserService::login(const std::string& username, const std::string& password) {
     try {
+        static std::mutex login_mutex;
+        std::lock_guard<std::mutex> lock(login_mutex);
+        
         auto& db = DbManager::getInstance();
+        
+        // 使用参数转义，防止SQL注入
+        std::string escapedUsername = username;
+        // 简单替换单引号 - 修复std::replace使用方式
+        for (size_t pos = 0; pos < escapedUsername.length(); ++pos) {
+            if (escapedUsername[pos] == '\'') {
+                escapedUsername[pos] = '\\';
+                escapedUsername.insert(pos + 1, 1, '\'');
+                ++pos; // 跳过新插入的字符
+            }
+        }
         
         // 查询用户信息
         std::stringstream ss;
         ss << "SELECT id, username, password_hash, is_admin FROM authors WHERE username = '"
-           << username << "' LIMIT 1";
+           << escapedUsername << "' LIMIT 1";
            
+        // 获取日志实例
+        NgxLog log;
+        log.debug("执行登录查询: %s", escapedUsername.c_str());
+        
         auto result = db.executeQuery(ss.str());
         auto row = result.fetchOne();
         
         if (!row) {
+            log.debug("登录失败: 用户 %s 不存在", escapedUsername.c_str());
             return std::nullopt;  // 用户不存在
         }
         
@@ -29,14 +51,23 @@ std::optional<std::string> UserService::login(const std::string& username, const
                 storedHash.c_str(),
                 password.c_str(),
                 password.length()) != 0) {
+            log.debug("登录失败: 用户 %s 密码错误", escapedUsername.c_str());
             return std::nullopt;  // 密码错误
         }
         
-        // 生成Token
+        // 获取用户ID和管理员状态
+        int userId = row[0].get<int>();
         bool isAdmin = row[3].get<bool>();
+        
+        log.debug("登录成功: 用户 %s (ID: %d, 管理员: %s)", 
+                 escapedUsername.c_str(), userId, isAdmin ? "是" : "否");
+        
+        // 生成Token
         return JwtUtils::getInstance().generateToken(username, isAdmin);
         
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        NgxLog log;
+        log.error("登录过程中出现异常: %s", e.what());
         return std::nullopt;
     }
 }
@@ -45,9 +76,19 @@ bool UserService::verifyPassword(const std::string& username, const std::string&
     try {
         auto& db = DbManager::getInstance();
         
+        // 转义用户名
+        std::string escapedUsername = username;
+        for (size_t pos = 0; pos < escapedUsername.length(); ++pos) {
+            if (escapedUsername[pos] == '\'') {
+                escapedUsername[pos] = '\\';
+                escapedUsername.insert(pos + 1, 1, '\'');
+                ++pos;
+            }
+        }
+        
         std::stringstream ss;
         ss << "SELECT password_hash FROM authors WHERE username = '"
-           << username << "' LIMIT 1";
+           << escapedUsername << "' LIMIT 1";
            
         auto result = db.executeQuery(ss.str());
         auto row = result.fetchOne();
@@ -72,10 +113,30 @@ bool UserService::createUser(const std::string& username, const std::string& pas
     try {
         auto& db = DbManager::getInstance();
         
+        // 转义所有字段
+        std::string escapedUsername = username;
+        std::string escapedDisplayName = displayName;
+        std::string escapedEmail = email;
+        
+        // 转义函数
+        auto escapeSQL = [](std::string& str) {
+            for (size_t pos = 0; pos < str.length(); ++pos) {
+                if (str[pos] == '\'') {
+                    str[pos] = '\\';
+                    str.insert(pos + 1, 1, '\'');
+                    ++pos;
+                }
+            }
+        };
+        
+        escapeSQL(escapedUsername);
+        escapeSQL(escapedDisplayName);
+        escapeSQL(escapedEmail);
+        
         // 检查用户名是否已存在
         std::stringstream checkSs;
         checkSs << "SELECT COUNT(*) FROM authors WHERE username = '"
-                << username << "' OR email = '" << email << "'";
+                << escapedUsername << "' OR email = '" << escapedEmail << "'";
                 
         auto checkResult = db.executeQuery(checkSs.str());
         auto row = checkResult.fetchOne();
@@ -87,13 +148,17 @@ bool UserService::createUser(const std::string& username, const std::string& pas
         // 生成密码哈希
         std::string passwordHash = hashPassword(password);
         
+        // 转义密码哈希
+        std::string escapedPasswordHash = passwordHash;
+        escapeSQL(escapedPasswordHash);
+        
         // 插入新用户
         std::stringstream ss;
         ss << "INSERT INTO authors (username, display_name, email, password_hash) VALUES ('"
-           << username << "', '"
-           << displayName << "', '"
-           << email << "', '"
-           << passwordHash << "')";
+           << escapedUsername << "', '"
+           << escapedDisplayName << "', '"
+           << escapedEmail << "', '"
+           << escapedPasswordHash << "')";
            
         return db.executeUpdate(ss.str()) > 0;
         
@@ -106,9 +171,19 @@ std::optional<json> UserService::getUserInfo(const std::string& username) {
     try {
         auto& db = DbManager::getInstance();
         
+        // 转义用户名
+        std::string escapedUsername = username;
+        for (size_t pos = 0; pos < escapedUsername.length(); ++pos) {
+            if (escapedUsername[pos] == '\'') {
+                escapedUsername[pos] = '\\';
+                escapedUsername.insert(pos + 1, 1, '\'');
+                ++pos;
+            }
+        }
+        
         std::stringstream ss;
         ss << "SELECT id, username, display_name, email, bio, profile_image, is_admin "
-           << "FROM authors WHERE username = '" << username << "' LIMIT 1";
+           << "FROM authors WHERE username = '" << escapedUsername << "' LIMIT 1";
            
         auto result = db.executeQuery(ss.str());
         auto row = result.fetchOne();
@@ -138,34 +213,55 @@ bool UserService::updateUser(int userId, const json& userInfo) {
     try {
         auto& db = DbManager::getInstance();
         
+        // 转义函数
+        auto escapeSQL = [](std::string& str) {
+            for (size_t pos = 0; pos < str.length(); ++pos) {
+                if (str[pos] == '\'') {
+                    str[pos] = '\\';
+                    str.insert(pos + 1, 1, '\'');
+                    ++pos;
+                }
+            }
+        };
+        
         std::stringstream ss;
         ss << "UPDATE authors SET ";
         
         bool first = true;
         if (userInfo.contains("displayName")) {
-            ss << "display_name = '" << userInfo["displayName"].get<std::string>() << "'";
+            std::string displayName = userInfo["displayName"].get<std::string>();
+            escapeSQL(displayName);
+            ss << "display_name = '" << displayName << "'";
             first = false;
         }
         if (userInfo.contains("email")) {
+            std::string email = userInfo["email"].get<std::string>();
+            escapeSQL(email);
             if (!first) ss << ", ";
-            ss << "email = '" << userInfo["email"].get<std::string>() << "'";
+            ss << "email = '" << email << "'";
             first = false;
         }
         if (userInfo.contains("bio")) {
+            std::string bio = userInfo["bio"].get<std::string>();
+            escapeSQL(bio);
             if (!first) ss << ", ";
-            ss << "bio = '" << userInfo["bio"].get<std::string>() << "'";
+            ss << "bio = '" << bio << "'";
             first = false;
         }
         if (userInfo.contains("profileImage")) {
+            std::string profileImage = userInfo["profileImage"].get<std::string>();
+            escapeSQL(profileImage);
             if (!first) ss << ", ";
-            ss << "profile_image = '" << userInfo["profileImage"].get<std::string>() << "'";
+            ss << "profile_image = '" << profileImage << "'";
         }
         
         ss << " WHERE id = " << userId;
         
         return db.executeUpdate(ss.str()) > 0;
         
-    } catch (const std::exception&) {
+    } catch (const std::exception& e) {
+        NgxLog log;
+        log.error("更新用户信息时出错: %s", e.what());
         return false;
     }
 }
