@@ -46,20 +46,31 @@ bool DbManager::initialize(const std::string& connStr, int minConnections, int m
     return success;
 }
 
-// 检查连接是否活跃
+// 检查数据库连接是否有效
 bool DbManager::isConnected() {
-    if (!m_initialized) {
+    // 首先进行快速检查，避免不必要的锁竞争
+    if (!m_initialized.load(std::memory_order_acquire)) {
         return false;
     }
     
     try {
-        // 从连接池获取连接并测试
-        ConnectionWrapper conn(m_pool);
+        // 尝试不获取锁的情况下获取连接并验证
+        auto conn = m_pool.getConnection(1000); // 较短的超时时间
+        if (!conn) {
+            return false;
+        }
+        
+        // 验证连接是否有效
         conn->sql("SELECT 1").execute();
+        
+        // 释放连接回连接池
+        m_pool.releaseConnection(conn);
+        
         return true;
-    } catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Database connection check failed: %s", e.what());
+    } 
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_WARN, ngx_cycle->log, 0, 
+                    "Connection check failed: %s", e.what());
         return false;
     }
 }

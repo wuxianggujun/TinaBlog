@@ -619,8 +619,8 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
                     ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
                                 "Initializing database connection with: %s", connStr.c_str());
 
-                    // 使用连接池初始化数据库，设置最小连接数为2，最大连接数为10
-                    if (DbManager::getInstance().initialize(connStr, 2, 10)) {
+                    // 使用连接池初始化数据库，设置最小连接数为4，最大连接数为20
+                    if (DbManager::getInstance().initialize(connStr, 4, 20)) {
                         ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
                                     "Database connection successful");
                         

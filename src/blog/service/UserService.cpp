@@ -29,7 +29,7 @@ std::optional<std::string> UserService::login(const std::string& username, const
         
         // 组装SQL查询 - 避免在锁中构建
         std::stringstream ss;
-        ss << "SELECT id, username, password_hash, is_admin FROM authors WHERE username = '"
+        ss << "SELECT id, username, password_hash, is_admin FROM users WHERE username = '"
            << escapedUsername << "' LIMIT 1";
         std::string sql = ss.str();
         

@@ -86,8 +86,8 @@ private:
     std::deque<std::shared_ptr<mysqlx::Session>> m_idle_connections;  // 空闲连接队列
     std::set<std::shared_ptr<mysqlx::Session>> m_active_connections;  // 活动连接集合
     std::string m_connection_string;                                 // 连接字符串
-    std::mutex m_mutex;                                              // 互斥锁
-    std::condition_variable m_condition;                             // 条件变量
+    std::timed_mutex m_mutex;                                        // 支持超时的互斥锁
+    std::condition_variable_any m_condition;                         // 条件变量（支持任意锁类型）
     int m_max_connections = 10;                                      // 最大连接数
     int m_min_connections = 2;                                       // 最小连接数
     int m_connection_timeout = 5000;                                 // 连接超时(毫秒)
