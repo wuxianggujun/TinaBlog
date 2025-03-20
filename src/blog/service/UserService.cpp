@@ -29,7 +29,7 @@ std::optional<std::string> UserService::login(const std::string& username, const
         
         // 组装SQL查询 - 避免在锁中构建
         std::stringstream ss;
-        ss << "SELECT id, username, password_hash, is_admin FROM users WHERE username = '"
+        ss << "SELECT id, username, password, IFNULL(is_admin, 0) as is_admin FROM users WHERE username = '"
            << escapedUsername << "' LIMIT 1";
         std::string sql = ss.str();
         
@@ -53,9 +53,9 @@ std::optional<std::string> UserService::login(const std::string& username, const
         }
         
         // 验证密码
-        std::string storedHash = row[2].get<std::string>();
+        std::string storedPassword = row[2].get<std::string>();
         if (crypto_pwhash_str_verify(
-                storedHash.c_str(),
+                storedPassword.c_str(),
                 password.c_str(),
                 password.length()) != 0) {
             log.debug("登录失败: 用户 %s 密码错误", escapedUsername.c_str());
@@ -94,7 +94,7 @@ bool UserService::verifyPassword(const std::string& username, const std::string&
         }
         
         std::stringstream ss;
-        ss << "SELECT password_hash FROM authors WHERE username = '"
+        ss << "SELECT password FROM users WHERE username = '"
            << escapedUsername << "' LIMIT 1";
            
         auto result = db.executeQuery(ss.str());
@@ -104,9 +104,9 @@ bool UserService::verifyPassword(const std::string& username, const std::string&
             return false;  // 用户不存在
         }
         
-        std::string storedHash = row[0].get<std::string>();
+        std::string storedPassword = row[0].get<std::string>();
         return crypto_pwhash_str_verify(
-            storedHash.c_str(),
+            storedPassword.c_str(),
             password.c_str(),
             password.length()) == 0;
         
@@ -161,7 +161,7 @@ bool UserService::createUser(const std::string& username, const std::string& pas
         
         // 插入新用户
         std::stringstream ss;
-        ss << "INSERT INTO authors (username, display_name, email, password_hash) VALUES ('"
+        ss << "INSERT INTO users (username, display_name, email, password) VALUES ('"
            << escapedUsername << "', '"
            << escapedDisplayName << "', '"
            << escapedEmail << "', '"
@@ -190,7 +190,7 @@ std::optional<json> UserService::getUserInfo(const std::string& username) {
         
         std::stringstream ss;
         ss << "SELECT id, username, display_name, email, bio, profile_image, is_admin "
-           << "FROM authors WHERE username = '" << escapedUsername << "' LIMIT 1";
+           << "FROM users WHERE username = '" << escapedUsername << "' LIMIT 1";
            
         auto result = db.executeQuery(ss.str());
         auto row = result.fetchOne();
@@ -232,7 +232,7 @@ bool UserService::updateUser(int userId, const json& userInfo) {
         };
         
         std::stringstream ss;
-        ss << "UPDATE authors SET ";
+        ss << "UPDATE users SET ";
         
         bool first = true;
         if (userInfo.contains("displayName")) {
@@ -278,7 +278,7 @@ bool UserService::deleteUser(int userId) {
         auto& db = DbManager::getInstance();
         
         std::stringstream ss;
-        ss << "DELETE FROM authors WHERE id = " << userId;
+        ss << "DELETE FROM users WHERE id = " << userId;
         
         return db.executeUpdate(ss.str()) > 0;
         
