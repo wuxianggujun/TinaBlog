@@ -1,7 +1,9 @@
 #pragma once
 #include "NgxPtr.hpp"
 #include <type_traits>
-
+#include <vector>
+#include <optional>
+#include <stdexcept>
 
 /**
  * @brief Nginx数组包装类
@@ -17,18 +19,30 @@ public:
     using reference = T&;
     using const_reference = const T&;
     using size_type = ngx_uint_t;
+    using iterator = T*;
+    using const_iterator = const T*;
     
     // 使用基类的构造函数
     using NgxPtr<ngx_array_t>::NgxPtr;
     
-    // 获取元素数量
-    [[nodiscard]] size_type size() const noexcept {
-        return get() ? get()->nelts : 0;
+    // 创建数组
+    static NgxArray<T> create(ngx_pool_t* pool, ngx_uint_t n) {
+        return NgxArray<T>(ngx_array_create(pool, n, sizeof(T)));
     }
     
-    // 获取容量
+    // 初始化现有数组
+    bool init(ngx_pool_t* pool, ngx_uint_t n) {
+        return ngx_array_init(ptr_, pool, n, sizeof(T)) == NGX_OK;
+    }
+    
+    // 获取元素数量
+    [[nodiscard]] size_type size() const noexcept {
+        return ptr_ ? ptr_->nelts : 0;
+    }
+    
+    // 获取分配的容量
     [[nodiscard]] size_type capacity() const noexcept {
-        return get() ? get()->nalloc : 0;
+        return ptr_ ? ptr_->nalloc : 0;
     }
     
     // 是否为空
@@ -36,41 +50,123 @@ public:
         return size() == 0;
     }
     
-    // 获取数据指针
-    pointer data() noexcept {
-        return get() ? static_cast<pointer>(get()->elts) : nullptr;
+    // 获取元素
+    [[nodiscard]] const_reference operator[](size_type i) const {
+        if (!ptr_ || i >= size()) {
+            throw std::out_of_range("Array index out of range");
+        }
+        return static_cast<const_pointer>(ptr_->elts)[i];
     }
     
-    const_pointer data() const noexcept {
-        return get() ? static_cast<const_pointer>(get()->elts) : nullptr;
+    // 获取元素(可修改)
+    [[nodiscard]] reference operator[](size_type i) {
+        if (!ptr_ || i >= size()) {
+            throw std::out_of_range("Array index out of range");
+        }
+        return static_cast<pointer>(ptr_->elts)[i];
     }
     
-    // 访问元素
-    reference operator[](size_type i) noexcept {
-        return data()[i];
+    // 获取第一个元素
+    [[nodiscard]] const_reference front() const {
+        if (!ptr_ || empty()) {
+            throw std::out_of_range("Array is empty");
+        }
+        return static_cast<const_pointer>(ptr_->elts)[0];
     }
     
-    const_reference operator[](size_type i) const noexcept {
-        return data()[i];
+    // 获取第一个元素(可修改)
+    [[nodiscard]] reference front() {
+        if (!ptr_ || empty()) {
+            throw std::out_of_range("Array is empty");
+        }
+        return static_cast<pointer>(ptr_->elts)[0];
     }
     
-    // 添加元素
+    // 获取最后一个元素
+    [[nodiscard]] const_reference back() const {
+        if (!ptr_ || empty()) {
+            throw std::out_of_range("Array is empty");
+        }
+        return static_cast<const_pointer>(ptr_->elts)[size() - 1];
+    }
+    
+    // 获取最后一个元素(可修改)
+    [[nodiscard]] reference back() {
+        if (!ptr_ || empty()) {
+            throw std::out_of_range("Array is empty");
+        }
+        return static_cast<pointer>(ptr_->elts)[size() - 1];
+    }
+    
+    // 添加元素(返回可以用于填充的指针)
     pointer push() {
         if (!ptr_) return nullptr;
         return static_cast<pointer>(ngx_array_push(ptr_));
     }
     
-    // 添加多个元素
-    pointer push_n(size_type n) {
+    // 添加多个元素(返回可以用于填充的指针)
+    pointer push_n(ngx_uint_t n) {
         if (!ptr_) return nullptr;
         return static_cast<pointer>(ngx_array_push_n(ptr_, n));
     }
     
+    // 添加元素(复制方式)
+    bool push(const T& element) {
+        pointer p = push();
+        if (!p) return false;
+        *p = element;
+        return true;
+    }
+    
+    // 转换为vector (复制所有元素)
+    std::vector<T> to_vector() const {
+        if (!ptr_ || empty()) return {};
+        
+        return std::vector<T>(
+            static_cast<const_pointer>(ptr_->elts),
+            static_cast<const_pointer>(ptr_->elts) + size()
+        );
+    }
+    
     // 迭代器支持
-    pointer begin() noexcept { return data(); }
-    pointer end() noexcept { return data() + size(); }
-    const_pointer begin() const noexcept { return data(); }
-    const_pointer end() const noexcept { return data() + size(); }
-    const_pointer cbegin() const noexcept { return begin(); }
-    const_pointer cend() const noexcept { return end(); }
+    [[nodiscard]] iterator begin() noexcept {
+        return ptr_ ? static_cast<pointer>(ptr_->elts) : nullptr;
+    }
+    
+    [[nodiscard]] const_iterator begin() const noexcept {
+        return ptr_ ? static_cast<const_pointer>(ptr_->elts) : nullptr;
+    }
+    
+    [[nodiscard]] const_iterator cbegin() const noexcept {
+        return begin();
+    }
+    
+    [[nodiscard]] iterator end() noexcept {
+        return ptr_ ? static_cast<pointer>(ptr_->elts) + size() : nullptr;
+    }
+    
+    [[nodiscard]] const_iterator end() const noexcept {
+        return ptr_ ? static_cast<const_pointer>(ptr_->elts) + size() : nullptr;
+    }
+    
+    [[nodiscard]] const_iterator cend() const noexcept {
+        return end();
+    }
+    
+    // 获取原始数据指针
+    [[nodiscard]] pointer data() noexcept {
+        return ptr_ ? static_cast<pointer>(ptr_->elts) : nullptr;
+    }
+    
+    [[nodiscard]] const_pointer data() const noexcept {
+        return ptr_ ? static_cast<const_pointer>(ptr_->elts) : nullptr;
+    }
+    
+    // 销毁数组
+    void destroy() {
+        if (ptr_) {
+            ngx_array_destroy(ptr_);
+            ptr_ = nullptr;
+        }
+    }
 }; // class NgxArray
