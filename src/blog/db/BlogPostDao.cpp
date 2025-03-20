@@ -33,17 +33,15 @@ BlogPostDao::BlogPostDao() {
 }
 
 // 获取数据库会话
-mysqlx::Session& BlogPostDao::getSession() {
-    return DbManager::getInstance().getSession();
-}
-
+// 这个方法不再需要，将在每个具体实现中使用ConnectionWrapper
+// 删除这个方法，并修改各个使用的地方
 
 // 获取所有文章
 std::vector<BlogPostRecord> BlogPostDao::getAllPosts(int limit, int offset) {
     std::vector<BlogPostRecord> result;
     
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT id, title, slug, summary, content, "
@@ -63,7 +61,7 @@ std::vector<BlogPostRecord> BlogPostDao::getAllPosts(int limit, int offset) {
             }
         }
         
-        mysqlx::RowResult rows = session.sql(query).execute();
+        mysqlx::RowResult rows = conn->sql(query).execute();
         
         for (const mysqlx::Row& row : rows.fetchAll()) {
             BlogPostRecord post = parsePostRecord(row);
@@ -86,7 +84,7 @@ std::vector<BlogPostRecord> BlogPostDao::getAllPosts(int limit, int offset) {
 // 按ID获取文章
 std::optional<BlogPostRecord> BlogPostDao::getPostById(int id) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT id, title, slug, summary, content, "
@@ -96,7 +94,7 @@ std::optional<BlogPostRecord> BlogPostDao::getPostById(int id) {
             "FROM posts "
             "WHERE id = ?";
         
-        mysqlx::SqlStatement stmt = session.sql(query);
+        mysqlx::SqlStatement stmt = conn->sql(query);
         mysqlx::SqlResult res = stmt.bind(id).execute();
         
         // 获取结果
@@ -121,7 +119,7 @@ std::optional<BlogPostRecord> BlogPostDao::getPostById(int id) {
 // 按Slug获取文章
 std::optional<BlogPostRecord> BlogPostDao::getPostBySlug(const std::string& slug) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT id, title, slug, summary, content, "
@@ -131,7 +129,7 @@ std::optional<BlogPostRecord> BlogPostDao::getPostBySlug(const std::string& slug
             "FROM posts "
             "WHERE slug = ?";
         
-        mysqlx::SqlStatement stmt = session.sql(query);
+        mysqlx::SqlStatement stmt = conn->sql(query);
         mysqlx::SqlResult res = stmt.bind(slug).execute();
         
         // 获取结果
@@ -158,7 +156,7 @@ std::vector<BlogPostRecord> BlogPostDao::getPostsByCategory(const std::string& c
     std::vector<BlogPostRecord> result;
     
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT p.id, p.title, p.slug, p.summary, p.content, "
@@ -180,7 +178,7 @@ std::vector<BlogPostRecord> BlogPostDao::getPostsByCategory(const std::string& c
             }
         }
         
-        mysqlx::SqlStatement stmt = session.sql(query);
+        mysqlx::SqlStatement stmt = conn->sql(query);
         mysqlx::SqlResult res = stmt.bind(category).execute();
         
         for (const mysqlx::Row& row : res.fetchAll()) {
@@ -206,7 +204,7 @@ std::vector<BlogPostRecord> BlogPostDao::getPostsByTag(const std::string& tag, i
     std::vector<BlogPostRecord> result;
     
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT p.id, p.title, p.slug, p.summary, p.content, "
@@ -228,7 +226,7 @@ std::vector<BlogPostRecord> BlogPostDao::getPostsByTag(const std::string& tag, i
             }
         }
         
-        mysqlx::SqlStatement stmt = session.sql(query);
+        mysqlx::SqlStatement stmt = conn->sql(query);
         mysqlx::SqlResult res = stmt.bind(tag).execute();
         
         for (const mysqlx::Row& row : res.fetchAll()) {
@@ -260,7 +258,7 @@ int BlogPostDao::createPost(
     bool published
 ) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 生成slug
         std::string slug = generateSlug(title);
@@ -270,7 +268,7 @@ int BlogPostDao::createPost(
                          "VALUES (?, ?, ?, ?, ?, ?)";
         
         
-        mysqlx::SqlStatement stmt = session.sql(query);
+        mysqlx::SqlStatement stmt = conn->sql(query);
         stmt.bind(title, slug, content, summary,author, published).execute();
         
         // 获取插入的ID
@@ -306,7 +304,7 @@ bool BlogPostDao::updatePost(
     bool published
 ) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 更新文章
         std::string query =
@@ -317,7 +315,7 @@ bool BlogPostDao::updatePost(
             "published = ? "
             "WHERE id = ?";
         
-        mysqlx::SqlStatement stmt = session.sql(query);
+        mysqlx::SqlStatement stmt = conn->sql(query);
         stmt.bind(title, content, summary, published, id).execute();
         
         return true;
@@ -332,11 +330,11 @@ bool BlogPostDao::updatePost(
 // 设置文章分类
 bool BlogPostDao::setPostCategories(int postId, const std::vector<std::string>& categories) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 先删除已有的分类关联
         std::string deleteQuery = "DELETE FROM post_categories WHERE post_id = ?";
-        session.sql(deleteQuery).bind(postId).execute();
+        conn->sql(deleteQuery).bind(postId).execute();
         
         // 添加新的分类关联
         for (const std::string& category : categories) {
@@ -344,7 +342,7 @@ bool BlogPostDao::setPostCategories(int postId, const std::vector<std::string>& 
             if (categoryId > 0) {
                 std::string insertQuery = 
                     "INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)";
-                session.sql(insertQuery).bind(postId, categoryId).execute();
+                conn->sql(insertQuery).bind(postId, categoryId).execute();
             }
         }
         
@@ -360,11 +358,11 @@ bool BlogPostDao::setPostCategories(int postId, const std::vector<std::string>& 
 // 设置文章标签
 bool BlogPostDao::setPostTags(int postId, const std::vector<std::string>& tags) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 先删除已有的标签关联
         std::string deleteQuery = "DELETE FROM post_tags WHERE post_id = ?";
-        session.sql(deleteQuery).bind(postId).execute();
+        conn->sql(deleteQuery).bind(postId).execute();
         
         // 添加新的标签关联
         for (const std::string& tag : tags) {
@@ -372,7 +370,7 @@ bool BlogPostDao::setPostTags(int postId, const std::vector<std::string>& tags) 
             if (tagId > 0) {
                 std::string insertQuery = 
                     "INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)";
-                session.sql(insertQuery).bind(postId, tagId).execute();
+                conn->sql(insertQuery).bind(postId, tagId).execute();
             }
         }
         
@@ -388,10 +386,10 @@ bool BlogPostDao::setPostTags(int postId, const std::vector<std::string>& tags) 
 // 增加文章浏览次数
 bool BlogPostDao::incrementViewCount(int id) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query = "UPDATE posts SET view_count = view_count + 1 WHERE id = ?";
-        session.sql(query).bind(id).execute();
+        conn->sql(query).bind(id).execute();
         
         return true;
     }
@@ -405,11 +403,11 @@ bool BlogPostDao::incrementViewCount(int id) {
 // 删除文章
 bool BlogPostDao::deletePost(int id) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 删除文章（级联删除会自动删除相关的分类和标签关联）
         std::string query = "DELETE FROM posts WHERE id = ?";
-        mysqlx::SqlResult result = session.sql(query).bind(id).execute();
+        mysqlx::SqlResult result = conn->sql(query).bind(id).execute();
         
         return result.getAffectedItemsCount() > 0;
     }
@@ -440,14 +438,14 @@ BlogPostRecord BlogPostDao::parsePostRecord(const mysqlx::Row& row) {
 // 加载文章的分类
 void BlogPostDao::loadPostCategories(BlogPostRecord& post) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT c.name FROM categories c "
             "JOIN post_categories pc ON c.id = pc.category_id "
             "WHERE pc.post_id = ?";
         
-        mysqlx::SqlResult res = session.sql(query).bind(post.id).execute();
+        mysqlx::SqlResult res = conn->sql(query).bind(post.id).execute();
         
         post.categories.clear();
         for (const mysqlx::Row& row : res.fetchAll()) {
@@ -463,14 +461,14 @@ void BlogPostDao::loadPostCategories(BlogPostRecord& post) {
 // 加载文章的标签
 void BlogPostDao::loadPostTags(BlogPostRecord& post) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         std::string query =
             "SELECT t.name FROM tags t "
             "JOIN post_tags pt ON t.id = pt.tag_id "
             "WHERE pt.post_id = ?";
         
-        mysqlx::SqlResult res = session.sql(query).bind(post.id).execute();
+        mysqlx::SqlResult res = conn->sql(query).bind(post.id).execute();
         
         post.tags.clear();
         for (const mysqlx::Row& row : res.fetchAll()) {
@@ -486,11 +484,11 @@ void BlogPostDao::loadPostTags(BlogPostRecord& post) {
 // 获取或创建分类
 int BlogPostDao::getOrCreateCategory(const std::string& name) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 先查找是否已存在
         std::string selectQuery = "SELECT id FROM categories WHERE name = ?";
-        mysqlx::SqlResult selectResult = session.sql(selectQuery).bind(name).execute();
+        mysqlx::SqlResult selectResult = conn->sql(selectQuery).bind(name).execute();
         
         if (mysqlx::Row row = selectResult.fetchOne()) {
             return row[0].get<int>();
@@ -500,7 +498,7 @@ int BlogPostDao::getOrCreateCategory(const std::string& name) {
         std::string slug = generateSlug(name);
         std::string insertQuery = 
             "INSERT INTO categories (name, slug) VALUES (?, ?)";
-        mysqlx::SqlStatement stmt = session.sql(insertQuery);
+        mysqlx::SqlStatement stmt = conn->sql(insertQuery);
         stmt.bind(name, slug).execute();
         
         // 返回新创建的ID
@@ -516,11 +514,11 @@ int BlogPostDao::getOrCreateCategory(const std::string& name) {
 // 获取或创建标签
 int BlogPostDao::getOrCreateTag(const std::string& name) {
     try {
-        mysqlx::Session& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
         // 先查找是否已存在
         std::string selectQuery = "SELECT id FROM tags WHERE name = ?";
-        mysqlx::SqlResult selectResult = session.sql(selectQuery).bind(name).execute();
+        mysqlx::SqlResult selectResult = conn->sql(selectQuery).bind(name).execute();
         
         if (mysqlx::Row row = selectResult.fetchOne()) {
             return row[0].get<int>();
@@ -530,7 +528,7 @@ int BlogPostDao::getOrCreateTag(const std::string& name) {
         std::string slug = generateSlug(name);
         std::string insertQuery = 
             "INSERT INTO tags (name, slug) VALUES (?, ?)";
-        mysqlx::SqlStatement stmt = session.sql(insertQuery);
+        mysqlx::SqlStatement stmt = conn->sql(insertQuery);
         stmt.bind(name, slug).execute();
         
         // 返回新创建的ID
@@ -558,8 +556,8 @@ std::string BlogPostDao::generateSlug(const std::string& name) {
 // 获取文章总数
 int BlogPostDao::getPostCount() {
     try {
-        auto& session = getSession();
-        auto schema = session.getSchema("blog");
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
+        auto schema = conn->getSchema("blog");
         auto table = schema.getTable("blog_posts");
         
         // 执行COUNT查询
@@ -582,8 +580,8 @@ int BlogPostDao::getPostCount() {
 // 获取已发布文章数
 int BlogPostDao::getPublishedPostCount() {
     try {
-        auto& session = getSession();
-        auto schema = session.getSchema("blog");
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
+        auto schema = conn->getSchema("blog");
         auto table = schema.getTable("blog_posts");
         
         // 执行COUNT查询，带条件
@@ -608,8 +606,8 @@ int BlogPostDao::getPublishedPostCount() {
 // 获取总浏览量
 int BlogPostDao::getTotalViewCount() {
     try {
-        auto& session = getSession();
-        auto schema = session.getSchema("blog");
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
+        auto schema = conn->getSchema("blog");
         auto table = schema.getTable("blog_posts");
         
         // 执行SUM查询
@@ -632,8 +630,8 @@ int BlogPostDao::getTotalViewCount() {
 // 获取分类数量
 int BlogPostDao::getCategoryCount() {
     try {
-        auto& session = getSession();
-        auto schema = session.getSchema("blog");
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
+        auto schema = conn->getSchema("blog");
         auto table = schema.getTable("blog_categories");
         
         // 执行COUNT查询
@@ -656,8 +654,8 @@ int BlogPostDao::getCategoryCount() {
 // 获取标签数量
 int BlogPostDao::getTagCount() {
     try {
-        auto& session = getSession();
-        auto schema = session.getSchema("blog");
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
+        auto schema = conn->getSchema("blog");
         auto table = schema.getTable("blog_tags");
         
         // 执行COUNT查询
@@ -675,8 +673,6 @@ int BlogPostDao::getTagCount() {
                      "获取标签数量异常: %s", e.what());
         return 0;
     }
-    
-    
 }
 
 // 辅助函数：从标题生成 slug
@@ -703,9 +699,9 @@ std::string BlogPostDao::createSlugFromTitle(const std::string& title) {
 // 检查 slug 是否已存在
 bool BlogPostDao::isSlugExists(const std::string& slug) {
     try {
-        auto& session = getSession();
+        ConnectionWrapper conn(DbManager::getInstance().getPool());
         
-        auto result = session.sql("SELECT COUNT(*) FROM posts WHERE slug = ?")
+        auto result = conn->sql("SELECT COUNT(*) FROM posts WHERE slug = ?")
                       .bind(slug)
                       .execute();
         

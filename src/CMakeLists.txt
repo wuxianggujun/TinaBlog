@@ -268,6 +268,7 @@ function(organize_sources OUT_CORE OUT_EVENT OUT_HTTP OUT_MAIL OUT_STREAM OUT_BL
         ${BLOG_DIR}/api/PostController.cpp
         ${BLOG_DIR}/db/DbManager.cpp
         ${BLOG_DIR}/db/BlogPostDao.cpp
+        ${BLOG_DIR}/db/ConnectionPool.cpp
         ${BLOG_DIR}/service/UserService.cpp
         ${BLOG_DIR}/service/JwtService.cpp
         ${BLOG_DIR}/utils/JwtUtils.cpp

@@ -619,7 +619,8 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
                     ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
                                 "Initializing database connection with: %s", connStr.c_str());
 
-                    if (DbManager::getInstance().initialize(connStr)) {
+                    // 使用连接池初始化数据库，设置最小连接数为2，最大连接数为10
+                    if (DbManager::getInstance().initialize(connStr, 2, 10)) {
                         ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
                                     "Database connection successful");
                         
@@ -631,6 +632,14 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
                             ngx_log_error(NGX_LOG_ERR, cycle->log, 0, 
                                         "Failed to create or verify database tables");
                         }
+                        
+                        // 记录连接池状态
+                        auto poolStatus = DbManager::getInstance().getPoolStatus();
+                        ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
+                                    "Database connection pool status: idle=%d, active=%d, max=%d", 
+                                    poolStatus.idle_connections, 
+                                    poolStatus.active_connections,
+                                    poolStatus.max_connections);
                     } else {
                         ngx_log_error(NGX_LOG_ERR, cycle->log, 0, 
                                     "Failed to initialize database connection");
@@ -658,6 +667,14 @@ ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
 // 进程退出函数
 void BlogModule::exitProcess(ngx_cycle_t* cycle) {
     ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程退出");
+    
+    // 关闭数据库连接池
+    try {
+        DbManager::getInstance().close();
+    } catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, cycle->log, 0, 
+                    "Error closing database connection pool: %s", e.what());
+    }
 }
 
 // 注册API路由

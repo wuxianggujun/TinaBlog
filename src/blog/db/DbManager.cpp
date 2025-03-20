@@ -14,7 +14,7 @@ DbManager& DbManager::getInstance() {
 }
 
 // 构造函数
-DbManager::DbManager() : initialized(false), connectionAttempts(0) {
+DbManager::DbManager() : m_pool(ConnectionPool::getInstance()), m_initialized(false) {
     // 构造函数初始化
 }
 
@@ -24,26 +24,23 @@ DbManager::~DbManager() {
 }
 
 // 初始化数据库连接
-bool DbManager::initialize(const std::string& connStr) {
-    std::lock_guard<std::mutex> lock(mutex);
+bool DbManager::initialize(const std::string& connStr, int minConnections, int maxConnections) {
+    std::lock_guard<std::mutex> lock(m_init_mutex);
     
-    if (initialized) {
+    if (m_initialized) {
         return isConnected();
     }
     
-    // 保存连接字符串
-    connectionString = connStr;
-    
-    // 尝试连接
-    bool success = connect();
+    // 初始化连接池
+    bool success = m_pool.initialize(connStr, minConnections, maxConnections);
     
     if (success) {
-        initialized = true;
+        m_initialized = true;
         ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                     "Database connection initialized successfully");
+                     "Database connection pool initialized successfully");
     } else {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Failed to initialize database connection");
+                     "Failed to initialize database connection pool");
     }
     
     return success;
@@ -51,134 +48,20 @@ bool DbManager::initialize(const std::string& connStr) {
 
 // 检查连接是否活跃
 bool DbManager::isConnected() {
-    // 初步无锁检查
-    if (!session) {
+    if (!m_initialized) {
         return false;
     }
     
     try {
-        std::lock_guard<std::mutex> lock(mutex);
-        
-        // 再次检查会话是否存在（可能在获取锁的过程中被其他线程关闭）
-        if (!session) {
-            return false;
-        }
-        
-        // 尝试执行简单查询验证连接是否有效
-        session->sql("SELECT 1").execute();
+        // 从连接池获取连接并测试
+        ConnectionWrapper conn(m_pool);
+        conn->sql("SELECT 1").execute();
         return true;
     } catch (const std::exception& e) {
         ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
                      "Database connection check failed: %s", e.what());
         return false;
     }
-}
-
-// 建立连接
-bool DbManager::connect() {
-    if (connectionString.empty()) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Connection string is empty");
-        return false;
-    }
-    
-    connectionAttempts++;
-    
-    if (connectionAttempts > MAX_CONNECTION_ATTEMPTS) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Maximum connection attempts reached, giving up");
-        return false;
-    }
-    
-    try {
-        // 解析连接字符串
-        std::string host = "localhost";
-        std::string user = "root";
-        std::string password = "";
-        std::string database = "";
-        int port = 33060;
-        
-        // 简单解析格式：host=...;user=...;password=...;database=...;port=...
-        std::regex pattern("(\\w+)=([^;]+)");
-        auto begin = std::sregex_iterator(connectionString.begin(), connectionString.end(), pattern);
-        auto end = std::sregex_iterator();
-        
-        for (std::sregex_iterator i = begin; i != end; ++i) {
-            std::smatch match = *i;
-            std::string key = match[1];
-            std::string value = match[2];
-            
-            if (key == "host") host = value;
-            else if (key == "user") user = value;
-            else if (key == "password") password = value;
-            else if (key == "database") database = value;
-            else if (key == "port") port = std::stoi(value);
-        }
-        
-        // 创建会话
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                     "Connecting to MySQL server at %s:%d as %s", 
-                     host.c_str(), port, user.c_str());
-        
-        // 创建会话并设置连接选项
-        mysqlx::SessionSettings settings(
-            mysqlx::SessionOption::HOST, host,
-            mysqlx::SessionOption::PORT, port,
-            mysqlx::SessionOption::USER, user,
-            mysqlx::SessionOption::PWD, password,
-            mysqlx::SessionOption::DB, database
-        );
-        
-        // 设置连接超时
-        settings.set(mysqlx::SessionOption::CONNECT_TIMEOUT, 10000);
-        
-        // 创建新会话
-        session = std::make_unique<mysqlx::Session>(settings);
-        
-        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                     "Connected to MySQL server, version: %s", 
-                     session->sql("SELECT VERSION()").execute().fetchOne()[0].get<std::string>().c_str());
-        
-        return true;
-    } 
-    catch (const mysqlx::Error& err) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "MySQL connection error: %s", 
-                     err.what());
-    }
-    catch (const std::exception& e) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                     "Connection error: %s", e.what());
-    }
-    
-    return false;
-}
-
-// 获取会话
-mysqlx::Session& DbManager::getSession() {
-    // 首先尝试无锁获取会话状态
-    if (session && initialized) {
-        try {
-            // 超快速无锁测试连接是否有效
-            // 仅检查会话指针，避免在这里执行SQL
-            return *session;
-        } catch (...) {
-            // 忽略错误，将在加锁后处理
-        }
-    }
-    
-    // 如果无法快速获取，则进行加锁操作
-    std::lock_guard<std::mutex> lock(mutex);
-    
-    // 加锁后再次检查会话
-    if (!session || !isConnected()) {
-        // 尝试建立连接，有错误时抛出异常
-        if (!connect()) {
-            throw std::runtime_error("Cannot execute query: not connected to database");
-        }
-    }
-    
-    return *session;
 }
 
 // 执行SQL查询
@@ -188,8 +71,8 @@ mysqlx::RowResult DbManager::executeQuery(const std::string& sql) {
     
     while (retry_count < MAX_RETRIES) {
         try {
-            mysqlx::Session& sess = getSession();
-            return sess.sql(sql).execute();
+            ConnectionWrapper conn(m_pool);
+            return conn->sql(sql).execute();
         } catch (const mysqlx::Error& e) {
             // 获取错误信息并记录
             std::string errorMsg = e.what();
@@ -197,33 +80,14 @@ mysqlx::RowResult DbManager::executeQuery(const std::string& sql) {
                          "Database error (attempt %d/%d): %s", 
                          retry_count + 1, MAX_RETRIES, errorMsg.c_str());
             
-            // 检查错误消息，判断是否是连接错误或死锁错误
-            bool isConnectionError = 
-                errorMsg.find("server has gone away") != std::string::npos || 
-                errorMsg.find("Lost connection") != std::string::npos;
-                
+            // 检查错误消息，判断是否是死锁错误
             bool isDeadlockError = 
                 errorMsg.find("deadlock") != std::string::npos || 
                 errorMsg.find("Deadlock") != std::string::npos;
                 
-            if (isConnectionError || isDeadlockError) {
-                // 如果是连接错误，重新连接
-                if (isConnectionError) {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    session.reset();
-                    if (!connect()) {
-                        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                                     "Failed to reconnect to database");
-                        throw;
-                    }
-                }
-                
-                // 如果是死锁错误，等待一小段时间
-                if (isDeadlockError) {
-                    // 随机延迟，避免所有线程同时重试
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100 * (retry_count + 1)));
-                }
-                
+            if (isDeadlockError) {
+                // 如果是死锁错误，随机延迟后重试
+                std::this_thread::sleep_for(std::chrono::milliseconds(100 * (retry_count + 1)));
                 retry_count++;
                 continue;
             }
@@ -245,6 +109,19 @@ mysqlx::RowResult DbManager::executeQuery(const std::string& sql) {
     throw std::runtime_error("Failed to execute query after maximum retries");
 }
 
+// 执行带回调的SQL查询
+bool DbManager::executeQuery(const std::string& sql, QueryCallback callback) {
+    try {
+        auto result = executeQuery(sql);
+        callback(result);
+        return true;
+    } catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "Error executing query with callback: %s", e.what());
+        return false;
+    }
+}
+
 // 执行SQL更新
 int DbManager::executeUpdate(const std::string& sql) {
     const int MAX_RETRIES = 3;
@@ -252,8 +129,8 @@ int DbManager::executeUpdate(const std::string& sql) {
     
     while (retry_count < MAX_RETRIES) {
         try {
-            mysqlx::Session& sess = getSession();
-            mysqlx::SqlResult result = sess.sql(sql).execute();
+            ConnectionWrapper conn(m_pool);
+            mysqlx::SqlResult result = conn->sql(sql).execute();
             return result.getAffectedItemsCount();
         } catch (const mysqlx::Error& e) {
             // 获取错误信息并记录
@@ -262,33 +139,14 @@ int DbManager::executeUpdate(const std::string& sql) {
                          "Database update error (attempt %d/%d): %s", 
                          retry_count + 1, MAX_RETRIES, errorMsg.c_str());
             
-            // 检查错误消息，判断是否是连接错误或死锁错误
-            bool isConnectionError = 
-                errorMsg.find("server has gone away") != std::string::npos || 
-                errorMsg.find("Lost connection") != std::string::npos;
-                
+            // 检查错误消息，判断是否是死锁错误
             bool isDeadlockError = 
                 errorMsg.find("deadlock") != std::string::npos || 
                 errorMsg.find("Deadlock") != std::string::npos;
                 
-            if (isConnectionError || isDeadlockError) {
-                // 如果是连接错误，重新连接
-                if (isConnectionError) {
-                    std::lock_guard<std::mutex> lock(mutex);
-                    session.reset();
-                    if (!connect()) {
-                        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                                     "Failed to reconnect to database");
-                        return -1;
-                    }
-                }
-                
-                // 如果是死锁错误，等待一小段时间
-                if (isDeadlockError) {
-                    // 随机延迟，避免所有线程同时重试
-                    std::this_thread::sleep_for(std::chrono::milliseconds(100 * (retry_count + 1)));
-                }
-                
+            if (isDeadlockError) {
+                // 如果是死锁错误，随机延迟后重试
+                std::this_thread::sleep_for(std::chrono::milliseconds(100 * (retry_count + 1)));
                 retry_count++;
                 continue;
             }
@@ -310,11 +168,37 @@ int DbManager::executeUpdate(const std::string& sql) {
     return -1;
 }
 
+// 执行事务
+bool DbManager::executeTransaction(TransactionCallback callback) {
+    try {
+        ConnectionWrapper conn(m_pool);
+        
+        // 开始事务
+        conn->startTransaction();
+        
+        // 执行事务回调
+        bool commit = callback(*conn);
+        
+        // 根据回调结果提交或回滚
+        if (commit) {
+            conn->commit();
+            return true;
+        } else {
+            conn->rollback();
+            return false;
+        }
+    } catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "Transaction error: %s", e.what());
+        return false;
+    }
+}
+
 // 获取上一个插入的ID
 uint64_t DbManager::getLastInsertId() {
     try {
-        mysqlx::Session& sess = getSession();
-        mysqlx::SqlResult result = sess.sql("SELECT LAST_INSERT_ID()").execute();
+        ConnectionWrapper conn(m_pool);
+        mysqlx::SqlResult result = conn->sql("SELECT LAST_INSERT_ID()").execute();
         mysqlx::Row row = result.fetchOne();
         return row[0].get<uint64_t>();
     } 
@@ -327,110 +211,147 @@ uint64_t DbManager::getLastInsertId() {
 
 // 关闭连接
 void DbManager::close() {
-    std::lock_guard<std::mutex> lock(mutex);
-    
-    if (session) {
-        try {
-            session->close();
-            ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, 
-                         "Database connection closed");
-        } 
-        catch (const std::exception& e) {
-            ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
-                         "Error closing database connection: %s", e.what());
-        }
-        
-        session.reset();
+    if (m_initialized) {
+        m_pool.close();
+        m_initialized = false;
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Database connections closed");
     }
-    
-    initialized = false;
-    connectionAttempts = 0;
+}
+
+// 获取连接池状态
+ConnectionPool::PoolStatus DbManager::getPoolStatus() {
+    return m_pool.getStatus();
 }
 
 // 创建数据库表
 bool DbManager::createTables() {
-
-    // 创建作者表
-    std::string createAuthorsTable = 
-        "CREATE TABLE IF NOT EXISTS authors ("
-        "  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-        "  username VARCHAR(50) NOT NULL UNIQUE,"
-        "  display_name VARCHAR(100) NOT NULL,"
-        "  email VARCHAR(100) NOT NULL UNIQUE,"
-        "  password_hash VARCHAR(255) NOT NULL,"
-        "  bio TEXT,"
-        "  profile_image VARCHAR(255),"
-        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-        "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
-        "  is_admin BOOLEAN DEFAULT FALSE"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-    
-    // 博文表 - 使用author_id外键代替author字符串
-    std::string createPostsTable = 
-        "CREATE TABLE IF NOT EXISTS posts ("
-        "  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-        "  title VARCHAR(255) NOT NULL,"
-        "  slug VARCHAR(255) NOT NULL UNIQUE,"
-        "  content TEXT NOT NULL,"
-        "  summary TEXT,"
-        "  author_id INT UNSIGNED NOT NULL,"  // 外键字段
-        "  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
-        "  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
-        "  published BOOLEAN DEFAULT TRUE,"
-        "  view_count INT UNSIGNED DEFAULT 0,"
-        "  INDEX idx_slug (slug),"
-        "  INDEX idx_created (created_at),"
-        "  FOREIGN KEY (author_id) REFERENCES authors(id)"  // 外键关联
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-    
-    // 分类表
-    std::string createCategoriesTable = 
-        "CREATE TABLE IF NOT EXISTS categories ("
-        "  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-        "  name VARCHAR(100) NOT NULL UNIQUE,"
-        "  slug VARCHAR(100) NOT NULL UNIQUE,"
-        "  description TEXT"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-    
-    // 标签表
-    std::string createTagsTable = 
-        "CREATE TABLE IF NOT EXISTS tags ("
-        "  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,"
-        "  name VARCHAR(50) NOT NULL UNIQUE,"
-        "  slug VARCHAR(50) NOT NULL UNIQUE"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-    
-    // 博文分类关系表
-    std::string createPostCategoriesTable = 
-        "CREATE TABLE IF NOT EXISTS post_categories ("
-        "  post_id INT UNSIGNED NOT NULL,"
-        "  category_id INT UNSIGNED NOT NULL,"
-        "  PRIMARY KEY (post_id, category_id),"
-        "  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,"
-        "  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-    
-    // 博文标签关系表
-    std::string createPostTagsTable = 
-        "CREATE TABLE IF NOT EXISTS post_tags ("
-        "  post_id INT UNSIGNED NOT NULL,"
-        "  tag_id INT UNSIGNED NOT NULL,"
-        "  PRIMARY KEY (post_id, tag_id),"
-        "  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,"
-        "  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-    
     try {
-        // 执行创建表操作
-        session->sql(createAuthorsTable).execute();
-        session->sql(createPostsTable).execute();
-        session->sql(createCategoriesTable).execute();
-        session->sql(createTagsTable).execute();
-        session->sql(createPostCategoriesTable).execute();
-        session->sql(createPostTagsTable).execute();
+        // 用户表
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS users ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "username VARCHAR(50) NOT NULL UNIQUE,"
+            "password VARCHAR(255) NOT NULL,"
+            "email VARCHAR(100) NOT NULL UNIQUE,"
+            "display_name VARCHAR(100) NOT NULL,"
+            "bio TEXT,"
+            "profile_image VARCHAR(255),"
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            "last_login_at TIMESTAMP NULL,"
+            "INDEX (username),"
+            "INDEX (email)"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 博客文章表
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS posts ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "title VARCHAR(255) NOT NULL,"
+            "slug VARCHAR(255) NOT NULL UNIQUE,"
+            "content TEXT NOT NULL,"
+            "summary TEXT,"
+            "author_id INT NOT NULL,"
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+            "published BOOLEAN DEFAULT TRUE,"
+            "view_count INT DEFAULT 0,"
+            "FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,"
+            "INDEX (slug),"
+            "INDEX (author_id),"
+            "INDEX (created_at)"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 分类表
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS categories ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "name VARCHAR(50) NOT NULL UNIQUE,"
+            "slug VARCHAR(50) NOT NULL UNIQUE,"
+            "description TEXT"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 文章分类关联表
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS post_categories ("
+            "post_id INT NOT NULL,"
+            "category_id INT NOT NULL,"
+            "PRIMARY KEY (post_id, category_id),"
+            "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,"
+            "FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 标签表
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS tags ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "name VARCHAR(50) NOT NULL UNIQUE,"
+            "slug VARCHAR(50) NOT NULL UNIQUE"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 文章标签关联表
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS post_tags ("
+            "post_id INT NOT NULL,"
+            "tag_id INT NOT NULL,"
+            "PRIMARY KEY (post_id, tag_id),"
+            "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,"
+            "FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 评论表 - 重新定义确保数据类型一致
+        executeUpdate(
+            "DROP TABLE IF EXISTS comments"
+        );
+        
+        executeUpdate(
+            "CREATE TABLE IF NOT EXISTS comments ("
+            "id INT AUTO_INCREMENT PRIMARY KEY,"
+            "post_id INT NOT NULL,"
+            "user_id INT,"
+            "parent_id INT,"
+            "content TEXT NOT NULL,"
+            "author_name VARCHAR(50),"
+            "author_email VARCHAR(100),"
+            "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,"
+            "approved BOOLEAN DEFAULT FALSE,"
+            "INDEX (post_id),"
+            "INDEX (user_id),"
+            "INDEX (parent_id)"
+            ") ENGINE=InnoDB;"
+        );
+        
+        // 添加外键约束
+        executeUpdate(
+            "ALTER TABLE comments "
+            "ADD CONSTRAINT fk_comments_post "
+            "FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE"
+        );
+        
+        executeUpdate(
+            "ALTER TABLE comments "
+            "ADD CONSTRAINT fk_comments_user "
+            "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL"
+        );
+        
+        executeUpdate(
+            "ALTER TABLE comments "
+            "ADD CONSTRAINT fk_comments_parent "
+            "FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE"
+        );
+        
+        ngx_log_error(NGX_LOG_INFO, ngx_cycle->log, 0, "Database tables created successfully");
         return true;
-    } catch (const mysqlx::Error& err) {
-        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, "Error creating tables: %s", err.what());
+    } 
+    catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, ngx_cycle->log, 0, 
+                     "Error creating database tables: %s", e.what());
         return false;
     }
 }

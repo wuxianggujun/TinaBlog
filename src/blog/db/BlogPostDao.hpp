@@ -8,6 +8,9 @@
 #include <memory>
 #include <mysqlx/xdevapi.h>
 
+// 添加新的头文件
+#include "ConnectionWrapper.hpp"
+
 // MySQL类型已经在DbManager.hpp中定义，这里不需要重复定义
 
 /**
@@ -218,12 +221,6 @@ private:
      * @return slug
      */
     std::string generateSlug(const std::string& name);
-    
-    /**
-     * 获取数据库会话
-     * @return 数据库会话
-     */
-    mysqlx::Session& getSession();
 
     std::string createSlugFromTitle(const std::string& title);
     bool isSlugExists(const std::string& slug);
