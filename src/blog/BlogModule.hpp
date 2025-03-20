@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Nginx.hpp"
+#include "db/DbManager.hpp"
 
 extern "C"{
     // 声明模块变量

@@ -21,11 +21,10 @@ public:
 
     /**
      * 初始化数据库连接
-     * @param connStr 连接字符串，格式如: "host=localhost;user=root;password=secret;database=blog"
-     * @param autoInit 自动初始化数据库表
+     * @param connectionString 连接字符串，格式如: "host=localhost;user=root;password=secret;database=blog"
      * @return 是否成功初始化
      */
-    bool initialize(const std::string& connStr, bool autoInit = true);
+    bool initialize(const std::string& connectionString);
 
     /**
      * 获取会话
@@ -37,7 +36,7 @@ public:
      * 检查数据库连接是否有效
      * @return 连接是否有效
      */
-    bool isConnected() const;
+    bool isConnected();
 
     /**
      * 执行SQL查询
@@ -63,9 +62,10 @@ public:
      * 关闭数据库连接
      */
     void close();
+    bool createTables();
 
 private:
-    // 私有构造函数，防止外部创建实例
+    // 单例模式，私有构造函数
     DbManager();
     ~DbManager();
 
@@ -73,26 +73,24 @@ private:
     DbManager(const DbManager&) = delete;
     DbManager& operator=(const DbManager&) = delete;
 
-    // 创建数据库表
-    bool createTables();
-    
-    // 解析连接字符串
-    bool parseConnectionString(const std::string& connStr);
+    // 建立连接
+    bool connect();
 
-private:
-    // X DevAPI会话 - 使用裸指针，在close()中手动管理内存
-    mysqlx::Session* session_;
+    // 连接字符串
+    std::string connectionString;
     
-    // 连接参数
-    std::string host_;
-    std::string user_;
-    std::string password_;
-    std::string database_;
-    unsigned int port_;
+    // 会话对象
+    std::unique_ptr<mysqlx::Session> session;
     
-    // 连接状态
-    bool connected_;
+    // 互斥锁，保证线程安全
+    std::mutex mutex;
     
-    // 互斥锁，保护连接操作的线程安全
-    std::mutex mutex_;
+    // 是否已初始化
+    bool initialized = false;
+    
+    // 连接尝试计数
+    int connectionAttempts = 0;
+    
+    // 最大连接尝试次数
+    static const int MAX_CONNECTION_ATTEMPTS = 3;
 };

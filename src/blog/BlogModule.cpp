@@ -570,6 +570,61 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
 // 进程初始化函数
 ngx_int_t BlogModule::initProcess(ngx_cycle_t* cycle) {
     ngx_log_error(NGX_LOG_NOTICE, cycle->log, 0, "博客模块进程初始化");
+    
+    // 尝试从配置中获取数据库连接信息
+    BlogModuleConfig* lcf = nullptr;
+    
+    // 从全局配置中读取
+    ngx_http_conf_ctx_t* conf_ctx = reinterpret_cast<ngx_http_conf_ctx_t*>(cycle->conf_ctx[ngx_http_module.index]);
+    if (conf_ctx) {
+        lcf = static_cast<BlogModuleConfig*>(
+            conf_ctx->loc_conf[ngx_http_blog_module.ctx_index]
+        );
+    }
+    
+    if (lcf) {
+        // 检查是否有数据库连接字符串
+        if (lcf->db_connection.len > 0) {
+            std::string connStr(reinterpret_cast<char*>(lcf->db_connection.data), lcf->db_connection.len);
+            
+            // 初始化数据库连接
+            if (lcf->db_auto_connect) {
+                try {
+                    ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
+                                "Initializing database connection with: %s", connStr.c_str());
+                    
+                    bool success = DbManager::getInstance().initialize(connStr);
+                    
+                    if (success) {
+                        // 数据库连接成功后，创建数据表
+                        if (DbManager::getInstance().createTables()) {
+                            ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
+                                        "Database tables created or verified successfully");
+                        } else {
+                            ngx_log_error(NGX_LOG_ERR, cycle->log, 0, 
+                                        "Failed to create or verify database tables");
+                        }
+                    } else {
+                        ngx_log_error(NGX_LOG_ERR, cycle->log, 0, 
+                                    "Failed to initialize database connection");
+                    }
+                } catch (const std::exception& e) {
+                    ngx_log_error(NGX_LOG_ERR, cycle->log, 0, 
+                                "Error initializing database: %s", e.what());
+                }
+            } else {
+                ngx_log_error(NGX_LOG_INFO, cycle->log, 0, 
+                            "Auto database connection is disabled");
+            }
+        } else {
+            ngx_log_error(NGX_LOG_WARN, cycle->log, 0, 
+                        "No database connection string configured");
+        }
+    } else {
+        ngx_log_error(NGX_LOG_WARN, cycle->log, 0, 
+                    "Could not find blog module configuration");
+    }
+    
     return NGX_OK;
 }
 
