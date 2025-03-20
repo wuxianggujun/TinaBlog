@@ -1,32 +1,26 @@
 #include "NgxRequest.hpp"
 #include <algorithm>
 #include <fstream>
+#include "NgxList.hpp"
 
 // 获取请求头
 std::optional<std::string> NgxRequest::get_header(const std::string& name) const {
     if (!get()) return std::nullopt;
     
-    // 手动遍历headers列表来查找header
-    ngx_list_part_t* part = const_cast<ngx_list_part_t*>(&get()->headers_in.headers.part);
-    ngx_table_elt_t* h = static_cast<ngx_table_elt_t*>(part->elts);
+    // 使用NgxList包装headers列表
+    NgxList<ngx_table_elt_t> headers(const_cast<ngx_list_t*>(&get()->headers_in.headers));
     
-    for (ngx_uint_t i = 0; /* void */; i++) {
-        if (i >= part->nelts) {
-            if (part->next == nullptr) {
-                break;
-            }
-            
-            part = part->next;
-            h = static_cast<ngx_table_elt_t*>(part->elts);
-            i = 0;
-        }
-        
-        if (h[i].key.len == name.length() && 
-            ngx_strncasecmp(h[i].key.data, 
-                           const_cast<u_char*>(reinterpret_cast<const u_char*>(name.c_str())),
-                           h[i].key.len) == 0) {
-            return std::string(reinterpret_cast<const char*>(h[i].value.data), h[i].value.len);
-        }
+    // 查找匹配的header
+    auto result = headers.find_if([&name](const ngx_table_elt_t& h) {
+        return h.key.len == name.length() && 
+               ngx_strncasecmp(h.key.data, 
+                              const_cast<u_char*>(reinterpret_cast<const u_char*>(name.c_str())),
+                              h.key.len) == 0;
+    });
+    
+    if (result) {
+        const auto& h = result->get();
+        return std::string(reinterpret_cast<const char*>(h.value.data), h.value.len);
     }
     
     return std::nullopt;
@@ -38,26 +32,16 @@ std::unordered_map<std::string, std::string> NgxRequest::get_headers() const {
     
     if (!get()) return headers;
     
-    // 遍历请求头列表
-    const ngx_list_part_t* part = &get()->headers_in.headers.part;
-    ngx_table_elt_t* h = static_cast<ngx_table_elt_t*>(part->elts);
+    // 使用NgxList包装headers列表
+    NgxList<ngx_table_elt_t> headers_list(const_cast<ngx_list_t*>(&get()->headers_in.headers));
     
-    for (ngx_uint_t i = 0; /* void */; i++) {
-        if (i >= part->nelts) {
-            if (part->next == nullptr) {
-                break;
-            }
-            
-            part = part->next;
-            h = static_cast<ngx_table_elt_t*>(part->elts);
-            i = 0;
-        }
-        
+    // 遍历所有headers
+    headers_list.for_each([&headers](const ngx_table_elt_t& h) {
         headers.emplace(
-            std::string(reinterpret_cast<const char*>(h[i].key.data), h[i].key.len),
-            std::string(reinterpret_cast<const char*>(h[i].value.data), h[i].value.len)
+            std::string(reinterpret_cast<const char*>(h.key.data), h.key.len),
+            std::string(reinterpret_cast<const char*>(h.value.data), h.value.len)
         );
-    }
+    });
     
     return headers;
 }
