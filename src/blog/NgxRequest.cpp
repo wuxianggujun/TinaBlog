@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <fstream>
 #include "NgxList.hpp"
+#include "utils/ApiResponse.hpp"
 
 // 获取请求头
 std::optional<std::string> NgxRequest::get_header(const std::string& name) const {
@@ -424,10 +425,30 @@ ngx_int_t NgxRequest::send_error(ngx_uint_t status_code, const std::string& mess
     
     // 如果提供了错误消息
     if (!message.empty()) {
+    
             // API请求返回JSON格式错误
-            std::string json = "{\"error\": \"" + message + "\", \"status\": " + 
-                              std::to_string(status_code) + "}";
-            return send_json(json, status_code);
+            ApiStatus api_status;
+            switch (status_code) {
+                case NGX_HTTP_BAD_REQUEST:
+                    api_status = ApiStatus::API_BAD_REQUEST;
+                    break;
+                case NGX_HTTP_UNAUTHORIZED:
+                    api_status = ApiStatus::API_UNAUTHORIZED;
+                    break;
+                case NGX_HTTP_NOT_FOUND:
+                    api_status = ApiStatus::API_NOT_FOUND;
+                    break;
+                default:
+                    api_status = ApiStatus::API_ERROR;
+                    break;
+            }
+            
+            auto response = ApiResponse::status(
+                api_status, 
+                message
+            );
+            
+            return send_json(response.dump(), status_code);
     }
     
     // 否则简单发送状态码

@@ -4,11 +4,11 @@
 #include <nlohmann/json.hpp>
 
 enum class ApiStatus {
-    SUCCESS,
-    ERROR,
-    UNAUTHORIZED,
-    NOT_FOUND,
-    BAD_REQUEST
+    API_SUCCESS,
+    API_ERROR,
+    API_UNAUTHORIZED,
+    API_NOT_FOUND,
+    API_BAD_REQUEST
 };
 
 /**
@@ -57,19 +57,19 @@ public:
         const nlohmann::json& data = nullptr
     ) {
         switch (status) {
-            case ApiStatus::SUCCESS:
+            case ApiStatus::API_SUCCESS:
                 return success(data);
                 
-            case ApiStatus::UNAUTHORIZED:
+            case ApiStatus::API_UNAUTHORIZED:
                 return error(message.empty() ? "Unauthorized" : message, 401, data);
                 
-            case ApiStatus::NOT_FOUND:
+            case ApiStatus::API_NOT_FOUND:
                 return error(message.empty() ? "Not found" : message, 404, data);
                 
-            case ApiStatus::BAD_REQUEST:
+            case ApiStatus::API_BAD_REQUEST:
                 return error(message.empty() ? "Bad request" : message, 400, data);
                 
-            case ApiStatus::ERROR:
+            case ApiStatus::API_ERROR:
             default:
                 return error(message.empty() ? "Internal server error" : message, 500, data);
         }
