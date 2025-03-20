@@ -296,8 +296,14 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
     // 处理URI以确保安全
     ngx_str_t uri = r->uri;
     
-    // 在处理URI之前添加这段代码
-    if (r->uri.len > 1 && r->uri.data[0] == '/' && !ngx_strchr(r->uri.data, '.')) {
+    // 如果URI是根目录，直接使用index.html
+    if (uri.len == 1 && uri.data[0] == '/') {
+        uri.data = (u_char*)"/index.html";
+        uri.len = sizeof("/index.html") - 1;
+        
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Root path detected, serving index.html");
+    } else if (r->uri.len > 1 && r->uri.data[0] == '/' && !ngx_strchr(r->uri.data, '.')) {
         // 没有扩展名的路径，可能是Vue路由，直接使用index.html
         uri.data = (u_char*)"/index.html";
         uri.len = sizeof("/index.html") - 1;
@@ -368,10 +374,58 @@ ngx_int_t BlogModule::handleRequest(ngx_http_request_t* r) {
         path = index_path;
     }
     
-    if (of.fd == NGX_INVALID_FILE || of.is_dir) {
+    // 如果是目录，尝试返回index.html
+    if (of.is_dir) {
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Path is a directory, trying index.html: %V", &path);
+        
+        // 构建index.html路径
+        ngx_str_t index_path;
+        
+        // 确保路径末尾有斜杠
+        if (path.data[path.len - 1] != '/') {
+            index_path.len = path.len + sizeof("index.html");
+            index_path.data = static_cast<u_char*>(ngx_palloc(r->pool, index_path.len + 1));
+            if (index_path.data == nullptr) {
+                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+            }
+            ngx_cpystrn(index_path.data, path.data, path.len + 1);
+            index_path.data[path.len] = '/';
+            ngx_cpystrn(index_path.data + path.len + 1, (u_char*)"index.html", sizeof("index.html"));
+        } else {
+            index_path.len = path.len + sizeof("index.html") - 1;
+            index_path.data = static_cast<u_char*>(ngx_palloc(r->pool, index_path.len + 1));
+            if (index_path.data == nullptr) {
+                return NGX_HTTP_INTERNAL_SERVER_ERROR;
+            }
+            ngx_cpystrn(index_path.data, path.data, path.len + 1);
+            ngx_cpystrn(index_path.data + path.len, (u_char*)"index.html", sizeof("index.html"));
+        }
+        
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Trying to serve index.html in directory: %V", &index_path);
+        
+        // 尝试打开目录下的index.html
+        ngx_memzero(&of, sizeof(ngx_open_file_info_t));
+        of.read_ahead = 1;
+        of.directio = NGX_MAX_OFF_T_VALUE;
+        of.valid = 60 * 1000;
+        of.min_uses = 1;
+        of.errors = 1;
+        of.events = 1;
+        
+        if (ngx_open_cached_file(clcf->open_file_cache, &index_path, &of, r->pool) != NGX_OK) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Index.html not found in directory: %V", &index_path);
+            return NGX_HTTP_NOT_FOUND;
+        }
+        
+        path = index_path;
+    }
+    
+    if (of.fd == NGX_INVALID_FILE) {
         ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
-            "Invalid file or is directory: %V, fd: %d, is_dir: %d", 
-            &path, of.fd, of.is_dir);
+            "Invalid file: %V, fd: %d", &path, of.fd);
         return NGX_HTTP_NOT_FOUND;
     }
     
