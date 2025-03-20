@@ -12,11 +12,6 @@ UserService& UserService::getInstance() {
 
 std::optional<std::string> UserService::login(const std::string& username, const std::string& password) {
     try {
-        static std::mutex login_mutex;
-        std::lock_guard<std::mutex> lock(login_mutex);
-        
-        auto& db = DbManager::getInstance();
-        
         // 使用参数转义，防止SQL注入
         std::string escapedUsername = username;
         // 简单替换单引号 - 修复std::replace使用方式
@@ -28,18 +23,30 @@ std::optional<std::string> UserService::login(const std::string& username, const
             }
         }
         
-        // 查询用户信息
-        std::stringstream ss;
-        ss << "SELECT id, username, password_hash, is_admin FROM authors WHERE username = '"
-           << escapedUsername << "' LIMIT 1";
-           
         // 获取日志实例
         NgxLog log;
         log.debug("执行登录查询: %s", escapedUsername.c_str());
         
-        auto result = db.executeQuery(ss.str());
-        auto row = result.fetchOne();
+        // 组装SQL查询 - 避免在锁中构建
+        std::stringstream ss;
+        ss << "SELECT id, username, password_hash, is_admin FROM authors WHERE username = '"
+           << escapedUsername << "' LIMIT 1";
+        std::string sql = ss.str();
         
+        // 仅在必要的数据库操作部分使用互斥锁
+        static std::mutex login_mutex;
+        mysqlx::Row row;
+        
+        {
+            std::lock_guard<std::mutex> lock(login_mutex);
+            auto& db = DbManager::getInstance();
+            auto result = db.executeQuery(sql);
+            if (result.count() > 0) {
+                row = result.fetchOne();
+            }
+        }
+        
+        // 处理查询结果 - 锁外进行
         if (!row) {
             log.debug("登录失败: 用户 %s 不存在", escapedUsername.c_str());
             return std::nullopt;  // 用户不存在
@@ -68,7 +75,7 @@ std::optional<std::string> UserService::login(const std::string& username, const
     } catch (const std::exception& e) {
         NgxLog log;
         log.error("登录过程中出现异常: %s", e.what());
-        return std::nullopt;
+        throw std::runtime_error(std::string("登录失败: ") + e.what());
     }
 }
 

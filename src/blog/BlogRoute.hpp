@@ -11,6 +11,7 @@ struct NgxRouteParams {
     ngx_str_t* keys;            // 参数名数组
     ngx_str_t* values;          // 参数值数组
     ngx_uint_t count;           // 参数数量
+    ngx_uint_t capacity_;       // 参数容量
     
     // 构造函数
     NgxRouteParams(ngx_pool_t* pool, ngx_uint_t capacity);

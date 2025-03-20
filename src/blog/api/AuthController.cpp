@@ -64,10 +64,19 @@ ngx_int_t AuthController::handleLogin(NgxRequest& req, const NgxRouteParams& par
         
         req.get_log().debug("Attempting login for user: %s", username.c_str());
         
-        // 验证登录
-        auto token = UserService::getInstance().login(username, password);
+        // 验证登录 - 添加超时处理
+        std::optional<std::string> token;
+        
+        try {
+            token = UserService::getInstance().login(username, password);
+        } catch (const std::runtime_error& e) {
+            req.get_log().error("Database error during login: %s", e.what());
+            return req.send_error(NGX_HTTP_SERVICE_UNAVAILABLE, "Database service unavailable, please try again later");
+        }
         
         if (!token) {
+            // 不存在的用户或密码错误
+            req.get_log().warn("Login failed for user: %s (invalid credentials)", username.c_str());
             return req.send_error(NGX_HTTP_UNAUTHORIZED, "Invalid username or password");
         }
         
@@ -77,6 +86,7 @@ ngx_int_t AuthController::handleLogin(NgxRequest& req, const NgxRouteParams& par
             {"message", "Login successful"}
         };
         
+        req.get_log().info("Login successful for user: %s", username.c_str());
         return req.send_json(response.dump());
     }
     catch (const json::exception& e) {

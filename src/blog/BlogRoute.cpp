@@ -9,7 +9,7 @@
 // NgxRouteParams 实现
 
 NgxRouteParams::NgxRouteParams(ngx_pool_t* pool, ngx_uint_t capacity)
-    : count(0)
+    : count(0), capacity_(capacity)
 {
     keys = static_cast<ngx_str_t*>(ngx_pcalloc(pool, sizeof(ngx_str_t) * capacity));
     values = static_cast<ngx_str_t*>(ngx_pcalloc(pool, sizeof(ngx_str_t) * capacity));
@@ -17,18 +17,26 @@ NgxRouteParams::NgxRouteParams(ngx_pool_t* pool, ngx_uint_t capacity)
 
 bool NgxRouteParams::add(ngx_pool_t* pool, const ngx_str_t* key, const ngx_str_t* value)
 {
-    if (!keys || !values) return false;
-
-    // 复制键
+    if (count >= capacity_) {
+        return false;
+    }
+    
+    // 复制参数名
     keys[count].len = key->len;
     keys[count].data = static_cast<u_char*>(ngx_pnalloc(pool, key->len));
+    if (!keys[count].data) {
+        return false;
+    }
     ngx_memcpy(keys[count].data, key->data, key->len);
-
-    // 复制值
+    
+    // 复制参数值
     values[count].len = value->len;
     values[count].data = static_cast<u_char*>(ngx_pnalloc(pool, value->len));
+    if (!values[count].data) {
+        return false;
+    }
     ngx_memcpy(values[count].data, value->data, value->len);
-
+    
     count++;
     return true;
 }
@@ -375,7 +383,14 @@ RouteEntry* BlogRoute::match_route(ngx_str_t* uri, HttpMethod method, NgxRoutePa
                 };
 
                 // 添加参数
-                params.add(pool_, &param_name, &uri_parts[j]);
+                if (!params.add(pool_, &param_name, &uri_parts[j])) {
+                    NgxLog log(ngx_cycle->log);
+                    log.error("Failed to add route parameter: %.*s", 
+                              (int)param_name.len, param_name.data);
+                    // 继续匹配下一个路由
+                    match = false;
+                    break;
+                }
             }
             else
             {

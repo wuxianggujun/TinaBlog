@@ -51,14 +51,20 @@ bool DbManager::initialize(const std::string& connStr) {
 
 // 检查连接是否活跃
 bool DbManager::isConnected() {
-    std::lock_guard<std::mutex> lock(mutex);
-    
+    // 初步无锁检查
     if (!session) {
         return false;
     }
     
     try {
-        // 尝试执行简单查询以验证连接是否有效
+        std::lock_guard<std::mutex> lock(mutex);
+        
+        // 再次检查会话是否存在（可能在获取锁的过程中被其他线程关闭）
+        if (!session) {
+            return false;
+        }
+        
+        // 尝试执行简单查询验证连接是否有效
         session->sql("SELECT 1").execute();
         return true;
     } catch (const std::exception& e) {
@@ -150,9 +156,23 @@ bool DbManager::connect() {
 
 // 获取会话
 mysqlx::Session& DbManager::getSession() {
+    // 首先尝试无锁获取会话状态
+    if (session && initialized) {
+        try {
+            // 超快速无锁测试连接是否有效
+            // 仅检查会话指针，避免在这里执行SQL
+            return *session;
+        } catch (...) {
+            // 忽略错误，将在加锁后处理
+        }
+    }
+    
+    // 如果无法快速获取，则进行加锁操作
     std::lock_guard<std::mutex> lock(mutex);
     
+    // 加锁后再次检查会话
     if (!session || !isConnected()) {
+        // 尝试建立连接，有错误时抛出异常
         if (!connect()) {
             throw std::runtime_error("Cannot execute query: not connected to database");
         }
