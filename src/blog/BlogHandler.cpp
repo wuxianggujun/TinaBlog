@@ -60,8 +60,25 @@ ngx_int_t BlogHandler::handlePost(ngx_http_request_t* r) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
 
+    // 需要先完成读取请求体的回调函数
+    if (r->request_body == NULL) {
+        ngx_int_t rc = ngx_http_read_client_request_body(r, [](ngx_http_request_t* r) {
+            // 读取完成后重新执行handlePost
+            ngx_http_finalize_request(r, BlogHandler::handlePost(r));
+        });
+
+        if (rc >= NGX_HTTP_SPECIAL_RESPONSE) {
+            return rc;
+        }
+
+        return NGX_DONE; // 告诉Nginx我们将在请求体读取完成后再次处理该请求
+    }
+
     NgxPool pool(r->pool);
     NgxString path = getRequestPath(r);
+    
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Handling POST request to: %V", &path);
     
     try {
         if (path.compare("/api/auth/login") == 0) {
@@ -87,31 +104,64 @@ ngx_int_t BlogHandler::handleLogin(ngx_http_request_t* r) {
     NgxString body(pool);
     ngx_int_t rc = parseRequestBody(r, body);
     if (rc != NGX_OK) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Failed to parse request body for login");
         return rc;
     }
     
+    // 记录请求内容
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Login request body: %V", &body);
+    
     try {
         // 解析JSON
-        json request = json::parse(body.str());
+        std::string bodyStr = body.str();
+        if (bodyStr.empty()) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Empty request body for login");
+            return sendError(r, NGX_HTTP_BAD_REQUEST, "Empty request body");
+        }
+        
+        json request;
+        try {
+            request = json::parse(bodyStr);
+        } catch (const json::exception& e) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Invalid JSON format: %s", e.what());
+            return sendError(r, NGX_HTTP_BAD_REQUEST, std::string("Invalid JSON format: ") + e.what());
+        }
+        
+        // 记录解析后的JSON
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Parsed JSON: %s", request.dump().c_str());
         
         // 验证必要字段
         if (!request.contains("username") || !request.contains("password")) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Missing username or password in login request");
             return sendError(r, NGX_HTTP_BAD_REQUEST, "Missing username or password");
         }
         
         std::string username = request["username"];
         std::string password = request["password"];
         
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Login attempt for user: %s", username.c_str());
+        
         // 调用登录服务
         auto token = UserService::getInstance().login(username, password);
         
         if (!token) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Invalid credentials for user: %s", username.c_str());
             return sendError(r, NGX_HTTP_UNAUTHORIZED, "Invalid username or password");
         }
         
         // 获取用户信息
         auto userInfo = UserService::getInstance().getUserInfo(username);
         if (!userInfo) {
+            ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+                "Failed to get user info for user: %s", username.c_str());
             return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, "Failed to get user info");
         }
         
@@ -121,12 +171,19 @@ ngx_int_t BlogHandler::handleLogin(ngx_http_request_t* r) {
             {"user", *userInfo}
         };
         
+        ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+            "Login successful for user: %s", username.c_str());
+        
         return sendJsonResponse(r, response.dump());
     }
-    catch (const json::exception&) {
-        return sendError(r, NGX_HTTP_BAD_REQUEST, "Invalid JSON format");
+    catch (const json::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "JSON error: %s", e.what());
+        return sendError(r, NGX_HTTP_BAD_REQUEST, std::string("Invalid JSON format: ") + e.what());
     }
     catch (const std::exception& e) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Error processing login: %s", e.what());
         return sendError(r, NGX_HTTP_INTERNAL_SERVER_ERROR, e.what());
     }
 }
@@ -348,19 +405,51 @@ ngx_int_t BlogHandler::sendError(ngx_http_request_t* r, ngx_uint_t status, const
 
 ngx_int_t BlogHandler::parseRequestBody(ngx_http_request_t* r, NgxString& body) {
     if (r->request_body == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Request body is null, you may need to call ngx_http_read_client_request_body first");
         return NGX_HTTP_BAD_REQUEST;
     }
     
+    // 检查请求体是否在临时文件中
     if (r->request_body->temp_file) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Request body is in temp file, not supported");
         return NGX_HTTP_BAD_REQUEST; // 不处理大文件上传
     }
     
-    ngx_buf_t* buf = r->request_body->bufs->buf;
-    if (!buf) {
+    // 检查请求体是否为空
+    if (r->request_body->bufs == nullptr) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Request body buffers is null");
         return NGX_HTTP_BAD_REQUEST;
     }
     
-    body.set(buf->pos, buf->last - buf->pos);
+    // 获取请求体缓冲区
+    ngx_buf_t* buf = r->request_body->bufs->buf;
+    if (!buf) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Request body buffer is null");
+        return NGX_HTTP_BAD_REQUEST;
+    }
+    
+    // 检查buf是否有内容
+    if (buf->pos == nullptr || buf->last == nullptr || buf->pos == buf->last) {
+        ngx_log_error(NGX_LOG_ERR, r->connection->log, 0, 
+            "Request body is empty or invalid");
+        return NGX_HTTP_BAD_REQUEST;
+    }
+    
+    // 设置请求体内容
+    size_t len = buf->last - buf->pos;
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Parsing request body: size=%d", len);
+        
+    body.set(buf->pos, len);
+    
+    // 记录请求体内容用于调试
+    ngx_log_error(NGX_LOG_DEBUG, r->connection->log, 0, 
+        "Request body content: %V", &body);
+        
     return NGX_OK;
 }
 
