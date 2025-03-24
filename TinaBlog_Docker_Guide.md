@@ -35,7 +35,15 @@ sudo apt-get install docker-compose-plugin
 
 ## Dockerfile配置
 
-在项目根目录创建`Dockerfile`文件：
+Dockerfile已经配置了必要的开发环境，包括：
+
+- 基本构建工具：gcc/g++, make, cmake
+- ninja构建系统：用于更快的编译
+- 调试工具：gdb用于C++程序调试
+- 数据库客户端
+- SSH服务器用于远程访问
+
+完整的Dockerfile如下：
 
 ```dockerfile
 FROM ubuntu:latest
@@ -50,8 +58,14 @@ RUN sed -i 's/archive.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list &&
 # 安装curl（用于一键换源脚本）
 RUN apt-get update && apt-get install -y curl
 
-# 一键换源脚本（可选，如果上面的源替换不够快）
-RUN curl -sSL https://linuxmirrors.cn/main.sh | bash -s -- --auto
+# 一键换源脚本（使用非交互式参数）
+RUN curl -sSL https://linuxmirrors.cn/main.sh | bash -s -- \
+  --source mirrors.ustc.edu.cn \
+  --protocol https \
+  --use-intranet-source false \
+  --backup true \
+  --upgrade-software false \
+  --clean-cache false
 
 # 安装必要的包
 RUN apt-get update && apt-get install -y \
@@ -78,6 +92,7 @@ RUN apt-get update && apt-get install -y \
     openssh-server \
     sudo \
     vim \
+    gdb \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -124,11 +139,11 @@ CMD ["/start.sh"]
 version: '3'
 
 services:
-  ubuntu-dev:
+  tinablog-linux-dev:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ubuntu-dev
+    container_name: tinablog-linux-dev
     volumes:
       - .:/app
     ports:
@@ -215,7 +230,7 @@ ssh developer@localhost -p 2222
 #### 方法3: 直接进入容器
 
 ```powershell
-docker exec -it ubuntu-dev bash
+docker exec -it tinablog-linux-dev bash
 ```
 
 ### 步骤4: 编译和运行TinaBlog
@@ -282,7 +297,7 @@ print_info "等待容器启动..."
 sleep 5
 
 # 检查容器状态
-if [ "$(docker ps -q -f name=ubuntu-dev)" ]; then
+if [ "$(docker ps -q -f name=tinablog-linux-dev)" ]; then
     print_success "开发容器已启动"
     
     # 显示SSH连接信息
@@ -306,7 +321,7 @@ if [ "$(docker ps -q -f name=ubuntu-dev)" ]; then
     
     # 提供进入容器的命令
     print_info "要进入开发容器，运行:"
-    print_info "docker exec -it ubuntu-dev bash"
+    print_info "docker exec -it tinablog-linux-dev bash"
     
     # 提供编译项目的命令
     print_info "要编译项目，进入容器后运行:"
@@ -397,7 +412,7 @@ cd build
 
 ```bash
 # 查看容器日志
-docker logs ubuntu-dev
+docker logs tinablog-linux-dev
 docker logs postgres-db
 
 # 检查容器状态
@@ -408,7 +423,7 @@ docker ps -a
 
 ```bash
 # 进入开发容器
-docker exec -it ubuntu-dev bash
+docker exec -it tinablog-linux-dev bash
 
 # 测试与数据库的连接
 ping postgres-db
@@ -424,7 +439,7 @@ docker network inspect tinablog-network
 
 ```bash
 # 检查环境变量
-docker exec -it ubuntu-dev env | grep DB_
+docker exec -it tinablog-linux-dev env | grep DB_
 
 # 验证PostgreSQL容器正在运行
 docker ps | grep postgres-db
@@ -437,7 +452,7 @@ docker exec -it postgres-db psql -U postgres -c "\l"
 
 ```bash
 # 如果遇到文件权限问题
-docker exec -it ubuntu-dev bash
+docker exec -it tinablog-linux-dev bash
 sudo chown -R developer:developer /app
 ```
 
@@ -451,4 +466,4 @@ docker-compose down
 docker-compose down -v
 ```
 
-希望这个部署指南对您有所帮助！如有任何问题，请查看故障排除部分或提出具体问题。 
+希望这个部署指南对您有所帮助！如有任何问题，请查看故障排除部分或提出具体问题。
