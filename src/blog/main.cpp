@@ -13,8 +13,15 @@
 #include <Windows.h>
 #endif
 
-#include "db/DbManager.hpp"
+#include "blog/db/DbManager.hpp"
+#include "blog/auth/JwtManager.hpp"
+#include "blog/auth/JwtAuthFilter.hpp"
+#include "blog/controllers/AuthController.hpp"
+#include "blog/controllers/HealthController.hpp"
 #include <drogon/drogon.h>
+
+// 定义JWT密钥（在实际应用中应从配置文件或环境变量获取）
+const std::string JWT_SECRET = "your-secret-key-change-this-in-production";
 
 // 定义一个全局指针，用于在信号处理程序中访问DbManager
 static DbManager* g_dbManager = nullptr;
@@ -153,32 +160,16 @@ int main()
             callback(resp);
         }, {drogon::Get});
     
-    // 添加健康检查API，验证数据库连接是否正常
-    drogon::app().registerHandler("/api/health", 
-        [&dbManager](const drogon::HttpRequestPtr& req, 
-                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
-            auto resp = drogon::HttpResponse::newHttpResponse();
-            resp->setContentTypeCode(drogon::CT_APPLICATION_JSON);
-            
-            try {
-                // 验证数据库连接
-                if (dbManager.isConnected()) {
-                    // 数据库连接正常
-                    resp->setStatusCode(drogon::k200OK);
-                    resp->setBody("{\"status\":\"ok\",\"database\":\"connected\"}");
-                } else {
-                    // 数据库连接异常
-                    resp->setStatusCode(drogon::k503ServiceUnavailable);
-                    resp->setBody("{\"status\":\"error\",\"database\":\"disconnected\"}");
-                }
-            } catch (const std::exception& e) {
-                // 发生异常
-                resp->setStatusCode(drogon::k500InternalServerError);
-                resp->setBody("{\"status\":\"error\",\"message\":\"" + std::string(e.what()) + "\"}");
-            }
-            
-            callback(resp);
-        });
+    // 创建JWT认证过滤器
+    auto jwtFilter = std::make_shared<blog::auth::JwtAuthFilter>(JWT_SECRET);
+    auto adminFilter = std::make_shared<blog::auth::AdminAuthFilter>(JWT_SECRET);
+    
+    // 注册过滤器
+    drogon::app().registerFilter(jwtFilter);
+    drogon::app().registerFilter(adminFilter);
+    
+    // Drogon会自动发现并注册继承自HttpController的控制器类
+    // 不需要手动注册控制器
     
     // 启动Drogon
     std::cout << "启动Web服务器，监听 http://localhost:8080" << std::endl;
