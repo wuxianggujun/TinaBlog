@@ -16,6 +16,7 @@ public:
     ADD_METHOD_TO(AuthController::login, "/api/auth/login", drogon::Post);
     // 使用JwtAuthFilter过滤器保护getUserInfo接口 - 参照示例简化
     ADD_METHOD_TO(AuthController::getUserInfo, "/api/auth/info", drogon::Get, "JwtAuthFilter");
+    ADD_METHOD_TO(AuthController::registerUser, "/api/auth/register", drogon::Post);
     METHOD_LIST_END
     
     /**
@@ -38,6 +39,14 @@ public:
      * 构造函数
      */
     AuthController();
+    
+    /**
+     * 注册用户
+     * @param req 请求对象
+     * @param callback 回调函数
+     */
+    void registerUser(const drogon::HttpRequestPtr& req, 
+                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
     
 private:
     std::string m_jwtSecret;

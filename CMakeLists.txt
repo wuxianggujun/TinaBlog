@@ -72,14 +72,17 @@ find_package(Drogon CONFIG REQUIRED)
 find_package(libpqxx CONFIG REQUIRED)
 find_package(jwt-cpp CONFIG REQUIRED)
 
+set(TINA_BLOG_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 # 包含目录
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${TINA_BLOG_SOURCE_DIR})
 
 # 源文件
 file(GLOB_RECURSE SOURCES
-    "src/blog/*.cpp"
-    "src/blog/auth/*.cpp"
-    "src/blog/controllers/*.cpp"
+    "${TINA_BLOG_SOURCE_DIR}/blog/*.cpp"
+    "${TINA_BLOG_SOURCE_DIR}/blog/auth/*.cpp"
+    "${TINA_BLOG_SOURCE_DIR}/blog/controllers/*.cpp"
+    "${TINA_BLOG_SOURCE_DIR}/blog/utils/*.cpp"
 )
 
 # 可执行文件

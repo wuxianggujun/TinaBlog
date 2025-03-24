@@ -3,6 +3,7 @@
 #include <drogon/HttpFilter.h>
 #include <drogon/drogon.h>
 #include "JwtManager.hpp"
+#include "blog/utils/HttpUtils.hpp"
 
 // 简化过滤器，参照示例
 class JwtAuthFilter : public drogon::HttpFilter<JwtAuthFilter>
@@ -46,11 +47,7 @@ public:
         // 没有令牌，返回未授权错误
         if (token.empty())
         {
-            Json::Value json;
-            json["status"] = "error";
-            json["message"] = "未授权的访问";
-            auto resp = drogon::HttpResponse::newHttpJsonResponse(json);
-            resp->setStatusCode(drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse("未授权的访问", drogon::k401Unauthorized);
             fcb(resp);
             return;
         }
@@ -59,11 +56,7 @@ public:
         if (!m_jwtManager.verifyToken(token))
         {
             // 令牌无效，返回未授权错误
-            Json::Value json;
-            json["status"] = "error";
-            json["message"] = "令牌无效或已过期";
-            auto resp = drogon::HttpResponse::newHttpJsonResponse(json);
-            resp->setStatusCode(drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse("令牌无效或已过期", drogon::k401Unauthorized);
             fcb(resp);
             return;
         }
@@ -110,11 +103,7 @@ public:
         // 没有令牌，返回未授权错误
         if (token.empty())
         {
-            Json::Value json;
-            json["status"] = "error";
-            json["message"] = "未授权的访问";
-            auto resp = drogon::HttpResponse::newHttpJsonResponse(json);
-            resp->setStatusCode(drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse("未授权的访问", drogon::k401Unauthorized);
             fcb(resp);
             return;
         }
@@ -123,11 +112,7 @@ public:
         if (!m_jwtManager.verifyToken(token))
         {
             // 令牌无效，返回未授权错误
-            Json::Value json;
-            json["status"] = "error";
-            json["message"] = "令牌无效或已过期";
-            auto resp = drogon::HttpResponse::newHttpJsonResponse(json);
-            resp->setStatusCode(drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse("令牌无效或已过期", drogon::k401Unauthorized);
             fcb(resp);
             return;
         }
@@ -136,11 +121,7 @@ public:
         if (!m_jwtManager.isAdminFromToken(token))
         {
             // 不是管理员，返回禁止访问错误
-            Json::Value json;
-            json["status"] = "error";
-            json["message"] = "需要管理员权限";
-            auto resp = drogon::HttpResponse::newHttpJsonResponse(json);
-            resp->setStatusCode(drogon::k403Forbidden);
+            auto resp = utils::createErrorResponse("需要管理员权限", drogon::k403Forbidden);
             fcb(resp);
             return;
         }
