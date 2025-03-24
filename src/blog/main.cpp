@@ -70,10 +70,10 @@ int main()
     const char* dbPassword = std::getenv("DB_PASSWORD");
     
     // 使用环境变量（如果存在）或默认值
-    std::string host = dbHost ? dbHost : "localhost";
+    std::string host = dbHost ? dbHost : "postgres-db";
     std::string port = dbPort ? dbPort : "5432";
     std::string user = dbUser ? dbUser : "postgres";
-    std::string password = dbPassword ? dbPassword : "3344207732";
+    std::string password = dbPassword ? dbPassword : "postgres";  // 修改为postgres默认密码
     std::string defaultDb = "postgres";
     
     std::cout << "数据库连接信息：" << std::endl;
@@ -81,6 +81,14 @@ int main()
     std::cout << "  端口: " << port << std::endl;
     std::cout << "  用户: " << user << std::endl;
     std::cout << "  数据库: " << defaultDb << std::endl;
+    
+    // 在环境变量检查后添加
+    std::cout << "环境变量检查:" << std::endl;
+    std::cout << "DB_HOST: " << (dbHost ? dbHost : "未设置") << std::endl;
+    std::cout << "DB_PORT: " << (dbPort ? dbPort : "未设置") << std::endl;
+    std::cout << "DB_NAME: " << (dbName ? dbName : "未设置") << std::endl;
+    std::cout << "DB_USER: " << (dbUser ? dbUser : "未设置") << std::endl;
+    std::cout << "DB_PASSWORD: " << (dbPassword ? dbPassword : "已设置但不显示") << std::endl;
     
     // 首先连接到默认数据库postgres
     std::string connStr = "host=" + host + " port=" + port + " user=" + user + " password=" + password + " dbname=" + defaultDb;
