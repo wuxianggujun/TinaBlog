@@ -19,9 +19,10 @@
 #include "blog/controllers/AuthController.hpp"
 #include "blog/controllers/HealthController.hpp"
 #include <drogon/drogon.h>
+#include <json/json.h>
 
 // 定义JWT密钥（在实际应用中应从配置文件或环境变量获取）
-const std::string JWT_SECRET = "your-secret-key-change-this-in-production";
+const std::string JWT_SECRET = "wuxianggujun-tina-blog-3344207732";
 
 // 定义一个全局指针，用于在信号处理程序中访问DbManager
 static DbManager* g_dbManager = nullptr;
@@ -62,18 +63,12 @@ int main()
     DbManager& dbManager = DbManager::getInstance();
     g_dbManager = &dbManager;  // 保存全局指针用于信号处理
     
-    // 从环境变量获取数据库连接信息
-    const char* dbHost = std::getenv("DB_HOST");
-    const char* dbPort = std::getenv("DB_PORT");
-    const char* dbName = std::getenv("DB_NAME");
-    const char* dbUser = std::getenv("DB_USER");
-    const char* dbPassword = std::getenv("DB_PASSWORD");
     
     // 使用环境变量（如果存在）或默认值
-    std::string host = dbHost ? dbHost : "postgres-db";
-    std::string port = dbPort ? dbPort : "5432";
-    std::string user = dbUser ? dbUser : "postgres";
-    std::string password = dbPassword ? dbPassword : "postgres";  // 修改为postgres默认密码
+    std::string host = "postgres-db";
+    std::string port =  "5432";
+    std::string user =  "postgres";
+    std::string password =  "postgres";  // 修改为postgres默认密码
     std::string defaultDb = "postgres";
     
     std::cout << "数据库连接信息：" << std::endl;
@@ -82,14 +77,7 @@ int main()
     std::cout << "  用户: " << user << std::endl;
     std::cout << "  数据库: " << defaultDb << std::endl;
     
-    // 在环境变量检查后添加
-    std::cout << "环境变量检查:" << std::endl;
-    std::cout << "DB_HOST: " << (dbHost ? dbHost : "未设置") << std::endl;
-    std::cout << "DB_PORT: " << (dbPort ? dbPort : "未设置") << std::endl;
-    std::cout << "DB_NAME: " << (dbName ? dbName : "未设置") << std::endl;
-    std::cout << "DB_USER: " << (dbUser ? dbUser : "未设置") << std::endl;
-    std::cout << "DB_PASSWORD: " << (dbPassword ? dbPassword : "已设置但不显示") << std::endl;
-    
+
     // 首先连接到默认数据库postgres
     std::string connStr = "host=" + host + " port=" + port + " user=" + user + " password=" + password + " dbname=" + defaultDb;
     
@@ -97,7 +85,7 @@ int main()
         std::cout << "连接到默认数据库成功" << std::endl;
         
         // 使用环境变量中的或默认的blog数据库名
-        std::string blogDbName = dbName ? dbName : "blog";
+        std::string blogDbName = "blog";
         std::cout << "  数据库: " << blogDbName << std::endl;
 
         // 检查blog数据库是否存在，如果不存在则创建
@@ -192,13 +180,10 @@ int main()
             callback(resp);
         }, {drogon::Get});
     
-    // 创建JWT认证过滤器
-    auto jwtFilter = std::make_shared<blog::auth::JwtAuthFilter>(JWT_SECRET);
-    auto adminFilter = std::make_shared<blog::auth::AdminAuthFilter>(JWT_SECRET);
-    
-    // 注册过滤器
-    drogon::app().registerFilter(jwtFilter);
-    drogon::app().registerFilter(adminFilter);
+    // 设置JWT密钥作为应用程序全局配置
+    Json::Value config;
+    config["jwt_secret"] = JWT_SECRET;
+    drogon::app().loadConfigJson(config);
     
     // Drogon会自动发现并注册继承自HttpController的控制器类
     // 不需要手动注册控制器

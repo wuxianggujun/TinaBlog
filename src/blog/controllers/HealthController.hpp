@@ -2,8 +2,6 @@
 #include <drogon/HttpController.h>
 #include "blog/db/DbManager.hpp"
 
-namespace blog {
-namespace controllers {
 
 /**
  * 健康检查控制器
@@ -25,6 +23,3 @@ public:
     void check(const drogon::HttpRequestPtr& req, 
                std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
 };
-
-} // namespace controllers
-} // namespace blog 

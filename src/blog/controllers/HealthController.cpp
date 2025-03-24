@@ -1,6 +1,5 @@
 #include "HealthController.hpp"
 
-using namespace blog::controllers;
 
 /**
  * 健康检查

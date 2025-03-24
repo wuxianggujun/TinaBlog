@@ -1,6 +1,5 @@
 #include "AuthController.hpp"
 
-using namespace blog::controllers;
 
 /**
  * 构造函数
@@ -76,7 +75,7 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
         }
         
         // 创建JWT令牌管理器
-        blog::auth::JwtManager jwtManager(m_jwtSecret);
+       JwtManager jwtManager(m_jwtSecret);
         
         // 生成JWT令牌
         std::string token = jwtManager.generateToken(userId, username, isAdmin);

@@ -12,8 +12,6 @@
 #include <jwt-cpp/jwt.h>
 #include <drogon/drogon.h>
 
-namespace blog {
-namespace auth {
 
 /**
  * JWT令牌管理器
@@ -161,6 +159,3 @@ private:
     std::string m_issuer;
     int m_tokenExpireTime;
 };
-
-} // namespace auth
-} // namespace blog 
