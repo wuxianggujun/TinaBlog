@@ -91,8 +91,37 @@ services:
       - "8080:8080"
     environment:
       - TZ=Asia/Shanghai
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=tinablog
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
     tty: true
     stdin_open: true
+    depends_on:
+      - postgres
+    networks:
+      - tinablog-network
+
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=tinablog
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - tinablog-network
+
+volumes:
+  postgres-data:
+
+networks:
+  tinablog-network:
+    driver: bridge
 EOF
 
 print_success "docker-compose.yml创建完成"

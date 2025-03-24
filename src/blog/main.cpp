@@ -62,21 +62,45 @@ int main()
     DbManager& dbManager = DbManager::getInstance();
     g_dbManager = &dbManager;  // 保存全局指针用于信号处理
     
+    // 从环境变量获取数据库连接信息
+    const char* dbHost = std::getenv("DB_HOST");
+    const char* dbPort = std::getenv("DB_PORT");
+    const char* dbName = std::getenv("DB_NAME");
+    const char* dbUser = std::getenv("DB_USER");
+    const char* dbPassword = std::getenv("DB_PASSWORD");
+    
+    // 使用环境变量（如果存在）或默认值
+    std::string host = dbHost ? dbHost : "localhost";
+    std::string port = dbPort ? dbPort : "5432";
+    std::string user = dbUser ? dbUser : "postgres";
+    std::string password = dbPassword ? dbPassword : "3344207732";
+    std::string defaultDb = "postgres";
+    
+    std::cout << "数据库连接信息：" << std::endl;
+    std::cout << "  主机: " << host << std::endl;
+    std::cout << "  端口: " << port << std::endl;
+    std::cout << "  用户: " << user << std::endl;
+    std::cout << "  数据库: " << defaultDb << std::endl;
+    
     // 首先连接到默认数据库postgres
-    std::string connStr = "host=localhost user=postgres password=3344207732 dbname=postgres";
+    std::string connStr = "host=" + host + " port=" + port + " user=" + user + " password=" + password + " dbname=" + defaultDb;
     
     if (dbManager.initialize(connStr)) {
         std::cout << "连接到默认数据库成功" << std::endl;
         
+        // 使用环境变量中的或默认的blog数据库名
+        std::string blogDbName = dbName ? dbName : "blog";
+        std::cout << "  数据库: " << blogDbName << std::endl;
+
         // 检查blog数据库是否存在，如果不存在则创建
-        if (!dbManager.databaseExists("blog")) {
-            std::cout << "blog数据库不存在，正在创建..." << std::endl;
-            if (!dbManager.createDatabase("blog")) {
-                std::cerr << "创建blog数据库失败" << std::endl;
+        if (!dbManager.databaseExists(blogDbName)) {
+            std::cout << blogDbName << "数据库不存在，正在创建..." << std::endl;
+            if (!dbManager.createDatabase(blogDbName)) {
+                std::cerr << "创建" << blogDbName << "数据库失败" << std::endl;
                 return 1;
             }
         } else {
-            std::cout << "blog数据库已存在" << std::endl;
+            std::cout << blogDbName << "数据库已存在" << std::endl;
         }
         
         // 关闭当前连接，重新连接到blog数据库
@@ -87,7 +111,7 @@ int main()
         std::cout << "正在连接到blog数据库..." << std::endl;
         
         // 重新连接到blog数据库
-        connStr = "host=localhost user=postgres password=3344207732 dbname=blog";
+        connStr = "host=" + host + " port=" + port + " user=" + user + " password=" + password + " dbname=" + blogDbName;
         if (dbManager.initialize(connStr)) {
             std::cout << "连接到blog数据库成功" << std::endl;
             

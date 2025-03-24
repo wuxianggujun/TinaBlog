@@ -218,3 +218,68 @@ TinaBlog/
 ## 许可证
 
 [在此添加项目许可证信息]
+
+## 数据库配置
+
+项目使用PostgreSQL数据库。有几种配置方式：
+
+### Docker环境
+
+在Docker环境中，docker-compose.yml已配置好PostgreSQL服务和所需的环境变量：
+
+```yaml
+services:
+  tinablog:
+    environment:
+      - DB_HOST=postgres  # PostgreSQL服务的主机名
+      - DB_PORT=5432      # PostgreSQL服务的端口
+      - DB_NAME=tinablog  # 要使用的数据库名
+      - DB_USER=postgres  # 数据库用户名
+      - DB_PASSWORD=postgres  # 数据库密码
+    depends_on:
+      - postgres  # 依赖于postgres服务
+
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=tinablog
+```
+
+无需额外配置，运行`docker-compose up`后应用将自动连接到PostgreSQL服务。
+
+### 本地环境
+
+如果在本地运行应用而不是Docker容器中，您需要：
+
+1. 安装PostgreSQL数据库服务器
+2. 创建数据库和用户
+3. 设置环境变量或修改代码中的默认连接值
+
+可以设置以下环境变量来配置数据库连接：
+- `DB_HOST`：数据库主机地址（默认：localhost）
+- `DB_PORT`：数据库端口（默认：5432）
+- `DB_NAME`：数据库名称（默认：blog）
+- `DB_USER`：数据库用户名（默认：postgres）
+- `DB_PASSWORD`：数据库密码（默认需要修改）
+
+#### 在Linux/macOS上设置环境变量：
+
+```bash
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=tinablog
+export DB_USER=postgres
+export DB_PASSWORD=your_password
+```
+
+#### 在Windows上设置环境变量：
+
+```powershell
+$env:DB_HOST = "localhost"
+$env:DB_PORT = "5432"
+$env:DB_NAME = "tinablog"
+$env:DB_USER = "postgres"
+$env:DB_PASSWORD = "your_password"
+```
