@@ -268,7 +268,7 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             std::string token = jwtManager.generateToken(
                                 result[0]["uuid"].as<std::string>(),  // userUuid
                                 username,                              // username
-                                result[0]["is_admin"].as<bool>()      // isAdmin
+                                false                                  // isAdmin，新注册用户默认不是管理员
                             );
                             
                             // 创建精简的响应数据
@@ -307,4 +307,50 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
             callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
         },
         username);
+}
+
+/**
+ * 验证token
+ */
+void AuthController::verifyToken(const drogon::HttpRequestPtr& req, 
+                               std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    // 由于使用了JwtAuthFilter，如果请求能到达这里，说明token是有效的
+    Json::Value responseData;
+    responseData["success"] = true;
+    responseData["message"] = "Token有效";
+    
+    // 从请求属性中获取用户信息
+    std::string userUuid = req->getAttributes()->get<std::string>("user_uuid");
+    std::string username = req->getAttributes()->get<std::string>("username");
+    bool isAdmin = req->getAttributes()->get<bool>("is_admin");
+    
+    // 创建用户数据对象
+    Json::Value userData;
+    userData["uuid"] = userUuid;
+    userData["username"] = username;
+    userData["is_admin"] = isAdmin;
+    
+    responseData["user"] = userData;
+    
+    callback(utils::createSuccessResponse("Token验证成功", responseData));
+}
+
+/**
+ * 用户登出
+ */
+void AuthController::logout(const drogon::HttpRequestPtr& req, 
+                          std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    // 由于使用了JWT，服务端不需要额外的处理
+    // 客户端会清除token和登录状态
+    auto resp = utils::createSuccessResponse("登出成功");
+    
+    // 清除cookie中的token
+    drogon::Cookie tokenCookie("token", "");
+    tokenCookie.setHttpOnly(true);
+    tokenCookie.setPath("/");
+    // 设置过期时间为过去的时间
+    tokenCookie.setExpiresDate(trantor::Date::now().after(-1));
+    resp->addCookie(std::move(tokenCookie));
+    
+    callback(resp);
 } 

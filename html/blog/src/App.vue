@@ -27,6 +27,9 @@ export default {
     // 监听登录状态变化事件
     window.addEventListener('storage', this.handleStorageChange);
     
+    // 监听用户信息更新事件
+    eventBus.on('user-info-updated', this.handleUserInfoUpdate);
+    
     // 立即验证token有效性
     const token = localStorage.getItem('token');
     if (isLoggedIn && token) {
@@ -50,6 +53,8 @@ export default {
     if (this.loginValidationInterval) {
       clearInterval(this.loginValidationInterval);
     }
+    // 移除事件监听
+    eventBus.off('user-info-updated', this.handleUserInfoUpdate);
   },
   methods: {
     checkLoginStatus() {
@@ -139,6 +144,8 @@ export default {
           }
         });
         
+        const data = await response.json();
+        
         // 如果返回401，说明token无效
         if (response.status === 401) {
           console.warn('Token已失效，清除登录状态');
@@ -146,12 +153,21 @@ export default {
           localStorage.removeItem('username');
           localStorage.removeItem('isLoggedIn');
           this.checkLoginStatus();
-        } else {
+        } else if (data.status === 'success') {
           // 正常响应，token有效
-          const data = await response.json();
-          if (data && data.success) {
-            console.log('Token有效，用户已登录');
+          console.log('Token有效，用户已登录');
+          // 更新用户信息
+          if (data.data && data.data.user) {
+            this.username = data.data.user.username;
+            this.isLoggedIn = true;
           }
+        } else {
+          // 其他错误情况
+          console.warn('Token验证失败:', data.message);
+          localStorage.removeItem('token');
+          localStorage.removeItem('username');
+          localStorage.removeItem('isLoggedIn');
+          this.checkLoginStatus();
         }
       } catch (error) {
         console.error('验证token时出错:', error);
@@ -166,6 +182,11 @@ export default {
       } catch (error) {
         console.error('触发发布事件失败:', error);
       }
+    },
+    handleUserInfoUpdate(userData) {
+      console.log('收到用户信息更新:', userData);
+      this.isLoggedIn = true;
+      this.username = userData.username || userData.display_name || '';
     }
   }
 }

@@ -130,6 +130,7 @@ export default {
       
       // 通知其他组件登录状态变化
       eventBus.emit('login-state-changed', true);
+      eventBus.emit('user-info-updated', userData);
 
       // 检查是否有重定向参数
       const redirect = this.$route.query.redirect;
