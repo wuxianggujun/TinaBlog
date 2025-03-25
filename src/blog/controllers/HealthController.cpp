@@ -12,11 +12,22 @@ void HealthController::check(const drogon::HttpRequestPtr& req,
         
         // 验证数据库连接
         if (dbManager.isConnected()) {
-            // 数据库连接正常
-            Json::Value data;
-            data["database"] = "connected";
-            auto resp = utils::createSuccessResponse("系统正常运行", data);
-            callback(resp);
+            // 尝试执行简单查询验证数据库
+            dbManager.executeQuery(
+                "SELECT 1",
+                [callback=std::move(callback)](const drogon::orm::Result& result) {
+                    // 数据库连接正常
+                    Json::Value data;
+                    data["database"] = "connected";
+                    auto resp = utils::createSuccessResponse("系统正常运行", data);
+                    callback(resp);
+                },
+                [callback=std::move(callback)](const drogon::orm::DrogonDbException& e) {
+                    // 数据库查询异常
+                    auto resp = utils::createErrorResponse("数据库查询失败: " + std::string(e.base().what()), 
+                                                         drogon::k503ServiceUnavailable);
+                    callback(resp);
+                });
         } else {
             // 数据库连接异常
             auto resp = utils::createErrorResponse("数据库连接失败", drogon::k503ServiceUnavailable);
@@ -25,7 +36,7 @@ void HealthController::check(const drogon::HttpRequestPtr& req,
     } catch (const std::exception& e) {
         // 发生异常
         auto resp = utils::createErrorResponse(std::string("健康检查异常: ") + e.what(), 
-                                               drogon::k500InternalServerError);
+                                             drogon::k500InternalServerError);
         callback(resp);
     }
 } 

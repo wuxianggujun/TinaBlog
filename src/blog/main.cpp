@@ -29,12 +29,10 @@ static DbManager* g_dbManager = nullptr;
 
 // 信号处理函数，用于优雅地处理程序终止
 void signalHandler(int signum) {
-    std::cout << "收到信号 " << signum << "，正在关闭数据库连接..." << std::endl;
+    std::cout << "收到信号 " << signum << "，正在关闭应用..." << std::endl;
     
-    // 关闭数据库连接
-    if (g_dbManager) {
-        g_dbManager->close();
-    }
+    // 通知Drogon框架停止
+    drogon::app().quit();
     
     // 退出程序
     exit(signum);
@@ -99,9 +97,6 @@ int main()
             std::cout << blogDbName << "数据库已存在" << std::endl;
         }
         
-        // 关闭当前连接，重新连接到blog数据库
-        dbManager.close();
-        
         // 简单等待一会儿确保连接完全关闭
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::cout << "正在连接到blog数据库..." << std::endl;
@@ -121,11 +116,33 @@ int main()
             
             // 尝试执行一个简单查询以进一步验证连接
             try {
-                std::string testQuery = "SELECT 1";
-                auto result = dbManager.executeQuery(testQuery);
-                if (!result.empty()) {
-                    std::cout << "测试查询执行成功，连接有效" << std::endl;
-                } else {
+                bool connectionOk = false;
+                
+                // 使用新的异步查询接口
+                dbManager.executeQuery(
+                    "SELECT 1",
+                    [&connectionOk](const drogon::orm::Result& result) {
+                        connectionOk = (result.size() > 0);
+                        std::cout << "测试查询执行成功，连接有效" << std::endl;
+                    },
+                    [](const drogon::orm::DrogonDbException& e) {
+                        std::cerr << "测试查询执行失败: " << e.base().what() << std::endl;
+                    }
+                );
+                
+                // 给异步查询一些时间完成
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                
+                if (!connectionOk) {
+                    // 可能异步查询没有足够时间完成，我们也可以尝试同步查询
+                    auto result = dbManager.execSyncQuery("SELECT 1");
+                    if (result.size() > 0) {
+                        std::cout << "同步测试查询执行成功，连接有效" << std::endl;
+                        connectionOk = true;
+                    }
+                }
+                
+                if (!connectionOk) {
                     std::cerr << "测试查询执行失败，连接可能无效" << std::endl;
                     return 1;
                 }
@@ -192,9 +209,8 @@ int main()
     std::cout << "启动Web服务器，监听 http://localhost:8080" << std::endl;
     drogon::app().run();
     
-    // 应用结束，关闭数据库连接
-    std::cout << "应用程序正常结束，关闭数据库连接..." << std::endl;
-    dbManager.close();
+    // 应用结束
+    std::cout << "应用程序正常结束" << std::endl;
     
     return 0;
 } 

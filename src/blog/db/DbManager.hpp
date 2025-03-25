@@ -5,17 +5,14 @@
 #include <mutex>
 #include <functional>
 #include <atomic>
-
-// 使用PostgreSQL的libpqxx库
-#include <pqxx/pqxx>
-
-// 查询回调类型
-using QueryCallback = std::function<void(pqxx::result&)>;
-using TransactionCallback = std::function<bool(pqxx::work&)>;
+#include <drogon/orm/DbClient.h>
+#include <drogon/orm/Exception.h>
+#include <stdexcept>
+#include <iostream>
 
 /**
  * 数据库连接管理器
- * 单例模式，负责维护PostgreSQL数据库连接
+ * 单例模式，使用Drogon的DbClient
  */
 class DbManager {
 public:
@@ -26,10 +23,11 @@ public:
 
     /**
      * 初始化数据库连接
-     * @param connectionString 连接字符串，格式如: "host=localhost user=postgres password=secret dbname=blog"
+     * @param connInfo 连接字符串，如: "host=localhost user=postgres password=secret dbname=blog"
+     * @param connNum 连接池中的连接数量
      * @return 是否成功初始化
      */
-    bool initialize(const std::string& connectionString);
+    bool initialize(const std::string& connInfo, size_t connNum = 3);
 
     /**
      * 检查数据库连接是否有效
@@ -38,66 +36,47 @@ public:
     bool isConnected();
 
     /**
-     * 执行SQL查询
+     * 异步执行SQL查询（无需转换结果）
      * @param sql SQL语句
-     * @return 查询结果集，失败时抛出异常
+     * @param resultCallback 成功回调
+     * @param exceptionCallback 异常回调
+     * @param args 绑定参数
      */
-    pqxx::result executeQuery(const std::string& sql);
+    template <typename... Args>
+    void executeQuery(const std::string& sql,
+                     std::function<void(const drogon::orm::Result&)> resultCallback,
+                     std::function<void(const drogon::orm::DrogonDbException&)> exceptionCallback,
+                     Args&&... args);
 
     /**
-     * 执行带回调的SQL查询
+     * 同步执行SQL查询
      * @param sql SQL语句
-     * @param callback 处理结果的回调函数
-     * @return 是否成功执行
+     * @param args 绑定参数
+     * @return 查询结果
+     * @throws std::runtime_error 数据库操作异常
      */
-    bool executeQuery(const std::string& sql, QueryCallback callback);
+    template <typename... Args>
+    drogon::orm::Result execSyncQuery(const std::string& sql, Args&&... args);
 
     /**
-     * 执行SQL更新（INSERT, UPDATE, DELETE等）
-     * @param sql SQL语句
-     * @return 受影响的行数，失败时返回-1
-     */
-    int executeUpdate(const std::string& sql);
-
-    /**
-     * 在事务中执行操作
-     * @param callback 事务回调函数，返回true表示提交，返回false表示回滚
-     * @return 事务是否成功执行并提交
-     */
-    bool executeTransaction(TransactionCallback callback);
-
-    /**
-     * 获取最后一次插入操作的ID
-     * @param table 表名
-     * @param idColumn ID列名
-     * @return 最后插入的ID
-     */
-    uint64_t getLastInsertId(const std::string& table = "", const std::string& idColumn = "id");
-
-    /**
-     * 关闭数据库连接
-     */
-    void close();
-
-    /**
-     * 创建数据库表结构
-     * @return 是否成功创建表
-     */
-    bool createTables();
-    
-    /**
-     * 创建数据库（特殊处理，不在事务中执行）
+     * 创建数据库
      * @param dbName 数据库名称
-     * @return 是否成功创建数据库
+     * @return 是否成功创建
      */
     bool createDatabase(const std::string& dbName);
     
     /**
      * 检查数据库是否存在
      * @param dbName 数据库名称
-     * @return 是否存在
+     * @return 数据库是否存在
      */
     bool databaseExists(const std::string& dbName);
+    
+    /**
+     * 创建数据库表结构
+     * @return 是否成功创建表
+     */
+    bool createTables();
 
 private:
     // 单例模式，私有构造函数
@@ -108,15 +87,41 @@ private:
     DbManager(const DbManager&) = delete;
     DbManager& operator=(const DbManager&) = delete;
 
-    // 直接使用一个数据库连接，而不是连接池
-    std::unique_ptr<pqxx::connection> m_connection;
+    // 数据库客户端
+    drogon::orm::DbClientPtr m_dbClient;
     
-    // 连接字符串
-    std::string m_connectionString;
+    // 连接信息
+    std::string m_connectionInfo;
     
     // 初始化状态
     std::atomic<bool> m_initialized{false};
     
     // 互斥锁，用于初始化保护
     std::mutex m_init_mutex;
-}; 
+};
+
+// 模板函数实现
+template <typename... Args>
+void DbManager::executeQuery(const std::string& sql,
+                            std::function<void(const drogon::orm::Result&)> resultCallback,
+                            std::function<void(const drogon::orm::DrogonDbException&)> exceptionCallback,
+                            Args&&... args) {
+    if (m_dbClient) {
+        m_dbClient->execSqlAsync(sql, 
+                              std::move(resultCallback), 
+                              std::move(exceptionCallback), 
+                              std::forward<Args>(args)...);
+    } else {
+        std::cerr << "数据库客户端未初始化，无法执行查询" << std::endl;
+        // 不要尝试调用回调，因为无法创建DrogonDbException
+    }
+}
+
+template <typename... Args>
+drogon::orm::Result DbManager::execSyncQuery(const std::string& sql, Args&&... args) {
+    if (m_dbClient) {
+        return m_dbClient->execSqlSync(sql, std::forward<Args>(args)...);
+    } else {
+        throw std::runtime_error("数据库客户端未初始化");
+    }
+} 

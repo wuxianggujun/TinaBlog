@@ -47,65 +47,66 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
     // 获取数据库连接
     auto& dbManager = DbManager::getInstance();
     
-    try {
-        // 查询用户信息 - 修改为使用UUID
-        std::string query = "SELECT uuid, username, password, is_admin, display_name FROM users WHERE username = '" + username + "'";
-        auto result = dbManager.executeQuery(query);
-        
-        if (result.empty()) {
+    // 使用异步查询获取用户信息
+    dbManager.executeQuery(
+        "SELECT uuid, username, password, is_admin, display_name FROM users WHERE username=$1",
+        [=, callback=std::move(callback)](const drogon::orm::Result& result) {
             // 用户不存在
-            auto resp = utils::createErrorResponse("用户名或密码错误", drogon::k401Unauthorized);
+            if (result.size() == 0) {
+                auto resp = utils::createErrorResponse("用户名或密码错误", drogon::k401Unauthorized);
+                callback(resp);
+                return;
+            }
+            
+            // 获取用户信息
+            std::string userUuid = result[0]["uuid"].as<std::string>();
+            std::string storedPassword = result[0]["password"].as<std::string>();
+            bool isAdmin = result[0]["is_admin"].as<bool>();
+            std::string displayName = result[0]["display_name"].as<std::string>();
+            
+            // 使用libsodium验证密码哈希
+            if (!utils::PasswordUtils::verifyPassword(password, storedPassword)) {
+                // 密码错误
+                auto resp = utils::createErrorResponse("用户名或密码错误", drogon::k401Unauthorized);
+                callback(resp);
+                return;
+            }
+            
+            // 创建JWT令牌管理器
+            JwtManager jwtManager(m_jwtSecret);
+            
+            // 生成JWT令牌
+            std::string token = jwtManager.generateToken(userUuid, username, isAdmin);
+            
+            // 创建精简的响应数据
+            Json::Value userData;
+            userData["uuid"] = userUuid;
+            userData["username"] = username;
+            userData["display_name"] = displayName;
+            
+            // 如果客户端需要，在响应体中返回token
+            if (returnTokenInBody) {
+                userData["token"] = token;
+            }
+            
+            // 返回成功响应
+            auto resp = utils::createSuccessResponse("登录成功", userData);
+            
+            // 默认总是在Cookie中设置token，便于浏览器环境
+            drogon::Cookie tokenCookie("token", token);
+            tokenCookie.setHttpOnly(true);
+            tokenCookie.setPath("/");
+            resp->addCookie(std::move(tokenCookie));
+            
             callback(resp);
-            return;
-        }
-        
-        // 获取用户信息
-        std::string userUuid = result[0][0].as<std::string>();
-        std::string storedPassword = result[0][2].as<std::string>();
-        bool isAdmin = result[0][3].as<bool>();
-        std::string displayName = result[0][4].as<std::string>();
-        
-        // 使用libsodium验证密码哈希
-        if (!utils::PasswordUtils::verifyPassword(password, storedPassword)) {
-            // 密码错误
-            auto resp = utils::createErrorResponse("用户名或密码错误", drogon::k401Unauthorized);
+        },
+        [callback=std::move(callback)](const drogon::orm::DrogonDbException& e) {
+            // 数据库查询异常
+            auto resp = utils::createErrorResponse("登录过程中发生错误: " + std::string(e.base().what()), 
+                                                 drogon::k500InternalServerError, 500);
             callback(resp);
-            return;
-        }
-        
-        // 创建JWT令牌管理器
-        JwtManager jwtManager(m_jwtSecret);
-        
-        // 生成JWT令牌
-        std::string token = jwtManager.generateToken(userUuid, username, isAdmin);
-        
-        // 创建精简的响应数据
-        Json::Value userData;
-        userData["uuid"] = userUuid;
-        userData["username"] = username;
-        userData["display_name"] = displayName;
-        
-        // 如果客户端需要，在响应体中返回token
-        if (returnTokenInBody) {
-            userData["token"] = token;
-        }
-        
-        // 返回成功响应
-        auto resp = utils::createSuccessResponse("登录成功", userData);
-        
-        // 默认总是在Cookie中设置token，便于浏览器环境
-        drogon::Cookie tokenCookie("token", token);
-        tokenCookie.setHttpOnly(true);
-        tokenCookie.setPath("/");
-        resp->addCookie(std::move(tokenCookie));
-        
-        callback(resp);
-    } catch (const std::exception& e) {
-        // 数据库查询异常
-        auto resp = utils::createErrorResponse("登录过程中发生错误："+std::string(e.what()), 
-                                               drogon::k500InternalServerError, 500);
-        callback(resp);
-    }
+        },
+        username);
 }
 
 /**
@@ -126,22 +127,37 @@ void AuthController::getUserInfo(const drogon::HttpRequestPtr& req,
     
     // 尝试获取更多用户信息
     auto& dbManager = DbManager::getInstance();
-    try {
-        std::string query = "SELECT email, display_name FROM users WHERE uuid = '" + userUuid + "'";
-        auto result = dbManager.executeQuery(query);
-        
-        if (!result.empty()) {
-            userData["email"] = result[0][0].as<std::string>();
-            userData["display_name"] = result[0][1].as<std::string>();
-        }
-    } catch (const std::exception& e) {
-        // 如果查询失败，只是记录错误，仍然返回基本信息
-        std::cerr << "Error fetching additional user info: " << e.what() << std::endl;
-    }
     
-    // 返回成功响应
-    auto resp = utils::createSuccessResponse("获取用户信息成功", userData);
-    callback(resp);
+    dbManager.executeQuery(
+        "SELECT email, display_name FROM users WHERE uuid=$1",
+        [=, callback=std::move(callback)](const drogon::orm::Result& result) {
+            Json::Value userData;
+            userData["uuid"] = userUuid;
+            userData["username"] = username;
+            userData["is_admin"] = isAdmin;
+            
+            if (result.size() > 0) {
+                userData["email"] = result[0]["email"].as<std::string>();
+                userData["display_name"] = result[0]["display_name"].as<std::string>();
+            }
+            
+            // 返回成功响应
+            auto resp = utils::createSuccessResponse("获取用户信息成功", userData);
+            callback(resp);
+        },
+        [=, callback=std::move(callback)](const drogon::orm::DrogonDbException& e) {
+            // 如果查询失败，仍然返回基本信息
+            std::cerr << "Error fetching additional user info: " << e.base().what() << std::endl;
+            
+            Json::Value userData;
+            userData["uuid"] = userUuid;
+            userData["username"] = username;
+            userData["is_admin"] = isAdmin;
+            
+            auto resp = utils::createSuccessResponse("获取基本用户信息成功", userData);
+            callback(resp);
+        },
+        userUuid);
 }
 
 void AuthController::registerUser(const drogon::HttpRequestPtr& req, 
@@ -187,78 +203,86 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     // 生成UUID
     std::string uuid = drogon::utils::getUuid();
     
-    // 检查用户名是否已存在
+    // 获取数据库连接
     auto& dbManager = DbManager::getInstance();
     
-    try {
-        // 检查用户名是否已存在
-        std::string checkSql = "SELECT COUNT(*) FROM users WHERE username = '" + username + "'";
-        auto checkResult = dbManager.executeQuery(checkSql);
-        
-        if (!checkResult.empty() && checkResult[0][0].as<int>() > 0) {
-            auto resp = utils::createErrorResponse("用户名已存在", drogon::k409Conflict);
+    // 检查用户名是否已存在
+    dbManager.executeQuery(
+        "SELECT COUNT(*) AS count FROM users WHERE username=$1",
+        [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
+            if (result[0]["count"].as<int>() > 0) {
+                auto resp = utils::createErrorResponse("用户名已存在", drogon::k409Conflict);
+                callback(resp);
+                return;
+            }
+            
+            // 检查邮箱是否已存在
+            dbManager.executeQuery(
+                "SELECT COUNT(*) AS count FROM users WHERE email=$1",
+                [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
+                    if (result[0]["count"].as<int>() > 0) {
+                        auto resp = utils::createErrorResponse("邮箱已被注册", drogon::k409Conflict);
+                        callback(resp);
+                        return;
+                    }
+                    
+                    // 使用libsodium进行密码哈希
+                    std::string hashedPassword = utils::PasswordUtils::hashPassword(password);
+                    if (hashedPassword.empty()) {
+                        auto resp = utils::createErrorResponse("密码加密失败", drogon::k500InternalServerError);
+                        callback(resp);
+                        return;
+                    }
+                    
+                    // 插入新用户
+                    dbManager.executeQuery(
+                        "INSERT INTO users (uuid, username, password, email, display_name, is_admin, created_at, updated_at) VALUES "
+                        "($1, $2, $3, $4, $5, false, NOW(), NOW()) RETURNING uuid",
+                        [=, callback=callback](const drogon::orm::Result& result) {
+                            // 生成JWT令牌
+                            JwtManager jwtManager(m_jwtSecret);
+                            std::string token = jwtManager.generateToken(uuid, username, false);
+                            
+                            // 创建精简的响应数据
+                            Json::Value userData;
+                            userData["uuid"] = uuid;
+                            userData["username"] = username;
+                            userData["display_name"] = display_name;
+                            
+                            // 如果客户端需要，在响应体中返回token
+                            if (returnTokenInBody) {
+                                userData["token"] = token;
+                            }
+                            
+                            // 返回成功响应
+                            auto resp = utils::createSuccessResponse("注册成功", userData);
+                            
+                            // 默认总是在Cookie中设置token，便于浏览器环境
+                            drogon::Cookie tokenCookie("token", token);
+                            tokenCookie.setHttpOnly(true);
+                            tokenCookie.setPath("/");
+                            resp->addCookie(std::move(tokenCookie));
+                            
+                            callback(resp);
+                        },
+                        [callback=callback](const drogon::orm::DrogonDbException& e) {
+                            auto resp = utils::createErrorResponse("注册过程中发生错误: " + std::string(e.base().what()), 
+                                                                 drogon::k500InternalServerError, 500);
+                            callback(resp);
+                        },
+                        uuid, username, hashedPassword, email, display_name);
+                },
+                [callback=callback](const drogon::orm::DrogonDbException& e) {
+                    auto resp = utils::createErrorResponse("注册过程中发生错误: " + std::string(e.base().what()), 
+                                                        drogon::k500InternalServerError, 500);
+                    callback(resp);
+                },
+                email);
+        },
+        [callback=callback](const drogon::orm::DrogonDbException& e) {
+            auto resp = utils::createErrorResponse("注册过程中发生错误: " + std::string(e.base().what()), 
+                                                drogon::k500InternalServerError, 500);
             callback(resp);
-            return;
-        }
-        
-        // 检查邮箱是否已存在
-        checkSql = "SELECT COUNT(*) FROM users WHERE email = '" + email + "'";
-        checkResult = dbManager.executeQuery(checkSql);
-        
-        if (!checkResult.empty() && checkResult[0][0].as<int>() > 0) {
-            auto resp = utils::createErrorResponse("邮箱已被注册", drogon::k409Conflict);
-            callback(resp);
-            return;
-        }
-        
-        // 使用libsodium进行密码哈希
-        std::string hashedPassword = utils::PasswordUtils::hashPassword(password);
-        if (hashedPassword.empty()) {
-            auto resp = utils::createErrorResponse("密码加密失败", drogon::k500InternalServerError);
-            callback(resp);
-            return;
-        }
-        
-        // 插入新用户 - 使用UUID作为主键
-        std::string insertSql = "INSERT INTO users (uuid, username, password, email, display_name, is_admin, created_at, updated_at) VALUES "
-                                "('" + uuid + "', '" + username + "', '" + hashedPassword + "', '" + email + "', '" + display_name + "', false, NOW(), NOW()) RETURNING uuid";
-        auto result = dbManager.executeQuery(insertSql);
-        
-        if (result.empty()) {
-            auto resp = utils::createErrorResponse("注册失败，请稍后重试", drogon::k500InternalServerError);
-            callback(resp);
-            return;
-        }
-        
-        // 生成JWT令牌
-        JwtManager jwtManager(m_jwtSecret);
-        std::string token = jwtManager.generateToken(uuid, username, false);
-        
-        // 创建精简的响应数据
-        Json::Value userData;
-        userData["uuid"] = uuid;
-        userData["username"] = username;
-        userData["display_name"] = display_name;
-        
-        // 如果客户端需要，在响应体中返回token
-        if (returnTokenInBody) {
-            userData["token"] = token;
-        }
-        
-        // 返回成功响应
-        auto resp = utils::createSuccessResponse("注册成功", userData);
-        
-        // 默认总是在Cookie中设置token，便于浏览器环境
-        drogon::Cookie tokenCookie("token", token);
-        tokenCookie.setHttpOnly(true);
-        tokenCookie.setPath("/");
-        resp->addCookie(std::move(tokenCookie));
-        
-        callback(resp);
-    } catch (const std::exception& e) {
-        // 数据库操作异常
-        auto resp = utils::createErrorResponse("注册过程中发生错误：" + std::string(e.what()), 
-                                               drogon::k500InternalServerError, 500);
-        callback(resp);
-    }
+        },
+        username);
 } 

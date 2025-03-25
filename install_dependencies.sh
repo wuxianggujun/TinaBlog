@@ -151,7 +151,7 @@ install_project_libraries() {
     
     # 安装drogon
     print_info "正在安装drogon..."
-    ./vcpkg install drogon:${platform}
+    ./vcpkg install drogon[core,postgres]:${platform} --recurse
     if [ $? -ne 0 ]; then
         print_error "安装drogon失败"
         return 1
