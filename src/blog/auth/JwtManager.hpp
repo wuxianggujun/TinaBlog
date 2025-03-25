@@ -36,17 +36,14 @@ public:
 
     /**
      * 生成JWT令牌
-     * @param userId 用户ID
+     * @param userUuid 用户UUID
      * @param username 用户名
      * @param isAdmin 是否管理员
      * @return JWT令牌
      */
-    std::string generateToken(int userId, const std::string& username, bool isAdmin = false) {
+    std::string generateToken(const std::string& userUuid, const std::string& username, bool isAdmin = false) {
         auto now = std::chrono::system_clock::now();
         auto expireTime = now + std::chrono::seconds(m_tokenExpireTime);
-        
-        // 将userId转为字符串
-        std::string userIdStr = std::to_string(userId);
         
         // 将isAdmin转为字符串
         std::string isAdminStr = isAdmin ? "true" : "false";
@@ -56,7 +53,7 @@ public:
             .set_type("JWT")
             .set_issued_at(now)
             .set_expires_at(expireTime)
-            .set_payload_claim("user_id", jwt::claim(userIdStr))
+            .set_payload_claim("user_uuid", jwt::claim(userUuid))
             .set_payload_claim("username", jwt::claim(username))
             .set_payload_claim("is_admin", jwt::claim(isAdminStr))
             .sign(jwt::algorithm::hs256{m_secret});
@@ -111,17 +108,16 @@ public:
     }
     
     /**
-     * 从令牌中获取用户ID
+     * 从令牌中获取用户UUID
      * @param token JWT令牌
-     * @return 用户ID，如果令牌无效则返回-1
+     * @return 用户UUID，如果令牌无效则返回空字符串
      */
-    int getUserIdFromToken(const std::string& token) {
+    std::string getUserUuidFromToken(const std::string& token) {
         try {
             auto decoded = jwt::decode(token);
-            std::string userId = decoded.get_payload_claim("user_id").as_string();
-            return std::stoi(userId);
+            return decoded.get_payload_claim("user_uuid").as_string();
         } catch (const std::exception& e) {
-            return -1;
+            return "";
         }
     }
     

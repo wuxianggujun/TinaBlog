@@ -62,11 +62,11 @@ public:
         }
 
         // 将用户信息添加到请求属性中
-        int userId = m_jwtManager.getUserIdFromToken(token);
+        std::string userUuid = m_jwtManager.getUserUuidFromToken(token);
         std::string username = m_jwtManager.getUsernameFromToken(token);
         bool isAdmin = m_jwtManager.isAdminFromToken(token);
 
-        req->getAttributes()->insert("user_id", userId);
+        req->getAttributes()->insert("user_uuid", userUuid);
         req->getAttributes()->insert("username", username);
         req->getAttributes()->insert("is_admin", isAdmin);
 
@@ -127,10 +127,10 @@ public:
         }
 
         // 将用户信息添加到请求属性中
-        int userId = m_jwtManager.getUserIdFromToken(token);
+        std::string userUuid = m_jwtManager.getUserUuidFromToken(token);
         std::string username = m_jwtManager.getUsernameFromToken(token);
 
-        req->getAttributes()->insert("user_id", userId);
+        req->getAttributes()->insert("user_uuid", userUuid);
         req->getAttributes()->insert("username", username);
         req->getAttributes()->insert("is_admin", true);
 

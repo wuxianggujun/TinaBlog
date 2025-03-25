@@ -363,10 +363,10 @@ bool DbManager::createTables() {
     try {
         // 创建所有表的事务
         return executeTransaction([](pqxx::work& tx) {
-            // 1. 创建用户表
+            // 1. 创建用户表 - 使用UUID作为主键
             tx.exec(R"(
                 CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
+                    uuid VARCHAR(36) PRIMARY KEY,
                     username VARCHAR(50) UNIQUE NOT NULL,
                     password VARCHAR(100) NOT NULL,
                     email VARCHAR(100) UNIQUE NOT NULL,
@@ -379,30 +379,30 @@ bool DbManager::createTables() {
                 )
             )");
             
-            // 2. 创建文章表
+            // 2. 创建文章表 - 使用user_uuid引用用户表，slug不唯一
             tx.exec(R"(
                 CREATE TABLE IF NOT EXISTS articles (
                     id SERIAL PRIMARY KEY,
                     title VARCHAR(200) NOT NULL,
-                    slug VARCHAR(200) UNIQUE NOT NULL,
+                    slug VARCHAR(200),
                     content TEXT NOT NULL,
                     summary TEXT,
                     cover_image VARCHAR(255),
                     view_count INTEGER DEFAULT 0,
-                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    user_uuid VARCHAR(36) NOT NULL REFERENCES users(uuid),
                     is_published BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                 )
             )");
             
-            // 3. 创建评论表
+            // 3. 创建评论表 - 使用user_uuid引用用户表
             tx.exec(R"(
                 CREATE TABLE IF NOT EXISTS comments (
                     id SERIAL PRIMARY KEY,
                     content TEXT NOT NULL,
                     article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
-                    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                    user_uuid VARCHAR(36) REFERENCES users(uuid) ON DELETE SET NULL,
                     parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
                     author_name VARCHAR(50),
                     author_email VARCHAR(100),
@@ -411,12 +411,12 @@ bool DbManager::createTables() {
                 )
             )");
             
-            // 4. 创建分类表
+            // 4. 创建分类表 - slug可以为空
             tx.exec(R"(
                 CREATE TABLE IF NOT EXISTS categories (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(50) UNIQUE NOT NULL,
-                    slug VARCHAR(50) UNIQUE NOT NULL,
+                    slug VARCHAR(50),
                     description TEXT,
                     parent_id INTEGER REFERENCES categories(id) ON DELETE SET NULL
                 )
@@ -431,12 +431,12 @@ bool DbManager::createTables() {
                 )
             )");
             
-            // 6. 创建标签表
+            // 6. 创建标签表 - slug可以为空
             tx.exec(R"(
                 CREATE TABLE IF NOT EXISTS tags (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(50) UNIQUE NOT NULL,
-                    slug VARCHAR(50) UNIQUE NOT NULL
+                    slug VARCHAR(50)
                 )
             )");
             
@@ -459,10 +459,10 @@ bool DbManager::createTables() {
             )");
             
             // 创建索引以提高查询性能
-            tx.exec("CREATE INDEX IF NOT EXISTS idx_articles_user_id ON articles(user_id)");
+            tx.exec("CREATE INDEX IF NOT EXISTS idx_articles_user_uuid ON articles(user_uuid)");
             tx.exec("CREATE INDEX IF NOT EXISTS idx_articles_created_at ON articles(created_at)");
             tx.exec("CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id)");
-            tx.exec("CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)");
+            tx.exec("CREATE INDEX IF NOT EXISTS idx_comments_user_uuid ON comments(user_uuid)");
             
             // 成功创建所有表，提交事务
             return true;
