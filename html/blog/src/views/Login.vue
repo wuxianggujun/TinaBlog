@@ -90,6 +90,8 @@
 </template>
 
 <script>
+import eventBus from '../utils/eventBus';
+
 export default {
   name: 'Login',
   data() {
@@ -108,19 +110,26 @@ export default {
     }
   },
   methods: {
-    saveUserAuth(token, username) {
-      // 验证token格式
-      if (!token || token.trim() === '') {
-        console.error('收到无效的token');
-        alert('登录失败，获取到的凭证无效');
+    saveUserAuth(userData) {
+      // 保存用户数据到localStorage
+      if (!userData.uuid) {
+        console.error('错误: 保存用户数据缺少uuid');
         return false;
       }
       
-      localStorage.setItem('token', token);
-      localStorage.setItem('username', username);
+      // 保存必要的用户信息
+      localStorage.setItem('user_uuid', userData.uuid);
+      localStorage.setItem('username', userData.username);
+      localStorage.setItem('display_name', userData.display_name || userData.username);
       localStorage.setItem('isLoggedIn', 'true');
+      
+      // 如果响应中含有token，也保存起来（可选项）
+      if (userData.token) {
+        localStorage.setItem('token', userData.token);
+      }
+      
       // 通知其他组件登录状态变化
-      this.$emit('login-state-changed', true);
+      eventBus.emit('login-state-changed', true);
 
       // 检查是否有重定向参数
       const redirect = this.$route.query.redirect;
@@ -131,7 +140,7 @@ export default {
 
     async handleLogin() {
       try {
-        // 这里替换成您的实际API地址
+        // 添加auth_type参数，用于选择返回token的方式
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
@@ -139,26 +148,33 @@ export default {
           },
           body: JSON.stringify({
             username: this.loginForm.username,
-            password: this.loginForm.password
-          })
+            password: this.loginForm.password,
+            auth_type: 'both' // 同时在Cookie和响应体中返回token
+          }),
+          credentials: 'include' // 确保接收和发送Cookie
         });
 
         const data = await response.json();
-        console.log('登录响应:', data); // 添加日志记录响应内容
+        console.log('登录响应:', data);
 
         if (data.success) {
-          // 登录成功,保存token和用户名
+          // 登录成功,保存用户数据
           const userData = data.data || {};
-          if (!userData.token) {
-            console.error('登录成功但无token:', data);
-            alert('登录失败，服务器未返回有效凭证');
+          
+          // 检查必要字段
+          if (!userData.uuid || !userData.username) {
+            console.error('登录成功但缺少必要用户信息:', data);
+            alert('登录失败，服务器返回的用户信息不完整');
             return;
           }
           
-          // 保存凭证
-          const saved = this.saveUserAuth(userData.token, userData.username);
-          if (!saved) {
-            console.error('凭证保存失败');
+          // 保存用户数据
+          const saved = this.saveUserAuth(userData);
+          if (saved) {
+            console.log('用户数据保存成功');
+          } else {
+            console.error('用户数据保存失败');
+            alert('登录成功但保存用户信息失败');
           }
         } else {
           alert(data.message || '登录失败，请检查用户名和密码');
@@ -176,7 +192,7 @@ export default {
       }
 
       try {
-        // 这里替换成您的实际API地址
+        // 添加auth_type参数
         const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: {
@@ -185,27 +201,34 @@ export default {
           body: JSON.stringify({
             username: this.registerForm.username,
             email: this.registerForm.email,
-            password: this.registerForm.password
-          })
+            password: this.registerForm.password,
+            display_name: this.registerForm.username, // 默认显示名与用户名相同
+            auth_type: 'both' // 同时在Cookie和响应体中返回token
+          }),
+          credentials: 'include' // 确保接收和发送Cookie
         });
 
         const data = await response.json();
-        console.log('注册响应:', data); // 添加日志记录响应内容
+        console.log('注册响应:', data);
 
         if (data.success) {
           const userData = data.data || {};
-          if (userData.token) {
-            // 注册成功并返回token，直接存储token
-            const saved = this.saveUserAuth(userData.token, userData.username);
-            if (saved) {
-              alert('注册成功并已自动登录！');
-            } else {
-              alert('注册成功但自动登录失败，请手动登录');
-              this.activeTab = 'login';
-              this.resetForms();
-            }
+          
+          // 检查必要字段
+          if (!userData.uuid || !userData.username) {
+            console.error('注册成功但缺少必要用户信息:', data);
+            alert('注册成功但无法自动登录，请手动登录');
+            this.activeTab = 'login';
+            this.resetForms();
+            return;
+          }
+          
+          // 保存用户信息并自动登录
+          const saved = this.saveUserAuth(userData);
+          if (saved) {
+            alert('注册成功并已自动登录！');
           } else {
-            alert('注册成功！请登录');
+            alert('注册成功但自动登录失败，请手动登录');
             this.activeTab = 'login';
             this.resetForms();
           }

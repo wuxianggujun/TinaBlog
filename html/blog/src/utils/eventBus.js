@@ -1,41 +1,41 @@
-// 创建一个简单的事件总线
+// 简单的事件总线实现，用于组件间通信
+// 参考 Vue 2 的事件总线模式，但适用于 Vue 3
+
+import { reactive } from 'vue';
+
 class EventBus {
-  constructor() {
-    this.events = {};
-  }
-
-  // 订阅事件
-  on(eventName, callback) {
-    if (!this.events[eventName]) {
-      this.events[eventName] = [];
+    constructor() {
+        this.events = reactive({});
     }
-    this.events[eventName].push(callback);
-  }
 
-  // 取消订阅
-  off(eventName, callback) {
-    if (!this.events[eventName]) return;
-    
-    if (!callback) {
-      // 如果没有提供特定回调，则移除所有该事件的监听器
-      delete this.events[eventName];
-      return;
+    // 注册事件监听器
+    on(event, callback) {
+        if (!this.events[event]) {
+            this.events[event] = [];
+        }
+        this.events[event].push(callback);
     }
-    
-    this.events[eventName] = this.events[eventName].filter(
-      cb => cb !== callback
-    );
-  }
 
-  // 发射事件
-  emit(eventName, ...args) {
-    if (!this.events[eventName]) return;
-    
-    this.events[eventName].forEach(callback => {
-      callback(...args);
-    });
-  }
+    // 触发事件
+    emit(event, ...args) {
+        if (this.events[event]) {
+            this.events[event].forEach(callback => {
+                callback(...args);
+            });
+        }
+    }
+
+    // 移除事件监听器
+    off(event, callback) {
+        if (this.events[event]) {
+            if (callback) {
+                this.events[event] = this.events[event].filter(cb => cb !== callback);
+            } else {
+                this.events[event] = [];
+            }
+        }
+    }
 }
 
-// 创建并导出事件总线实例
+// 创建一个全局的事件总线实例
 export default new EventBus(); 
