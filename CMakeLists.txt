@@ -109,9 +109,6 @@ target_link_libraries(TinaBlog PRIVATE
 # 安装规则
 install(TARGETS TinaBlog DESTINATION bin)
 
-# 复制前端资源文件
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/html DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-
 # 设置前端构建目录
 set(FRONTEND_BUILD_DIR ${CMAKE_BINARY_DIR}/html)
 

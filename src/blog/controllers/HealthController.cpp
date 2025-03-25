@@ -1,5 +1,6 @@
 #include "HealthController.hpp"
 #include "blog/utils/HttpUtils.hpp"
+#include "blog/utils/ErrorCode.hpp"
 
 /**
  * 健康检查
@@ -24,19 +25,26 @@ void HealthController::check(const drogon::HttpRequestPtr& req,
                 },
                 [callback=std::move(callback)](const drogon::orm::DrogonDbException& e) {
                     // 数据库查询异常
-                    auto resp = utils::createErrorResponse("数据库查询失败: " + std::string(e.base().what()), 
-                                                         drogon::k503ServiceUnavailable);
+                    auto resp = utils::createErrorResponse(
+                        utils::ErrorCode::DB_QUERY_ERROR,
+                        "数据库查询失败: " + std::string(e.base().what())
+                    );
                     callback(resp);
                 });
         } else {
             // 数据库连接异常
-            auto resp = utils::createErrorResponse("数据库连接失败", drogon::k503ServiceUnavailable);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::DB_CONNECTION_ERROR,
+                "数据库连接失败"
+            );
             callback(resp);
         }
     } catch (const std::exception& e) {
         // 发生异常
-        auto resp = utils::createErrorResponse(std::string("健康检查异常: ") + e.what(), 
-                                             drogon::k500InternalServerError);
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::SYSTEM_ERROR,
+            std::string("健康检查异常: ") + e.what()
+        );
         callback(resp);
     }
 } 

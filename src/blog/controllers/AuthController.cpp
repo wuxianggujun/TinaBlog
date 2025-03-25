@@ -1,6 +1,7 @@
 #include "AuthController.hpp"
 #include "blog/utils/HttpUtils.hpp"
 #include "blog/utils/PasswordUtils.hpp"
+#include "blog/utils/ErrorCode.hpp"
 
 /**
  * 构造函数
@@ -35,7 +36,7 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
         // 检查Content-Type是否为application/json
         std::string contentType = req->getHeader("Content-Type");
         if (contentType.find("application/json") == std::string::npos) {
-            callback(utils::createErrorResponse("请求体必须是JSON格式", drogon::k400BadRequest));
+            callback(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "请求体必须是JSON格式"));
             return;
         }
 
@@ -43,13 +44,13 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
         Json::Value requestJson;
         Json::Reader reader;
         if (!reader.parse(std::string(req->getBody()), requestJson)) {
-            callback(utils::createErrorResponse("无效的JSON格式", drogon::k400BadRequest));
+            callback(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的JSON格式"));
             return;
         }
 
         // 检查必要字段
         if (!requestJson.isMember("username") || !requestJson.isMember("password")) {
-            callback(utils::createErrorResponse("缺少必要字段：username 或 password", drogon::k400BadRequest));
+            callback(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "缺少必要字段：username 或 password"));
             return;
         }
 
@@ -61,7 +62,7 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
 
         // 检查数据库连接
         if (!m_dbManager->isConnected()) {
-            callback(utils::createErrorResponse("数据库连接失败", drogon::k500InternalServerError));
+            callback(utils::createErrorResponse(utils::ErrorCode::DB_CONNECTION_ERROR));
             return;
         }
 
@@ -70,14 +71,14 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
             "SELECT username, password, display_name, uuid, is_admin FROM users WHERE username = $1",
             [this, username, password, returnTokenInBody, callback](const drogon::orm::Result& result) {
                 if (result.empty()) {
-                    callback(utils::createErrorResponse("用户不存在", drogon::k401Unauthorized));
+                    callback(utils::createErrorResponse(utils::ErrorCode::USER_NOT_FOUND));
                     return;
                 }
 
                 // 验证密码
                 std::string storedHash = result[0]["password"].as<std::string>();
                 if (!verifyPassword(password, storedHash)) {
-                    callback(utils::createErrorResponse("密码错误", drogon::k401Unauthorized));
+                    callback(utils::createErrorResponse(utils::ErrorCode::PASSWORD_ERROR));
                     return;
                 }
 
@@ -91,7 +92,7 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
                     );
                 } catch (const std::exception& e) {
                     LOG_ERROR << "生成JWT令牌失败: " << e.what();
-                    callback(utils::createErrorResponse("生成认证令牌失败", drogon::k500InternalServerError));
+                    callback(utils::createErrorResponse(utils::ErrorCode::SYSTEM_ERROR, "生成认证令牌失败"));
                     return;
                 }
 
@@ -120,13 +121,13 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
             },
             [callback](const drogon::orm::DrogonDbException& e) {
                 LOG_ERROR << "数据库查询失败: " << e.base().what();
-                callback(utils::createErrorResponse("数据库查询失败", drogon::k500InternalServerError));
+                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
             },
             username
         );
     } catch (const std::exception& e) {
         LOG_ERROR << "登录处理异常: " << e.what();
-        callback(utils::createErrorResponse("服务器内部错误", drogon::k500InternalServerError));
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
     }
 }
 
@@ -188,14 +189,20 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     
     // 检查JSON请求体
     if (!jsonBody) {
-        auto resp = utils::createErrorResponse("无效的请求格式，需要JSON数据", drogon::k400BadRequest);
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::INVALID_REQUEST,
+            "无效的请求格式，需要JSON数据"
+        );
         callback(resp);
         return;
     }
     
     // 获取用户名和密码
     if (!(*jsonBody)["username"].isString() || !(*jsonBody)["password"].isString()) {
-        auto resp = utils::createErrorResponse("缺少用户名或密码", drogon::k400BadRequest);
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::INVALID_PARAMETER,
+            "缺少用户名或密码"
+        );
         callback(resp);
         return;
     }
@@ -216,7 +223,10 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     
     // 确保重要字段不为空
     if (username.empty() || password.empty() || email.empty()) {
-        auto resp = utils::createErrorResponse("用户名、密码和邮箱不能为空", drogon::k400BadRequest);
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::INVALID_PARAMETER,
+            "用户名、密码和邮箱不能为空"
+        );
         callback(resp);
         return;
     }
@@ -232,7 +242,10 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
         "SELECT COUNT(*) AS count FROM users WHERE username=$1",
         [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
             if (result[0]["count"].as<int>() > 0) {
-                auto resp = utils::createErrorResponse("用户名已存在", drogon::k409Conflict);
+                auto resp = utils::createErrorResponse(
+                    utils::ErrorCode::USERNAME_EXISTS,
+                    "用户名已存在"
+                );
                 callback(resp);
                 return;
             }
@@ -242,7 +255,10 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                 "SELECT COUNT(*) AS count FROM users WHERE email=$1",
                 [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
                     if (result[0]["count"].as<int>() > 0) {
-                        auto resp = utils::createErrorResponse("邮箱已被注册", drogon::k409Conflict);
+                        auto resp = utils::createErrorResponse(
+                            utils::ErrorCode::EMAIL_EXISTS,
+                            "邮箱已被注册"
+                        );
                         callback(resp);
                         return;
                     }
@@ -250,7 +266,10 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                     // 使用libsodium进行密码哈希
                     std::string hashedPassword = utils::PasswordUtils::hashPassword(password);
                     if (hashedPassword.empty()) {
-                        auto resp = utils::createErrorResponse("密码加密失败", drogon::k500InternalServerError);
+                        auto resp = utils::createErrorResponse(
+                            utils::ErrorCode::SYSTEM_ERROR,
+                            "密码加密失败"
+                        );
                         callback(resp);
                         return;
                     }
@@ -291,22 +310,28 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             callback(resp);
                         },
                         [callback=callback](const drogon::orm::DrogonDbException& e) {
-                            auto resp = utils::createErrorResponse("注册过程中发生错误: " + std::string(e.base().what()), 
-                                                                 drogon::k500InternalServerError, 500);
+                            auto resp = utils::createErrorResponse(
+                                utils::ErrorCode::DB_INSERT_ERROR,
+                                "注册过程中发生错误: " + std::string(e.base().what())
+                            );
                             callback(resp);
                         },
                         uuid, username, hashedPassword, email, display_name);
                 },
                 [callback=callback](const drogon::orm::DrogonDbException& e) {
-                    auto resp = utils::createErrorResponse("注册过程中发生错误: " + std::string(e.base().what()), 
-                                                        drogon::k500InternalServerError, 500);
+                    auto resp = utils::createErrorResponse(
+                        utils::ErrorCode::DB_QUERY_ERROR,
+                        "注册过程中发生错误: " + std::string(e.base().what())
+                    );
                     callback(resp);
                 },
                 email);
         },
         [callback=callback](const drogon::orm::DrogonDbException& e) {
-            auto resp = utils::createErrorResponse("注册过程中发生错误: " + std::string(e.base().what()), 
-                                                drogon::k500InternalServerError, 500);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::DB_QUERY_ERROR,
+                "注册过程中发生错误: " + std::string(e.base().what())
+            );
             callback(resp);
         },
         username);

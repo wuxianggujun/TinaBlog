@@ -4,6 +4,7 @@
 #include <drogon/drogon.h>
 #include "JwtManager.hpp"
 #include "blog/utils/HttpUtils.hpp"
+#include "blog/utils/ErrorCode.hpp"
 
 // 简化过滤器，参照示例
 class JwtAuthFilter : public drogon::HttpFilter<JwtAuthFilter>
@@ -47,7 +48,10 @@ public:
         // 没有令牌，返回未授权错误
         if (token.empty())
         {
-            auto resp = utils::createErrorResponse("未授权的访问", drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::UNAUTHORIZED,
+                "未授权的访问"
+            );
             fcb(resp);
             return;
         }
@@ -56,7 +60,10 @@ public:
         if (!m_jwtManager.verifyToken(token))
         {
             // 令牌无效，返回未授权错误
-            auto resp = utils::createErrorResponse("令牌无效或已过期", drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::TOKEN_INVALID,
+                "令牌无效或已过期"
+            );
             fcb(resp);
             return;
         }
@@ -103,7 +110,10 @@ public:
         // 没有令牌，返回未授权错误
         if (token.empty())
         {
-            auto resp = utils::createErrorResponse("未授权的访问", drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::UNAUTHORIZED,
+                "未授权的访问"
+            );
             fcb(resp);
             return;
         }
@@ -112,7 +122,10 @@ public:
         if (!m_jwtManager.verifyToken(token))
         {
             // 令牌无效，返回未授权错误
-            auto resp = utils::createErrorResponse("令牌无效或已过期", drogon::k401Unauthorized);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::TOKEN_INVALID,
+                "令牌无效或已过期"
+            );
             fcb(resp);
             return;
         }
@@ -121,7 +134,10 @@ public:
         if (!m_jwtManager.isAdminFromToken(token))
         {
             // 不是管理员，返回禁止访问错误
-            auto resp = utils::createErrorResponse("需要管理员权限", drogon::k403Forbidden);
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::FORBIDDEN,
+                "需要管理员权限"
+            );
             fcb(resp);
             return;
         }
