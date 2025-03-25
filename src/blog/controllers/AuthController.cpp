@@ -1,5 +1,6 @@
 #include "AuthController.hpp"
 #include "blog/utils/HttpUtils.hpp"
+#include "blog/utils/PasswordUtils.hpp"
 
 /**
  * 构造函数
@@ -7,6 +8,9 @@
 AuthController::AuthController() {
     // 在实际应用中应从配置文件中获取JWT密钥
     m_jwtSecret = "your-secret-key-change-this-in-production";
+    
+    // 初始化密码工具类
+    utils::PasswordUtils::initialize();
 }
 
 /**
@@ -61,8 +65,8 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
         bool isAdmin = result[0][3].as<bool>();
         std::string displayName = result[0][4].as<std::string>();
         
-        // TODO: 在实际应用中应使用加密算法比较密码哈希
-        if (password != storedPassword) {
+        // 使用libsodium验证密码哈希
+        if (!utils::PasswordUtils::verifyPassword(password, storedPassword)) {
             // 密码错误
             auto resp = utils::createErrorResponse("用户名或密码错误", drogon::k401Unauthorized);
             callback(resp);
@@ -207,9 +211,13 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
             return;
         }
         
-        // 密码加密 (实际应用应使用更安全的哈希算法如bcrypt)
-        // 这里暂时使用明文密码，实际生产中应当使用加密算法
-        std::string hashedPassword = password;
+        // 使用libsodium进行密码哈希
+        std::string hashedPassword = utils::PasswordUtils::hashPassword(password);
+        if (hashedPassword.empty()) {
+            auto resp = utils::createErrorResponse("密码加密失败", drogon::k500InternalServerError);
+            callback(resp);
+            return;
+        }
         
         // 插入新用户 - 使用UUID作为主键
         std::string insertSql = "INSERT INTO users (uuid, username, password, email, display_name, is_admin, created_at, updated_at) VALUES "
