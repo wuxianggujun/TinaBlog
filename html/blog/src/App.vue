@@ -12,10 +12,36 @@ export default {
       loginValidationInterval: null
     }
   },
-  mounted() {
-    // 检查登录状态
-    this.checkLoginStatus();
+  computed: {
+    // 添加计算属性以便于应用响应式更新
+    userDisplayName() {
+      return this.username || localStorage.getItem('username') || '';
+    },
+    isUserLoggedIn() {
+      return this.isLoggedIn || localStorage.getItem('isLoggedIn') === 'true';
+    }
+  },
+  watch: {
+    // 监听登录状态变化，确保UI立即更新
+    isLoggedIn(newValue) {
+      console.debug('[App] 登录状态变化:', newValue);
+      // 强制更新UI
+      this.$forceUpdate();
+    }
+  },
+  created() {
+    // 在created钩子中初始化事件监听，确保尽早捕获事件
+    // 确保每种事件类型只监听一次
+    eventBus.off('login-state-changed', this.checkLoginStatus);
+    eventBus.off('user-info-updated', this.handleUserInfoUpdate);
     
+    eventBus.on('login-state-changed', this.checkLoginStatus);
+    eventBus.on('user-info-updated', this.handleUserInfoUpdate);
+    
+    // 初始化检查登录状态
+    this.checkLoginStatus();
+  },
+  mounted() {
     // 如果已登录但在登录页面，自动重定向
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     if (isLoggedIn && this.$route.path === '/login') {
@@ -26,9 +52,6 @@ export default {
     
     // 监听登录状态变化事件
     window.addEventListener('storage', this.handleStorageChange);
-    
-    // 监听用户信息更新事件
-    eventBus.on('user-info-updated', this.handleUserInfoUpdate);
     
     // 立即验证token有效性
     const token = localStorage.getItem('token');
@@ -54,25 +77,29 @@ export default {
       clearInterval(this.loginValidationInterval);
     }
     // 移除事件监听
+    eventBus.off('login-state-changed', this.checkLoginStatus);
     eventBus.off('user-info-updated', this.handleUserInfoUpdate);
   },
   methods: {
     checkLoginStatus() {
-      console.log('检查登录状态...');
+      console.debug('[App] 检查登录状态...');
       const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
       const username = localStorage.getItem('username');
-      console.log('从localStorage获取的状态:', {
-        isLoggedIn,
-        username
-      });
+      console.debug('[App] 从localStorage获取的状态:', { isLoggedIn, username });
       
-      this.isLoggedIn = isLoggedIn;
-      this.username = username;
+      // 更新组件数据
+      if (this.isLoggedIn !== isLoggedIn) {
+        this.isLoggedIn = isLoggedIn;
+      }
       
-      console.log('更新后的状态:', {
-        isLoggedIn: this.isLoggedIn,
-        username: this.username
-      });
+      if (this.username !== username) {
+        this.username = username || '';
+      }
+      
+      console.debug('[App] 更新后的状态:', { isLoggedIn: this.isLoggedIn, username: this.username });
+      
+      // 强制刷新UI
+      this.$forceUpdate();
     },
     handleStorageChange(event) {
       if (event.key === 'isLoggedIn' || event.key === 'username') {
@@ -109,6 +136,8 @@ export default {
         // 无论API调用成功与否，都清除本地存储
         localStorage.removeItem('token');
         localStorage.removeItem('username');
+        localStorage.removeItem('user_uuid');
+        localStorage.removeItem('display_name');
         localStorage.removeItem('isLoggedIn');
         
         // 更新状态
@@ -194,12 +223,29 @@ export default {
       }
     },
     handleUserInfoUpdate(userData) {
-      console.log('收到用户信息更新事件:', userData);
-      this.isLoggedIn = true;
-      this.username = userData.username || userData.display_name;
-      console.log('更新后的登录状态:', {
+      console.debug('[App] 收到用户信息更新事件:', userData);
+      console.debug('[App] 更新前的登录状态:', {
         isLoggedIn: this.isLoggedIn,
         username: this.username
+      });
+      
+      // 强制更新用户信息和登录状态
+      this.isLoggedIn = true;
+      this.username = userData.username || userData.display_name || '';
+      
+      // 确保localStorage也同步更新
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('username', this.username);
+      
+      console.debug('[App] 更新后的登录状态:', {
+        isLoggedIn: this.isLoggedIn,
+        username: this.username
+      });
+      
+      // 强制更新视图
+      this.$nextTick(() => {
+        this.$forceUpdate();
+        console.debug('[App] 视图已强制更新');
       });
     }
   }
@@ -223,7 +269,7 @@ export default {
         <!-- 右侧功能区 -->
         <div class="nav-right">
           <!-- 仅在非创建文章页面显示"创作"按钮 -->
-          <router-link v-if="isLoggedIn && $route.path !== '/create'" to="/create" class="create-btn">
+          <router-link v-if="isUserLoggedIn && $route.path !== '/create'" to="/create" class="create-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 5px;">
               <path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" fill="currentColor"/>
             </svg>
@@ -231,7 +277,7 @@ export default {
           </router-link>
           
           <!-- 在创建文章页面显示"发布文章"按钮 -->
-          <button v-if="isLoggedIn && $route.path === '/create'" @click="handlePublish" class="publish-btn">
+          <button v-if="isUserLoggedIn && $route.path === '/create'" @click="handlePublish" class="publish-btn">
             <svg viewBox="0 0 1024 1024" width="16" height="16" style="margin-right: 5px;">
               <path d="M725.333333 362.666667h42.666667a128 128 0 0 1 128 128v256a128 128 0 0 1-128 128H256a128 128 0 0 1-128-128V490.666667a128 128 0 0 1 128-128h42.666667v-21.333334a213.333333 213.333333 0 0 1 426.666666 0v21.333334z m-42.666666 0v-21.333334a170.666667 170.666667 0 0 0-341.333334 0v21.333334h341.333334z m-384 170.666666a42.666667 42.666667 0 1 0 85.333333 0 42.666667 42.666667 0 0 0-85.333333 0z m170.666666 0a42.666667 42.666667 0 1 0 85.333334 0 42.666667 42.666667 0 0 0-85.333334 0z m170.666667 0a42.666667 42.666667 0 1 0 85.333333 0 42.666667 42.666667 0 0 0-85.333333 0z" fill="currentColor"></path>
             </svg>
@@ -239,10 +285,10 @@ export default {
           </button>
           
           <!-- 登录/用户信息 -->
-          <router-link v-if="!isLoggedIn" to="/login" class="login-btn">登录</router-link>
+          <router-link v-if="!isUserLoggedIn" to="/login" class="login-btn">登录</router-link>
           <div v-else class="user-menu" @click.stop="toggleDropdown">
             <div class="user-avatar">
-              <span class="username">{{ username }}</span>
+              <span class="username">{{ userDisplayName }}</span>
               <i class="dropdown-icon"></i>
             </div>
             <div v-show="showDropdown" class="dropdown-menu">
@@ -257,7 +303,7 @@ export default {
     </nav>
 
     <main class="main">
-      <router-view ref="routerView" @login-state-changed="checkLoginStatus" />
+      <router-view ref="routerView" />
     </main>
 
     <footer class="footer">

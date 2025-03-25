@@ -117,25 +117,51 @@ export default {
         return false;
       }
       
-      // 保存必要的用户信息
+      console.debug('[Login] 开始保存用户认证数据:', userData);
+      
+      // 同步确保localStorage更新，不等待事件传递
       localStorage.setItem('user_uuid', userData.uuid);
       localStorage.setItem('username', userData.username);
       localStorage.setItem('display_name', userData.display_name || userData.username);
       localStorage.setItem('isLoggedIn', 'true');
       
-      // 如果响应中含有token，也保存起来（可选项）
+      // 如果响应中含有token，也保存起来
       if (userData.token) {
         localStorage.setItem('token', userData.token);
       }
       
-      // 通知其他组件登录状态变化
-      eventBus.emit('login-state-changed', true);
-      eventBus.emit('user-info-updated', userData);
+      console.debug('[Login] localStorage保存完成，开始触发事件');
+      
+      // 准备完整的用户信息
+      const userInfo = {
+        uuid: userData.uuid,
+        username: userData.username,
+        display_name: userData.display_name || userData.username,
+        token: userData.token || localStorage.getItem('token')
+      };
 
-      // 检查是否有重定向参数
-      const redirect = this.$route.query.redirect;
-      // 如果有重定向参数，则跳转到指定页面，否则跳转到首页
-      this.$router.push(redirect || '/');
+      // 注意事件触发顺序非常重要：
+      // 1. 先触发用户信息更新事件
+      console.debug('[Login] 触发user-info-updated事件');
+      eventBus.emit('user-info-updated', userInfo);
+      
+      // 2. 再触发登录状态变化事件
+      console.debug('[Login] 触发login-state-changed事件');
+      eventBus.emit('login-state-changed', true);
+      
+      // 3. 确保所有更新都被处理后再跳转
+      console.debug('[Login] 准备页面跳转');
+      
+      // 使用Vue Router的nextTick和setTimeout确保状态更新和DOM渲染完成后再跳转
+      this.$nextTick(() => {
+        setTimeout(() => {
+          // 检查是否有重定向参数
+          const redirect = this.$route.query.redirect || '/';
+          this.$router.push(redirect);
+          console.debug('[Login] 已跳转到:', redirect);
+        }, 50); // 短暂延迟，确保事件处理完成
+      });
+      
       return true;
     },
 
@@ -232,10 +258,7 @@ export default {
           const saved = this.saveUserAuth(userData);
           console.log('用户数据保存结果:', saved);
           
-          if (saved) {
-            console.log('注册成功，准备跳转...');
-            alert('注册成功并已自动登录！');
-          } else {
+          if (!saved) {
             console.error('用户数据保存失败');
             alert('注册成功但自动登录失败，请手动登录');
             this.activeTab = 'login';
