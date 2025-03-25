@@ -31,9 +31,32 @@ bool DbManager::initialize(const std::string& connInfo, size_t connNum) {
     try {
         // 创建PostgreSQL客户端
         m_dbClient = drogon::orm::DbClient::newPgClient(connInfo, connNum);
-        m_initialized = true;
-        std::cout << "数据库连接初始化成功" << std::endl;
-        return true;
+        
+        // 验证数据库连接
+        if (!m_dbClient) {
+            std::cerr << "数据库客户端创建失败" << std::endl;
+            return false;
+        }
+        
+        // 测试连接
+        auto result = m_dbClient->execSqlSync("SELECT current_database()");
+        std::string currentDb = result[0]["current_database"].as<std::string>();
+        std::cout << "当前连接的数据库: " << currentDb << std::endl;
+        
+        // 只有在连接到blog数据库时才进行验证
+        if (currentDb == "blog") {
+            m_initialized = true;
+            std::cout << "数据库连接初始化成功" << std::endl;
+            return true;
+        } else if (currentDb == "postgres") {
+            // 如果连接到postgres数据库，也允许初始化
+            m_initialized = true;
+            std::cout << "已连接到postgres数据库，可以执行数据库创建操作" << std::endl;
+            return true;
+        } else {
+            std::cerr << "警告：当前连接的数据库不是blog或postgres数据库" << std::endl;
+            return false;
+        }
     } catch (const std::exception& e) {
         std::cerr << "数据库初始化错误: " << e.what() << std::endl;
         return false;
@@ -58,6 +81,54 @@ bool DbManager::isConnected() {
 // 创建数据库表结构
 bool DbManager::createTables() {
     try {
+        // 详细验证当前数据库连接
+        std::cout << "createTables: 开始验证数据库连接..." << std::endl;
+        
+        if (!m_dbClient) {
+            std::cerr << "createTables: 错误 - 数据库客户端未初始化" << std::endl;
+            return false;
+        }
+        
+        // 从连接字符串中解析当前数据库名称
+        std::string expectedDb = "blog";
+        std::regex dbRegex("dbname=([^ ]+)");
+        std::smatch matches;
+        if (std::regex_search(m_connectionInfo, matches, dbRegex) && matches.size() > 1) {
+            std::string connDbName = matches[1].str();
+            std::cout << "createTables: 连接字符串中的数据库名称: " << connDbName << std::endl;
+        }
+        
+        // 验证当前数据库
+        auto result = m_dbClient->execSqlSync("SELECT current_database()");
+        std::string currentDb = result[0]["current_database"].as<std::string>();
+        std::cout << "createTables: 当前实际连接的数据库: " << currentDb << std::endl;
+        
+        if (currentDb != "blog") {
+            std::cerr << "错误：当前数据库不是blog数据库，无法创建表" << std::endl;
+            
+            // 尝试强制切换到blog数据库
+            std::cout << "createTables: 尝试强制切换到blog数据库..." << std::endl;
+            std::regex re("dbname=[^ ]+");
+            std::string newConnStr = std::regex_replace(m_connectionInfo, re, "dbname=blog");
+            
+            try {
+                m_dbClient = drogon::orm::DbClient::newPgClient(newConnStr, 1);
+                auto checkResult = m_dbClient->execSqlSync("SELECT current_database()");
+                std::string newDb = checkResult[0]["current_database"].as<std::string>();
+                std::cout << "createTables: 强制切换后的数据库: " << newDb << std::endl;
+                
+                if (newDb != "blog") {
+                    std::cerr << "createTables: 强制切换失败，仍然连接到错误的数据库" << std::endl;
+                    return false;
+                }
+            } catch (const std::exception& e) {
+                std::cerr << "createTables: 强制切换数据库时出错: " << e.what() << std::endl;
+                return false;
+            }
+        }
+        
+        std::cout << "开始在blog数据库中创建表..." << std::endl;
+        
         // 创建用户表 - 使用UUID作为主键
         m_dbClient->execSqlSync(R"(
             CREATE TABLE IF NOT EXISTS users (
@@ -73,6 +144,8 @@ bool DbManager::createTables() {
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         )");
+        
+        std::cout << "用户表创建成功" << std::endl;
         
         // 创建文章表 - 使用user_uuid引用用户表，slug不唯一
         m_dbClient->execSqlSync(R"(
@@ -159,7 +232,7 @@ bool DbManager::createTables() {
         m_dbClient->execSqlSync("CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id)");
         m_dbClient->execSqlSync("CREATE INDEX IF NOT EXISTS idx_comments_user_uuid ON comments(user_uuid)");
         
-        std::cout << "成功创建所有数据库表" << std::endl;
+        std::cout << "所有数据库表创建成功" << std::endl;
         return true;
     } catch (const drogon::orm::DrogonDbException& e) {
         std::cerr << "创建表错误: " << e.base().what() << std::endl;
@@ -189,7 +262,25 @@ bool DbManager::createDatabase(const std::string& dbName) {
             // 数据库已存在
             std::cout << "数据库 " << dbName << " 已存在" << std::endl;
         }
-        return true;
+
+        // 重新连接到新创建的数据库
+        std::string newConnStr = std::regex_replace(m_connectionInfo, re, "dbname=" + dbName);
+        m_dbClient = drogon::orm::DbClient::newPgClient(newConnStr, 1);
+        
+        // 验证新连接
+        auto newResult = m_dbClient->execSqlSync("SELECT current_database()");
+        std::string newDb = newResult[0]["current_database"].as<std::string>();
+        std::cout << "已重新连接到数据库: " << newDb << std::endl;
+        
+        // 更新连接状态
+        if (newDb == dbName) {
+            m_initialized = true;
+            std::cout << "数据库连接状态已更新" << std::endl;
+            return true;
+        } else {
+            std::cerr << "错误：无法连接到目标数据库 " << dbName << std::endl;
+            return false;
+        }
     } catch (const drogon::orm::DrogonDbException& e) {
         std::cerr << "创建数据库错误: " << e.base().what() << std::endl;
         return false;

@@ -210,6 +210,8 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     std::string username = (*jsonBody)["username"].asString();
     std::string password = (*jsonBody)["password"].asString();
     
+    LOG_INFO << "开始注册用户: " << username;
+    
     // 检查认证方式首选项（如果有）
     bool returnTokenInBody = true;
     if ((*jsonBody)["auth_type"].isString()) {
@@ -218,8 +220,8 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     }
     
     // 获取可选字段
-    std::string email = (*jsonBody)["email"].isString() ? (*jsonBody)["email"].asString() : username + "@example.com"; // 默认邮箱
-    std::string display_name = (*jsonBody)["display_name"].isString() ? (*jsonBody)["display_name"].asString() : username; // 默认显示名称
+    std::string email = (*jsonBody)["email"].isString() ? (*jsonBody)["email"].asString() : username + "@example.com";
+    std::string display_name = (*jsonBody)["display_name"].isString() ? (*jsonBody)["display_name"].asString() : username;
     
     // 确保重要字段不为空
     if (username.empty() || password.empty() || email.empty()) {
@@ -229,6 +231,7 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     
     // 生成UUID
     std::string uuid = drogon::utils::getUuid();
+    LOG_INFO << "生成用户UUID: " << uuid;
     
     // 获取数据库连接
     auto& dbManager = DbManager::getInstance();
@@ -238,31 +241,42 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
         "SELECT COUNT(*) AS count FROM users WHERE username=$1",
         [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
             if (result[0]["count"].as<int>() > 0) {
+                LOG_WARN << "用户名已存在: " << username;
                 callback(utils::createErrorResponse(utils::ErrorCode::USERNAME_EXISTS));
                 return;
             }
+            
+            LOG_INFO << "用户名可用，检查邮箱: " << email;
             
             // 检查邮箱是否已存在
             dbManager.executeQuery(
                 "SELECT COUNT(*) AS count FROM users WHERE email=$1",
                 [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
                     if (result[0]["count"].as<int>() > 0) {
+                        LOG_WARN << "邮箱已存在: " << email;
                         callback(utils::createErrorResponse(utils::ErrorCode::EMAIL_EXISTS));
                         return;
                     }
                     
+                    LOG_INFO << "邮箱可用，开始密码哈希";
+                    
                     // 使用libsodium进行密码哈希
                     std::string hashedPassword = utils::PasswordUtils::hashPassword(password);
                     if (hashedPassword.empty()) {
+                        LOG_ERROR << "密码哈希失败";
                         callback(utils::createErrorResponse(utils::ErrorCode::SYSTEM_ERROR));
                         return;
                     }
+                    
+                    LOG_INFO << "开始插入新用户数据";
                     
                     // 插入新用户
                     dbManager.executeQuery(
                         "INSERT INTO users (uuid, username, password, email, display_name, is_admin, created_at, updated_at) VALUES "
                         "($1, $2, $3, $4, $5, false, NOW(), NOW()) RETURNING uuid",
                         [=, callback=callback](const drogon::orm::Result& result) {
+                            LOG_INFO << "用户数据插入成功，开始生成JWT令牌";
+                            
                             // 生成JWT令牌
                             JwtManager jwtManager(m_jwtSecret);
                             std::string token = jwtManager.generateToken(
@@ -270,6 +284,8 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                                 username,                              // username
                                 false                                  // isAdmin，新注册用户默认不是管理员
                             );
+                            
+                            LOG_INFO << "JWT令牌生成成功";
                             
                             // 创建精简的响应数据
                             Json::Value userData;
@@ -291,19 +307,23 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             tokenCookie.setPath("/");
                             resp->addCookie(std::move(tokenCookie));
                             
+                            LOG_INFO << "注册流程完成，返回响应";
                             callback(resp);
                         },
                         [callback=callback](const drogon::orm::DrogonDbException& e) {
+                            LOG_ERROR << "插入用户数据失败: " << e.base().what();
                             callback(utils::createErrorResponse(utils::ErrorCode::DB_INSERT_ERROR));
                         },
                         uuid, username, hashedPassword, email, display_name);
                 },
                 [callback=callback](const drogon::orm::DrogonDbException& e) {
+                    LOG_ERROR << "检查邮箱失败: " << e.base().what();
                     callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                 },
                 email);
         },
         [callback=callback](const drogon::orm::DrogonDbException& e) {
+            LOG_ERROR << "检查用户名失败: " << e.base().what();
             callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
         },
         username);

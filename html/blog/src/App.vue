@@ -58,11 +58,21 @@ export default {
   },
   methods: {
     checkLoginStatus() {
+      console.log('检查登录状态...');
       const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
       const username = localStorage.getItem('username');
+      console.log('从localStorage获取的状态:', {
+        isLoggedIn,
+        username
+      });
       
       this.isLoggedIn = isLoggedIn;
-      this.username = username || '';
+      this.username = username;
+      
+      console.log('更新后的状态:', {
+        isLoggedIn: this.isLoggedIn,
+        username: this.username
+      });
     },
     handleStorageChange(event) {
       if (event.key === 'isLoggedIn' || event.key === 'username') {
@@ -184,9 +194,13 @@ export default {
       }
     },
     handleUserInfoUpdate(userData) {
-      console.log('收到用户信息更新:', userData);
+      console.log('收到用户信息更新事件:', userData);
       this.isLoggedIn = true;
-      this.username = userData.username || userData.display_name || '';
+      this.username = userData.username || userData.display_name;
+      console.log('更新后的登录状态:', {
+        isLoggedIn: this.isLoggedIn,
+        username: this.username
+      });
     }
   }
 }
