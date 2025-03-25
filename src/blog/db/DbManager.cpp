@@ -15,11 +15,6 @@ DbManager::DbManager() : m_initialized(false) {
     // 构造函数初始化
 }
 
-// 析构函数
-DbManager::~DbManager() {
-    // Drogon的DbClient由智能指针管理，会自动清理
-}
-
 // 初始化数据库连接
 bool DbManager::initialize(const std::string& connInfo, size_t connNum) {
     std::lock_guard<std::mutex> lock(m_init_mutex);

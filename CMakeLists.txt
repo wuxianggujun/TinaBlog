@@ -112,5 +112,25 @@ install(TARGETS TinaBlog DESTINATION bin)
 # 复制前端资源文件
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/html DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+# 设置前端构建目录
+set(FRONTEND_BUILD_DIR ${CMAKE_BINARY_DIR}/html)
+
+# 添加复制前端文件的命令
+add_custom_command(
+    OUTPUT ${FRONTEND_BUILD_DIR}/blog/index.html
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/html/blog/dist
+    ${FRONTEND_BUILD_DIR}/blog
+    COMMENT "Copying frontend files..."
+)
+
+# 添加自定义目标
+add_custom_target(copy_frontend
+    DEPENDS ${FRONTEND_BUILD_DIR}/blog/index.html
+)
+
+# 将复制前端文件的目标添加到主目标的依赖中
+add_dependencies(${PROJECT_NAME} copy_frontend)
+
 # 输出信息
 message(STATUS "TinaBlog配置完成")

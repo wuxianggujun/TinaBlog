@@ -157,7 +157,7 @@ export default {
         const data = await response.json();
         console.log('登录响应:', data);
 
-        if (data.success) {
+        if (data.status === "success") {
           // 登录成功,保存用户数据
           const userData = data.data || {};
           
@@ -192,6 +192,7 @@ export default {
       }
 
       try {
+        console.log('开始注册请求...');
         // 添加auth_type参数
         const response = await fetch('/api/auth/register', {
           method: 'POST',
@@ -208,11 +209,14 @@ export default {
           credentials: 'include' // 确保接收和发送Cookie
         });
 
+        console.log('收到注册响应');
         const data = await response.json();
-        console.log('注册响应:', data);
+        console.log('注册响应数据:', data);
 
-        if (data.success) {
+        if (data.status === "success") {
+          console.log('注册成功，开始处理用户数据');
           const userData = data.data || {};
+          console.log('用户数据:', userData);
           
           // 检查必要字段
           if (!userData.uuid || !userData.username) {
@@ -222,21 +226,26 @@ export default {
             this.resetForms();
             return;
           }
-          
-          // 保存用户信息并自动登录
+
+          console.log('开始保存用户数据...');
           const saved = this.saveUserAuth(userData);
+          console.log('用户数据保存结果:', saved);
+          
           if (saved) {
+            console.log('注册成功，准备跳转...');
             alert('注册成功并已自动登录！');
           } else {
+            console.error('用户数据保存失败');
             alert('注册成功但自动登录失败，请手动登录');
             this.activeTab = 'login';
             this.resetForms();
           }
         } else {
+          console.error('注册失败:', data.message);
           alert(data.message || '注册失败，请稍后重试');
         }
       } catch (error) {
-        console.error('注册出错：', error);
+        console.error('注册过程出错：', error);
         alert('注册失败，请稍后重试');
       }
     },

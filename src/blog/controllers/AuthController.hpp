@@ -50,4 +50,14 @@ public:
     
 private:
     std::string m_jwtSecret;
+    std::shared_ptr<DbManager> m_dbManager;
+    std::shared_ptr<JwtManager> m_jwtManager;
+    
+    /**
+     * 验证密码
+     * @param password 明文密码
+     * @param hashedPassword 哈希后的密码
+     * @return 是否验证通过
+     */
+    bool verifyPassword(const std::string& password, const std::string& hashedPassword) const;
 };

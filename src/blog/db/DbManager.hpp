@@ -78,10 +78,14 @@ public:
      */
     bool createTables();
 
+    /**
+     * 析构函数
+     */
+    virtual ~DbManager() = default;
+
 private:
     // 单例模式，私有构造函数
     DbManager();
-    ~DbManager();
 
     // 删除复制构造和赋值操作
     DbManager(const DbManager&) = delete;
