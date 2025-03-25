@@ -7,6 +7,9 @@ namespace utils {
 
 // 错误码枚举
 enum class ErrorCode {
+    // 成功状态 (0)
+    SUCCESS = 0,
+    
     // 认证相关错误 (1000-1999)
     USER_NOT_FOUND = 1000,
     PASSWORD_ERROR = 1001,
@@ -38,6 +41,7 @@ enum class ErrorCode {
 
 // 错误信息映射
 inline const std::unordered_map<ErrorCode, std::string> ERROR_MESSAGES = {
+    {ErrorCode::SUCCESS, "操作成功"},
     {ErrorCode::USER_NOT_FOUND, "用户不存在"},
     {ErrorCode::PASSWORD_ERROR, "密码错误"},
     {ErrorCode::TOKEN_INVALID, "令牌无效"},
