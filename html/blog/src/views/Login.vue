@@ -112,31 +112,40 @@ export default {
   methods: {
     saveUserAuth(userData) {
       // 保存用户数据到localStorage
-      if (!userData.uuid) {
-        console.error('错误: 保存用户数据缺少uuid');
+      try {
+        if (!userData.uuid) {
+          console.error('错误: 保存用户数据缺少uuid');
+          return false;
+        }
+        
+        console.debug('[Login] 开始保存用户认证数据:', userData);
+        
+        // 保存所有必要的用户信息到localStorage
+        localStorage.setItem('user_uuid', userData.uuid);
+        localStorage.setItem('username', userData.username);
+        localStorage.setItem('display_name', userData.display_name || userData.username);
+        localStorage.setItem('isLoggedIn', 'true');
+        
+        // 如果响应中含有token，也保存起来
+        if (userData.token) {
+          localStorage.setItem('token', userData.token);
+        }
+        
+        console.debug('[Login] 用户认证数据保存完成');
+        
+        // 发送事件通知父组件
+        console.debug('[Login] 发送login-state-changed事件');
+        this.$emit('login-state-changed', true);
+        
+        return true;
+      } catch (error) {
+        console.error('[Login] 保存用户认证数据出错:', error);
         return false;
       }
-      
-      console.debug('[Login] 开始保存用户认证数据:', userData);
-      
-      // 保存所有必要的用户信息到localStorage
-      localStorage.setItem('user_uuid', userData.uuid);
-      localStorage.setItem('username', userData.username);
-      localStorage.setItem('display_name', userData.display_name || userData.username);
-      localStorage.setItem('isLoggedIn', 'true');
-      
-      // 如果响应中含有token，也保存起来
-      if (userData.token) {
-        localStorage.setItem('token', userData.token);
-      }
-      
-      console.debug('[Login] 用户认证数据保存完成');
-      return true;
     },
 
     async handleLogin() {
       try {
-        // 添加auth_type参数，用于选择返回token的方式
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
@@ -145,71 +154,54 @@ export default {
           body: JSON.stringify({
             username: this.loginForm.username,
             password: this.loginForm.password,
-            auth_type: 'both' // 同时在Cookie和响应体中返回token
+            auth_type: 'both'
           }),
-          credentials: 'include' // 确保接收和发送Cookie
+          credentials: 'include'
         });
 
         const data = await response.json();
         console.log('登录响应:', data);
 
         if (data.status === "success") {
-          // 处理用户数据 - 直接从响应中获取，不需要嵌套结构
-          const userData = data.data || {};
+          // 最简化处理: 直接从响应获取用户数据并保存
+          console.log('登录成功, 开始保存用户数据');
           
-          console.log('处理后的用户数据:', userData);
+          // 保存基本数据到localStorage
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('username', this.loginForm.username);
           
-          // 检查必要字段
-          if (!userData.uuid || !userData.username) {
-            console.error('登录成功但缺少必要用户信息:', data);
-            this.$message.error('登录失败，服务器返回的用户信息不完整');
-            return;
+          // 如果有token也保存
+          if (data.data && data.data.token) {
+            localStorage.setItem('token', data.data.token);
           }
           
-          // 保存用户数据
-          const saved = this.saveUserAuth(userData);
-          if (saved) {
-            console.log('用户数据保存成功，准备触发事件');
-            
-            // 先触发用户信息更新事件
-            eventBus.emit('user-info-updated', userData);
-            
-            // 等待250ms后触发登录状态变化事件
-            setTimeout(() => {
-              console.log('触发登录状态变化事件');
-              eventBus.emit('login-state-changed', true);
-              
-              // 再等待250ms后执行路由跳转
-              setTimeout(() => {
-                console.log('事件触发完成，准备重定向');
-                // 检查是否有重定向参数
-                const redirect = this.$route.query.redirect || '/';
-                // 使用Vue Router导航
-                this.$router.push(redirect);
-              }, 250);
-            }, 250);
-          } else {
-            console.error('用户数据保存失败');
-            this.$message.error('登录成功但保存用户信息失败');
+          // 保存用户ID(如果有)
+          if (data.data && data.data.uuid) {
+            localStorage.setItem('user_uuid', data.data.uuid);
           }
+          
+          console.log('用户数据保存完成，准备跳转');
+          
+          // 简单直接的跳转方式
+          const redirect = this.$route.query.redirect || '/';
+          this.$router.push(redirect);
         } else {
-          this.$message.error(data.message || '登录失败，请检查用户名和密码');
+          alert(data.message || '登录失败，请检查用户名和密码');
         }
       } catch (error) {
         console.error('登录出错：', error);
-        this.$message.error('登录失败，请稍后重试');
+        alert('登录失败，请稍后重试');
       }
     },
     
     async handleRegister() {
       if (this.registerForm.password !== this.registerForm.confirmPassword) {
-        this.$message.error('两次输入的密码不一致！');
+        alert('两次输入的密码不一致！');
         return;
       }
 
       try {
         console.log('开始注册请求...');
-        // 添加auth_type参数
         const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: {
@@ -219,10 +211,10 @@ export default {
             username: this.registerForm.username,
             email: this.registerForm.email,
             password: this.registerForm.password,
-            display_name: this.registerForm.username, // 默认显示名与用户名相同
-            auth_type: 'both' // 同时在Cookie和响应体中返回token
+            display_name: this.registerForm.username,
+            auth_type: 'both'
           }),
-          credentials: 'include' // 确保接收和发送Cookie
+          credentials: 'include'
         });
 
         console.log('收到注册响应');
@@ -230,58 +222,34 @@ export default {
         console.log('注册响应数据:', data);
 
         if (data.status === "success") {
-          console.log('注册成功，开始处理用户数据');
-          // 处理用户数据 - 直接从响应中获取，不考虑嵌套
-          const userData = data.data || {};
+          console.log('注册成功，保存基本用户数据');
           
-          console.log('处理后的用户数据:', userData);
+          // 最简化处理: 直接保存基本数据到localStorage
+          localStorage.setItem('isLoggedIn', 'true');
+          localStorage.setItem('username', this.registerForm.username);
           
-          // 检查必要字段
-          if (!userData.uuid || !userData.username) {
-            console.error('注册成功但缺少必要用户信息:', data);
-            this.$message.error('注册成功但无法自动登录，请手动登录');
-            this.activeTab = 'login';
-            this.resetForms();
-            return;
+          // 如果有token也保存
+          if (data.data && data.data.token) {
+            localStorage.setItem('token', data.data.token);
           }
-
-          console.log('开始保存用户数据...');
-          const saved = this.saveUserAuth(userData);
-          console.log('用户数据保存结果:', saved);
           
-          if (saved) {
-            console.log('用户数据保存成功，准备触发事件');
-            
-            // 先触发用户信息更新事件
-            eventBus.emit('user-info-updated', userData);
-            
-            // 等待250ms后触发登录状态变化事件
-            setTimeout(() => {
-              console.log('触发登录状态变化事件');
-              eventBus.emit('login-state-changed', true);
-              
-              // 再等待250ms后执行路由跳转
-              setTimeout(() => {
-                console.log('事件触发完成，准备重定向');
-                // 检查是否有重定向参数
-                const redirect = this.$route.query.redirect || '/';
-                // 使用Vue Router导航
-                this.$router.push(redirect);
-              }, 250);
-            }, 250);
-          } else {
-            console.error('用户数据保存失败');
-            this.$message.error('注册成功但自动登录失败，请手动登录');
-            this.activeTab = 'login';
-            this.resetForms();
+          // 保存用户ID(如果有)
+          if (data.data && data.data.uuid) {
+            localStorage.setItem('user_uuid', data.data.uuid);
           }
+          
+          console.log('用户数据保存完成，准备跳转');
+          
+          // 简单直接的跳转方式
+          const redirect = this.$route.query.redirect || '/';
+          this.$router.push(redirect);
         } else {
           console.error('注册失败:', data.message);
-          this.$message.error(data.message || '注册失败，请稍后重试');
+          alert(data.message || '注册失败，请稍后重试');
         }
       } catch (error) {
         console.error('注册过程出错：', error);
-        this.$message.error('注册失败，请稍后重试');
+        alert('注册失败，请稍后重试');
       }
     },
     

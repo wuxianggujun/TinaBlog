@@ -27,6 +27,39 @@ const std::string JWT_SECRET = "wuxianggujun-tina-blog-3344207732";
 // 定义一个全局指针，用于在信号处理程序中访问DbManager
 static DbManager* g_dbManager = nullptr;
 
+// 获取当前工作目录的函数
+std::string getCurrentWorkingDir() {
+    try {
+        // 尝试使用C++17标准库
+        return std::filesystem::current_path().string();
+    } catch(const std::exception& e) {
+        // 如果C++17方法失败，使用平台特定方法
+        char buffer[1024];
+#ifdef _WIN32
+        if (_getcwd(buffer, sizeof(buffer)) != NULL) {
+            return std::string(buffer);
+        }
+#else
+        if (getcwd(buffer, sizeof(buffer)) != NULL) {
+            return std::string(buffer);
+        }
+#endif
+        std::cerr << "获取当前工作目录失败: " << e.what() << std::endl;
+        return "未知目录";
+    }
+}
+
+// 检查文件或目录是否存在
+bool fileExists(const std::string& path) {
+    try {
+        return std::filesystem::exists(path);
+    } catch(const std::exception& e) {
+        std::cerr << "检查文件路径失败: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+
 // 信号处理函数，用于优雅地处理程序终止
 void signalHandler(int signum) {
     std::cout << "收到信号 " << signum << "，正在关闭应用..." << std::endl;
@@ -50,6 +83,12 @@ static void setConsoleUTF8() {
 int main()
 {
     setConsoleUTF8();
+
+        
+    // 输出当前工作目录
+    std::string currentDir = getCurrentWorkingDir();
+    std::cout << "当前工作目录: " << currentDir << std::endl;
+    
     
     // 设置信号处理
     std::signal(SIGINT, signalHandler);
@@ -170,9 +209,35 @@ int main()
     // 配置Drogon服务器
     drogon::app().addListener("0.0.0.0", 8080);
     
-    // 设置Vue编译后的dist目录作为文档根目录
-    const std::string distPath = "./html/blog/dist";
+    // 设置文档根目录
+    const std::string distPath = "./html/blog";
     std::cout << "设置静态资源目录: " << distPath << std::endl;
+
+    // 检查静态资源目录是否存在
+    std::string absoluteDistPath = currentDir + "/" + distPath;
+    if (fileExists(distPath)) {
+        std::cout << "静态资源相对路径存在: " << distPath << std::endl;
+    } else {
+        std::cout << "警告: 相对路径不存在: " << distPath << std::endl;
+    }
+    
+    if (fileExists(absoluteDistPath)) {
+        std::cout << "静态资源绝对路径存在: " << absoluteDistPath << std::endl;
+    } else {
+        std::cout << "警告: 绝对路径不存在: " << absoluteDistPath << std::endl;
+        
+        // 尝试列出当前目录下的内容
+        std::cout << "当前目录内容:" << std::endl;
+        try {
+            for (const auto& entry : std::filesystem::directory_iterator(currentDir)) {
+                std::cout << "  " << entry.path().string() << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "  无法列出目录内容: " << e.what() << std::endl;
+        }
+    }
+    
+    
     drogon::app().setDocumentRoot(distPath);
     
     // 设置静态文件缓存时间
@@ -180,10 +245,17 @@ int main()
     
     // 配置默认首页
     drogon::app().registerHandler("/", 
-        [distPath](const drogon::HttpRequestPtr& req, 
+        [distPath, currentDir](const drogon::HttpRequestPtr& req, 
            std::function<void(const drogon::HttpResponsePtr&)>&& callback) {
+            std::string indexPath = distPath + "/index.html";
+            // 检查index.html是否存在
+            if (fileExists(indexPath)) {
+                std::cout << "请求 /: index.html 存在于 " << indexPath << std::endl;
+            } else {
+                std::cout << "警告 - 请求 /: index.html 不存在于 " << indexPath << std::endl;
+            }
             // 返回首页index.html
-            auto resp = drogon::HttpResponse::newFileResponse(distPath + "/index.html");
+            auto resp = drogon::HttpResponse::newFileResponse(indexPath);
             callback(resp);
         });
     
@@ -192,8 +264,10 @@ int main()
         [distPath](const drogon::HttpRequestPtr& req, 
            std::function<void(const drogon::HttpResponsePtr&)>&& callback, 
            const std::string& path) {
+            std::string indexPath = distPath + "/index.html";
+            std::cout << "请求路径: /" << path << " -> 将返回 index.html" << std::endl;
             // 对于任何路径请求，都返回index.html以支持前端路由
-            auto resp = drogon::HttpResponse::newFileResponse(distPath + "/index.html");
+            auto resp = drogon::HttpResponse::newFileResponse(indexPath);
             callback(resp);
         }, {drogon::Get});
     

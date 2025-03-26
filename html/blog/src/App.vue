@@ -32,24 +32,18 @@ export default {
     }
   },
   created() {
-    // 设置响应式监听
-    watchEffect(() => {
-      const loggedIn = this.isUserLoggedIn;
-      const userName = this.userDisplayName;
-      console.debug('[App] watchEffect - 登录状态:', loggedIn, '用户名:', userName);
-      // 当计算属性变化时，可以在这里执行额外操作...
-    });
+    // 完全简化created钩子，只做最基本的初始化
+    console.debug('[App] created生命周期钩子');
     
-    // 在created钩子中初始化事件监听，确保尽早捕获事件
-    // 确保每种事件类型只监听一次
-    eventBus.off('login-state-changed', this.checkLoginStatus);
-    eventBus.off('user-info-updated', this.handleUserInfoUpdate);
+    // 检查localStorage中的登录状态，不涉及任何可能为null的对象
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const username = localStorage.getItem('username');
     
-    eventBus.on('login-state-changed', this.checkLoginStatus);
-    eventBus.on('user-info-updated', this.handleUserInfoUpdate);
+    // 直接设置组件数据
+    this.isLoggedIn = isLoggedIn;
+    this.username = username || '';
     
-    // 初始化检查登录状态
-    this.checkLoginStatus();
+    // 不再在created中调用checkLoginStatus
   },
   mounted() {
     // 如果已登录但在登录页面，自动重定向
@@ -92,24 +86,92 @@ export default {
   },
   methods: {
     checkLoginStatus() {
-      console.debug('[App] 检查登录状态...');
-      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      const username = localStorage.getItem('username');
-      console.debug('[App] 从localStorage获取的状态:', { isLoggedIn, username });
-      
-      // 更新组件数据
-      if (this.isLoggedIn !== isLoggedIn) {
+      try {
+        console.debug('[App] 检查登录状态...');
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        const username = localStorage.getItem('username');
+        console.debug('[App] 从localStorage获取的状态:', { isLoggedIn, username });
+        
+        // 更新组件数据
         this.isLoggedIn = isLoggedIn;
-      }
-      
-      if (this.username !== username) {
         this.username = username || '';
+        
+        console.debug('[App] 更新后的状态:', { isLoggedIn: this.isLoggedIn, username: this.username });
+        
+        // 简化后的方法，不访问任何可能为null的对象
+        // 移除对this.$route的访问
+        
+        // 强制刷新UI
+        this.$forceUpdate();
+      } catch (error) {
+        console.error('[App] 检查登录状态时出错:', error);
       }
+    },
+    
+    // 新增方法：直接获取当前登录状态
+    getLoginStatus() {
+      return {
+        isLoggedIn: this.isLoggedIn || localStorage.getItem('isLoggedIn') === 'true',
+        username: this.username || localStorage.getItem('username') || '',
+        forceUpdateFlag: this.forceUpdateFlag
+      };
+    },
+    
+    // 添加能被子组件调用的调试方法
+    debugLogin() {
+      console.debug('[App] 调试登录状态');
+      console.debug('[App] 当前状态:', {
+        isLoggedIn: this.isLoggedIn,
+        username: this.username,
+        isUserLoggedIn: this.isUserLoggedIn,
+        userDisplayName: this.userDisplayName,
+        forceUpdateFlag: this.forceUpdateFlag
+      });
       
-      console.debug('[App] 更新后的状态:', { isLoggedIn: this.isLoggedIn, username: this.username });
+      // 本地存储检查
+      const localStorage_isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const localStorage_username = localStorage.getItem('username');
+      console.debug('[App] 本地存储:', {
+        isLoggedIn: localStorage_isLoggedIn,
+        username: localStorage_username,
+        token: localStorage.getItem('token') ? '存在' : '不存在',
+        user_uuid: localStorage.getItem('user_uuid') || '无'
+      });
       
-      // 强制刷新UI
+      // DOM检查
+      console.debug('[App] DOM状态:', {
+        loginBtn: document.querySelector('.login-btn') ? '可见' : '不可见',
+        createBtn: document.querySelector('.create-btn') ? '可见' : '不可见',
+        userMenu: document.querySelector('.user-menu') ? '可见' : '不可见'
+      });
+      
+      return {
+        status: 'ok',
+        loginStatus: this.isLoggedIn, 
+        username: this.username
+      };
+    },
+    
+    updateLoginState(isLoggedIn, username) {
+      console.debug('[App] updateLoginState被调用:', { isLoggedIn, username });
+      
+      this.isLoggedIn = isLoggedIn;
+      this.username = username;
+      
+      console.debug('[App] 状态已更新，启动强制刷新');
+      
+      // 强制刷新视图
+      this.forceUpdateFlag++;
       this.$forceUpdate();
+      
+      // 延迟再次刷新
+      setTimeout(() => {
+        console.debug('[App] 延迟刷新');
+        this.forceUpdateFlag++;
+        this.$forceUpdate();
+      }, 100);
+      
+      return true;
     },
     handleStorageChange(event) {
       if (event.key === 'isLoggedIn' || event.key === 'username') {
@@ -302,27 +364,29 @@ export default {
         
         <!-- 右侧功能区 -->
         <div class="nav-right">
-          <!-- 仅在非创建文章页面显示"创作"按钮 -->
-          <router-link v-if="isUserLoggedIn && $route.path !== '/create'" to="/create" class="create-btn">
+          <!-- 登录按钮 - 未登录时显示 -->
+          <router-link v-if="!isLoggedIn" to="/login" class="login-btn">登录</router-link>
+          
+          <!-- 创作按钮 - 已登录且不在创建页面时显示 -->
+          <router-link v-if="isLoggedIn && $route.path !== '/create'" to="/create" class="create-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 5px;">
               <path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" fill="currentColor"/>
             </svg>
             创作
           </router-link>
           
-          <!-- 在创建文章页面显示"发布文章"按钮 -->
-          <button v-if="isUserLoggedIn && $route.path === '/create'" @click="handlePublish" class="publish-btn">
+          <!-- 发布文章按钮 - 已登录且在创建页面时显示 -->
+          <button v-if="isLoggedIn && $route.path === '/create'" @click="handlePublish" class="publish-btn">
             <svg viewBox="0 0 1024 1024" width="16" height="16" style="margin-right: 5px;">
               <path d="M725.333333 362.666667h42.666667a128 128 0 0 1 128 128v256a128 128 0 0 1-128 128H256a128 128 0 0 1-128-128V490.666667a128 128 0 0 1 128-128h42.666667v-21.333334a213.333333 213.333333 0 0 1 426.666666 0v21.333334z m-42.666666 0v-21.333334a170.666667 170.666667 0 0 0-341.333334 0v21.333334h341.333334z m-384 170.666666a42.666667 42.666667 0 1 0 85.333333 0 42.666667 42.666667 0 0 0-85.333333 0z m170.666666 0a42.666667 42.666667 0 1 0 85.333334 0 42.666667 42.666667 0 0 0-85.333334 0z m170.666667 0a42.666667 42.666667 0 1 0 85.333333 0 42.666667 42.666667 0 0 0-85.333333 0z" fill="currentColor"></path>
             </svg>
             发布文章
           </button>
           
-          <!-- 登录/用户信息 -->
-          <router-link v-if="!isUserLoggedIn" to="/login" class="login-btn">登录</router-link>
-          <div v-else class="user-menu" @click.stop="toggleDropdown">
+          <!-- 用户菜单 - 已登录时显示 -->
+          <div v-if="isLoggedIn" class="user-menu" @click.stop="toggleDropdown">
             <div class="user-avatar">
-              <span class="username">{{ userDisplayName }}</span>
+              <span class="username">{{ username }}</span>
               <i class="dropdown-icon"></i>
             </div>
             <div v-show="showDropdown" class="dropdown-menu">
@@ -337,7 +401,7 @@ export default {
     </nav>
 
     <main class="main">
-      <router-view ref="routerView" />
+      <router-view ref="routerView" @login-state-changed="checkLoginStatus" />
     </main>
 
     <footer class="footer">
