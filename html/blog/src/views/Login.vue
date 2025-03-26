@@ -119,7 +119,7 @@ export default {
       
       console.debug('[Login] 开始保存用户认证数据:', userData);
       
-      // 同步确保localStorage更新，不等待事件传递
+      // 保存所有必要的用户信息到localStorage
       localStorage.setItem('user_uuid', userData.uuid);
       localStorage.setItem('username', userData.username);
       localStorage.setItem('display_name', userData.display_name || userData.username);
@@ -130,38 +130,7 @@ export default {
         localStorage.setItem('token', userData.token);
       }
       
-      console.debug('[Login] localStorage保存完成，开始触发事件');
-      
-      // 准备完整的用户信息
-      const userInfo = {
-        uuid: userData.uuid,
-        username: userData.username,
-        display_name: userData.display_name || userData.username,
-        token: userData.token || localStorage.getItem('token')
-      };
-
-      // 注意事件触发顺序非常重要：
-      // 1. 先触发用户信息更新事件
-      console.debug('[Login] 触发user-info-updated事件');
-      eventBus.emit('user-info-updated', userInfo);
-      
-      // 2. 再触发登录状态变化事件
-      console.debug('[Login] 触发login-state-changed事件');
-      eventBus.emit('login-state-changed', true);
-      
-      // 3. 确保所有更新都被处理后再跳转
-      console.debug('[Login] 准备页面跳转');
-      
-      // 使用Vue Router的nextTick和setTimeout确保状态更新和DOM渲染完成后再跳转
-      this.$nextTick(() => {
-        setTimeout(() => {
-          // 检查是否有重定向参数
-          const redirect = this.$route.query.redirect || '/';
-          this.$router.push(redirect);
-          console.debug('[Login] 已跳转到:', redirect);
-        }, 50); // 短暂延迟，确保事件处理完成
-      });
-      
+      console.debug('[Login] 用户认证数据保存完成');
       return true;
     },
 
@@ -185,36 +154,56 @@ export default {
         console.log('登录响应:', data);
 
         if (data.status === "success") {
-          // 登录成功,保存用户数据
+          // 处理用户数据 - 直接从响应中获取，不需要嵌套结构
           const userData = data.data || {};
+          
+          console.log('处理后的用户数据:', userData);
           
           // 检查必要字段
           if (!userData.uuid || !userData.username) {
             console.error('登录成功但缺少必要用户信息:', data);
-            alert('登录失败，服务器返回的用户信息不完整');
+            this.$message.error('登录失败，服务器返回的用户信息不完整');
             return;
           }
           
           // 保存用户数据
           const saved = this.saveUserAuth(userData);
           if (saved) {
-            console.log('用户数据保存成功');
+            console.log('用户数据保存成功，准备触发事件');
+            
+            // 先触发用户信息更新事件
+            eventBus.emit('user-info-updated', userData);
+            
+            // 等待250ms后触发登录状态变化事件
+            setTimeout(() => {
+              console.log('触发登录状态变化事件');
+              eventBus.emit('login-state-changed', true);
+              
+              // 再等待250ms后执行路由跳转
+              setTimeout(() => {
+                console.log('事件触发完成，准备重定向');
+                // 检查是否有重定向参数
+                const redirect = this.$route.query.redirect || '/';
+                // 使用Vue Router导航
+                this.$router.push(redirect);
+              }, 250);
+            }, 250);
           } else {
             console.error('用户数据保存失败');
-            alert('登录成功但保存用户信息失败');
+            this.$message.error('登录成功但保存用户信息失败');
           }
         } else {
-          alert(data.message || '登录失败，请检查用户名和密码');
+          this.$message.error(data.message || '登录失败，请检查用户名和密码');
         }
       } catch (error) {
         console.error('登录出错：', error);
-        alert('登录失败，请稍后重试');
+        this.$message.error('登录失败，请稍后重试');
       }
     },
     
     async handleRegister() {
       if (this.registerForm.password !== this.registerForm.confirmPassword) {
-        alert('两次输入的密码不一致！');
+        this.$message.error('两次输入的密码不一致！');
         return;
       }
 
@@ -242,13 +231,15 @@ export default {
 
         if (data.status === "success") {
           console.log('注册成功，开始处理用户数据');
+          // 处理用户数据 - 直接从响应中获取，不考虑嵌套
           const userData = data.data || {};
-          console.log('用户数据:', userData);
+          
+          console.log('处理后的用户数据:', userData);
           
           // 检查必要字段
           if (!userData.uuid || !userData.username) {
             console.error('注册成功但缺少必要用户信息:', data);
-            alert('注册成功但无法自动登录，请手动登录');
+            this.$message.error('注册成功但无法自动登录，请手动登录');
             this.activeTab = 'login';
             this.resetForms();
             return;
@@ -258,19 +249,39 @@ export default {
           const saved = this.saveUserAuth(userData);
           console.log('用户数据保存结果:', saved);
           
-          if (!saved) {
+          if (saved) {
+            console.log('用户数据保存成功，准备触发事件');
+            
+            // 先触发用户信息更新事件
+            eventBus.emit('user-info-updated', userData);
+            
+            // 等待250ms后触发登录状态变化事件
+            setTimeout(() => {
+              console.log('触发登录状态变化事件');
+              eventBus.emit('login-state-changed', true);
+              
+              // 再等待250ms后执行路由跳转
+              setTimeout(() => {
+                console.log('事件触发完成，准备重定向');
+                // 检查是否有重定向参数
+                const redirect = this.$route.query.redirect || '/';
+                // 使用Vue Router导航
+                this.$router.push(redirect);
+              }, 250);
+            }, 250);
+          } else {
             console.error('用户数据保存失败');
-            alert('注册成功但自动登录失败，请手动登录');
+            this.$message.error('注册成功但自动登录失败，请手动登录');
             this.activeTab = 'login';
             this.resetForms();
           }
         } else {
           console.error('注册失败:', data.message);
-          alert(data.message || '注册失败，请稍后重试');
+          this.$message.error(data.message || '注册失败，请稍后重试');
         }
       } catch (error) {
         console.error('注册过程出错：', error);
-        alert('注册失败，请稍后重试');
+        this.$message.error('注册失败，请稍后重试');
       }
     },
     

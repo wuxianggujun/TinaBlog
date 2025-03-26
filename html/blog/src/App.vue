@@ -2,6 +2,7 @@
 import { RouterLink, RouterView } from 'vue-router'
 import './assets/base.css'
 import eventBus from './utils/eventBus';
+import { watchEffect } from 'vue';
 
 export default {
   data() {
@@ -9,7 +10,8 @@ export default {
       isLoggedIn: false,
       username: '',
       showDropdown: false,
-      loginValidationInterval: null
+      loginValidationInterval: null,
+      forceUpdateFlag: 0  // 新增强制更新标志
     }
   },
   computed: {
@@ -30,6 +32,14 @@ export default {
     }
   },
   created() {
+    // 设置响应式监听
+    watchEffect(() => {
+      const loggedIn = this.isUserLoggedIn;
+      const userName = this.userDisplayName;
+      console.debug('[App] watchEffect - 登录状态:', loggedIn, '用户名:', userName);
+      // 当计算属性变化时，可以在这里执行额外操作...
+    });
+    
     // 在created钩子中初始化事件监听，确保尽早捕获事件
     // 确保每种事件类型只监听一次
     eventBus.off('login-state-changed', this.checkLoginStatus);
@@ -242,11 +252,35 @@ export default {
         username: this.username
       });
       
-      // 强制更新视图
+      // 使用$nextTick确保DOM更新
       this.$nextTick(() => {
+        // 触发重新计算计算属性
         this.$forceUpdate();
         console.debug('[App] 视图已强制更新');
+        
+        // 额外调试: 检查更新后的DOM状态
+        console.debug('[App] 更新后的DOM状态:', {
+          isUserLoggedInComputed: this.isUserLoggedIn,
+          userDisplayNameComputed: this.userDisplayName,
+          navLoginButton: document.querySelector('.login-btn'),
+          navUserMenu: document.querySelector('.user-menu'),
+          createButton: document.querySelector('.create-btn')
+        });
       });
+      
+      // 10ms后再次触发状态检查，确保状态已传播
+      setTimeout(() => {
+        console.debug('[App] 延迟检查 - 登录状态:', {
+          isLoggedIn: this.isLoggedIn,
+          username: this.username,
+          isUserLoggedInComputed: this.isUserLoggedIn,
+          userDisplayNameComputed: this.userDisplayName
+        });
+        this.$forceUpdate(); // 再次强制更新
+      }, 10);
+      
+      // 更新强制刷新标志
+      this.forceUpdateFlag++;
     }
   }
 }

@@ -18,10 +18,24 @@ class EventBus {
 
     // 触发事件
     emit(event, ...args) {
+        console.debug(`[EventBus] 触发事件 "${event}"`, args);
+        
         if (this.events[event]) {
-            this.events[event].forEach(callback => {
-                callback(...args);
+            console.debug(`[EventBus] 事件 "${event}" 有 ${this.events[event].length} 个监听器`);
+            
+            // 使用微任务(Promise)而非宏任务(setTimeout)处理，提高优先级
+            Promise.resolve().then(() => {
+                this.events[event].forEach(callback => {
+                    try {
+                        callback(...args);
+                    } catch (error) {
+                        console.error(`[EventBus] 事件 "${event}" 回调执行错误:`, error);
+                    }
+                });
+                console.debug(`[EventBus] 事件 "${event}" 所有回调执行完成`);
             });
+        } else {
+            console.warn(`[EventBus] 事件 "${event}" 没有监听器`);
         }
     }
 

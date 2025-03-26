@@ -101,15 +101,12 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
                 userData["uuid"] = result[0]["uuid"].as<std::string>();
                 userData["username"] = result[0]["username"].as<std::string>();
                 userData["display_name"] = result[0]["display_name"].as<std::string>();
-
-                // 创建响应
-                Json::Value responseData;
-                responseData["user"] = userData;
+                
                 if (returnTokenInBody) {
-                    responseData["token"] = token;
+                    userData["token"] = token;
                 }
 
-                auto resp = utils::createSuccessResponse("登录成功", responseData);
+                auto resp = utils::createSuccessResponse("登录成功", userData);
                 if (!returnTokenInBody) {
                     drogon::Cookie tokenCookie("token", token);
                     tokenCookie.setHttpOnly(true);
