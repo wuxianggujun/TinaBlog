@@ -10,8 +10,8 @@ AuthController::AuthController() {
     // 使用单例模式获取数据库管理器
     m_dbManager = std::shared_ptr<DbManager>(&DbManager::getInstance());
     
-    // 初始化JWT管理器
-    m_jwtManager = std::make_shared<JwtManager>();
+    // 使用单例模式获取JWT管理器
+    m_jwtManager = std::shared_ptr<JwtManager>(&JwtManager::getInstance());
     
     // 初始化密码工具类
     utils::PasswordUtils::initialize();
@@ -296,10 +296,9 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             LOG_INFO << "用户数据插入成功，开始生成JWT令牌";
                             
                             // 生成JWT令牌
-                            JwtManager jwtManager;
                             std::string token;
                             try {
-                                token = jwtManager.generateToken(
+                                token = JwtManager::getInstance().generateToken(
                                     uuid,  // userUuid
                                     username,  // username
                                     false   // isAdmin，新注册用户默认不是管理员

@@ -5,8 +5,8 @@
 #include "blog/utils/HttpUtils.hpp"
 
 JwtAuthFilter::JwtAuthFilter() {
-    // 创建JWT管理器
-    m_jwtManager = std::make_shared<JwtManager>();
+    // 使用单例模式获取JWT管理器
+    m_jwtManager = std::shared_ptr<JwtManager>(&JwtManager::getInstance());
 }
 
 void JwtAuthFilter::doFilter(const drogon::HttpRequestPtr &req,
@@ -73,8 +73,8 @@ void JwtAuthFilter::doFilter(const drogon::HttpRequestPtr &req,
 
 // AdminAuthFilter实现
 AdminAuthFilter::AdminAuthFilter() {
-    // 创建JWT管理器
-    m_jwtManager = std::make_shared<JwtManager>();
+    // 使用单例模式获取JWT管理器
+    m_jwtManager = std::shared_ptr<JwtManager>(&JwtManager::getInstance());
 }
 
 void AdminAuthFilter::doFilter(const drogon::HttpRequestPtr &req,

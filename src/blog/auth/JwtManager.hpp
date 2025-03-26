@@ -31,6 +31,14 @@ public:
     };
 
     /**
+     * 获取JwtManager实例
+     */
+    static JwtManager& getInstance() {
+        static JwtManager instance;
+        return instance;
+    }
+
+    /**
      * 从请求中获取token
      */
     static std::string getTokenFromRequest(const drogon::HttpRequestPtr& req) {
@@ -48,21 +56,6 @@ public:
         }
 
         return "";
-    }
-
-    /**
-     * 构造函数
-     */
-    JwtManager() {
-        // 直接硬编码JWT配置
-        m_secret = "wuxianggujun-tina-blog-3344207732";
-        m_issuer = "tinablog";
-        m_expireTime = 15 * 24 * 3600; // 15天
-        
-        LOG_INFO << "JwtManager初始化成功, 使用硬编码配置";
-        LOG_INFO << "  - 密钥长度: " << m_secret.length();
-        LOG_INFO << "  - 发行者: " << m_issuer;
-        LOG_INFO << "  - 过期时间: " << m_expireTime << "秒";
     }
 
     /**
@@ -184,6 +177,25 @@ public:
     }
 
 private:
+    /**
+     * 私有构造函数
+     */
+    JwtManager() {
+        // 直接硬编码JWT配置
+        m_secret = "wuxianggujun-tina-blog-3344207732";
+        m_issuer = "tinablog";
+        m_expireTime = 15 * 24 * 3600; // 15天
+        
+        LOG_INFO << "JwtManager初始化成功, 使用硬编码配置";
+        LOG_INFO << "  - 密钥长度: " << m_secret.length();
+        LOG_INFO << "  - 发行者: " << m_issuer;
+        LOG_INFO << "  - 过期时间: " << m_expireTime << "秒";
+    }
+
+    // 禁止拷贝和赋值
+    JwtManager(const JwtManager&) = delete;
+    JwtManager& operator=(const JwtManager&) = delete;
+
     // 存储JWT配置
     std::string m_secret;
     std::string m_issuer;
