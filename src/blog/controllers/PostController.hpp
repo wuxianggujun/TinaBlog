@@ -71,4 +71,9 @@ private:
      * 处理文章标签
      */
     void handleTags(int articleId, const Json::Value& tags) const;
+
+    void createArticleWithTransaction(DbManager& dbManager,
+                                    const std::string& userUuid,
+                                    const Json::Value& jsonBody,
+                                    const std::function<void(const drogon::HttpResponsePtr&)>& callback) const;
 }; 

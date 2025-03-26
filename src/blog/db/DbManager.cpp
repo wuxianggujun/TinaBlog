@@ -145,9 +145,7 @@ bool DbManager::createTables() {
             )
         )");
         
-        std::cout << "用户表创建成功" << std::endl;
-        
-        // 创建文章表 - 使用user_uuid引用用户表，slug不唯一
+        // 创建文章表 - 使用user_uuid引用用户表，slug在同一用户下唯一
         m_dbClient->execSqlSync(R"(
             CREATE TABLE IF NOT EXISTS articles (
                 id SERIAL PRIMARY KEY,
@@ -160,7 +158,8 @@ bool DbManager::createTables() {
                 user_uuid VARCHAR(36) NOT NULL REFERENCES users(uuid),
                 is_published BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_uuid, slug)
             )
         )");
         

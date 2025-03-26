@@ -51,9 +51,10 @@
                   type="text"
                   id="categories"
                   v-model="categoryInput"
-                  @keydown.enter.prevent="addCategory"
+                  @keyup.enter.prevent="addCategory"
                   placeholder="输入分类名称并按回车添加"
               />
+              <button type="button" class="add-tag-btn" @click="addCategory">添加</button>
               <div class="tags-container">
                 <span
                     v-for="(category, index) in postForm.categories"
@@ -74,9 +75,10 @@
                   type="text"
                   id="tags"
                   v-model="tagInput"
-                  @keydown.enter.prevent="addTag"
+                  @keyup.enter.prevent="addTag"
                   placeholder="输入标签名称并按回车添加"
               />
+              <button type="button" class="add-tag-btn" @click="addTag">添加</button>
               <div class="tags-container">
                 <span
                     v-for="(tag, index) in postForm.tags"
@@ -378,21 +380,44 @@ export default {
     },
 
     async submitPost() {
+      console.log('提交文章表单，开始处理...');
+      
       // 确保获取最新的编辑器内容
       if (this.editor) {
         this.postForm.content = this.editor.getMarkdown();
+        console.log('已获取编辑器内容，长度:', this.postForm.content.length);
+      } else {
+        console.warn('编辑器实例不存在');
       }
 
       if (!this.postForm.title || !this.postForm.content) {
+        console.warn('标题或内容为空，终止提交');
         alert('请填写必填字段');
         return;
       }
 
       // 验证和处理slug
       this.validateSlug();
+      
+      // 详细检查分类和标签
+      console.log('===== 表单数据诊断 =====');
+      console.log('标题:', this.postForm.title);
+      console.log('摘要:', this.postForm.summary);
+      console.log('Slug:', this.postForm.slug);
+      console.log('分类数组:', this.postForm.categories);
+      console.log('分类数组类型:', Array.isArray(this.postForm.categories) ? 'Array' : typeof this.postForm.categories);
+      console.log('分类数组长度:', this.postForm.categories.length);
+      console.log('分类JSON:', JSON.stringify(this.postForm.categories));
+      console.log('标签数组:', this.postForm.tags);
+      console.log('标签数组类型:', Array.isArray(this.postForm.tags) ? 'Array' : typeof this.postForm.tags);
+      console.log('标签数组长度:', this.postForm.tags.length);
+      console.log('标签JSON:', JSON.stringify(this.postForm.tags));
+      console.log('发布状态:', this.postForm.published);
+      console.log('========================');
 
       try {
         this.isSubmitting = true;
+        console.log('设置isSubmitting=true');
 
         // 从localStorage获取token
         const token = localStorage.getItem('token');
@@ -428,6 +453,19 @@ export default {
           // 验证出错不阻止发布尝试
         }
 
+        // 准备提交数据
+        const postData = {
+          title: this.postForm.title,
+          content: this.postForm.content,
+          summary: this.postForm.summary,
+          slug: this.postForm.slug,
+          categories: this.postForm.categories,
+          tags: this.postForm.tags,
+          published: this.postForm.published // 修改：使用 published 替代 is_published
+        };
+        
+        console.log('准备提交的文章数据:', postData);
+
         // 创建文章
         const response = await fetch('/api/posts', {
           method: 'POST',
@@ -435,20 +473,20 @@ export default {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(this.postForm)
+          body: JSON.stringify(postData)
         });
 
         const data = await response.json();
 
-        if (response.ok && data.success) {
+        if (response.ok && data.status === 'success') {
           // 创建成功
           this.showDialog = false;
 
           // 构建文章链接
-          const postLink = data.slug ? `/post/${data.slug}` : `/post/${data.id}`;
+          const postLink = data.data.slug ? `/post/${data.data.slug}` : `/post/${data.data.id}`;
 
           // 显示成功信息包含链接
-          const message = `文章创建成功！文章ID: ${data.id}`;
+          const message = `文章创建成功！文章ID: ${data.data.id}`;
           alert(message);
 
           // 跳转到文章详情页或首页
@@ -629,6 +667,14 @@ export default {
 
 .tag-input-container {
   margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.tag-input-container input {
+  flex: 1;
+  min-width: 200px;
 }
 
 .tags-container {
@@ -636,6 +682,7 @@ export default {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.75rem;
+  width: 100%;
 }
 
 .tag {
@@ -814,6 +861,22 @@ export default {
 }
 
 .editor-toolbar .publish-btn:hover {
+  background-color: #4f46e5;
+}
+
+.add-tag-btn {
+  background-color: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  margin-left: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.add-tag-btn:hover {
   background-color: #4f46e5;
 }
 </style> 
