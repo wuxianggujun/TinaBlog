@@ -93,11 +93,38 @@
           </div>
 
           <div class="form-group publish-option">
-            <label class="checkbox-container">
-              <input type="checkbox" v-model="postForm.published">
-              <span class="checkmark"></span>
-              立即发布
-            </label>
+            <h4>发布设置</h4>
+            <div class="publish-options-container">
+              <div class="publish-option-toggle">
+                <div class="toggle-option" 
+                     :class="{ active: postForm.published }"
+                     @click="postForm.published = true">
+                  <div class="toggle-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  <div class="toggle-text">
+                    <div class="toggle-title">公开发布</div>
+                    <div class="toggle-desc">所有访问者均可查看此文章</div>
+                  </div>
+                </div>
+                
+                <div class="toggle-option" 
+                     :class="{ active: !postForm.published }"
+                     @click="postForm.published = false">
+                  <div class="toggle-icon">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                      <path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z" fill="currentColor"/>
+                    </svg>
+                  </div>
+                  <div class="toggle-text">
+                    <div class="toggle-title">私人文章</div>
+                    <div class="toggle-desc">仅自己可以查看</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -306,6 +333,21 @@ export default {
 
       // 去除首尾连字符
       this.postForm.slug = this.postForm.slug.replace(/^-+|-+$/g, '');
+      
+      // 确保符合后端验证规则：^[a-z0-9]+(?:-[a-z0-9]+)*$
+      const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+      if (!slugRegex.test(this.postForm.slug)) {
+        console.warn('Slug不符合格式要求，系统将自动调整');
+        // 如果不符合规则，简化处理成只有字母和数字
+        this.postForm.slug = this.postForm.slug.replace(/-/g, '');
+        
+        // 如果调整后仍为空，生成一个基于时间戳的slug
+        if (!this.postForm.slug) {
+          this.postForm.slug = 'post-' + Date.now().toString().slice(-8);
+        }
+      }
+      
+      console.log('验证后的slug:', this.postForm.slug);
     },
 
     // 显示发布对话框
@@ -415,6 +457,17 @@ export default {
       console.log('发布状态:', this.postForm.published);
       console.log('========================');
 
+      // 确保分类和标签为数组类型
+      if (!Array.isArray(this.postForm.categories)) {
+        console.warn('分类不是数组，将自动修正');
+        this.postForm.categories = [];
+      }
+      
+      if (!Array.isArray(this.postForm.tags)) {
+        console.warn('标签不是数组，将自动修正');
+        this.postForm.tags = [];
+      }
+
       try {
         this.isSubmitting = true;
         console.log('设置isSubmitting=true');
@@ -461,7 +514,7 @@ export default {
           slug: this.postForm.slug,
           categories: this.postForm.categories,
           tags: this.postForm.tags,
-          published: this.postForm.published // 修改：使用 published 替代 is_published
+          published: this.postForm.published
         };
         
         console.log('准备提交的文章数据:', postData);
@@ -473,10 +526,34 @@ export default {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify(postData)
+          body: JSON.stringify(postData),
+          // 添加请求超时控制
+          signal: AbortSignal.timeout(15000) // 15秒超时
+        }).catch(error => {
+          console.error('请求失败:', error);
+          if(error.name === 'AbortError') {
+            alert('请求超时，请稍后重试');
+          } else {
+            alert('网络请求失败，请检查网络连接');
+          }
+          throw error;
         });
 
-        const data = await response.json();
+        if (!response) {
+          this.isSubmitting = false;
+          return;
+        }
+
+        // 添加超时后的代码
+        let data;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          console.error('解析响应JSON失败:', parseError);
+          alert('服务器响应格式错误');
+          this.isSubmitting = false;
+          return;
+        }
 
         if (response.ok && data.status === 'success') {
           // 创建成功
@@ -712,57 +789,80 @@ export default {
   margin-top: 1rem;
 }
 
-.checkbox-container {
+.publish-option h4 {
+  margin-bottom: 0.75rem;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.publish-options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.publish-option-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toggle-option {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
   cursor: pointer;
   user-select: none;
   color: #374151;
   font-weight: normal;
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s;
+  border: 1px solid #e5e7eb;
 }
 
-.checkbox-container input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-  height: 0;
-  width: 0;
+.toggle-option:hover {
+  background-color: #f9fafb;
 }
 
-.checkmark {
-  height: 20px;
-  width: 20px;
-  margin-right: 10px;
-  background-color: #fff;
-  border: 2px solid #d1d5db;
-  border-radius: 4px;
-  position: relative;
+.toggle-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.checkbox-container:hover input ~ .checkmark {
-  border-color: #9ca3af;
+.toggle-text {
+  display: flex;
+  flex-direction: column;
 }
 
-.checkbox-container input:checked ~ .checkmark {
-  background-color: #6366f1;
+.toggle-title {
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.toggle-desc {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+.toggle-option.active {
+  background-color: #f0f5ff;
   border-color: #6366f1;
 }
 
-.checkmark:after {
-  content: "";
-  position: absolute;
-  display: none;
+.toggle-option.active .toggle-icon {
+  color: #6366f1;
 }
 
-.checkbox-container input:checked ~ .checkmark:after {
-  display: block;
-  left: 6px;
-  top: 2px;
-  width: 5px;
-  height: 10px;
-  border: solid white;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+.toggle-option.active .toggle-title {
+  color: #4f46e5;
 }
 
 .cancel-btn, .submit-btn {

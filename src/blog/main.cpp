@@ -252,6 +252,50 @@ int main()
     // 设置静态文件缓存时间
     drogon::app().setStaticFilesCacheTime(0); // 开发环境禁用缓存
     
+    // 输出静态资源目录内容
+    std::cout << "静态资源目录 (" << distPath << ") 内容:" << std::endl;
+    try {
+        for (const auto& entry : std::filesystem::directory_iterator(distPath)) {
+            std::cout << "  " << entry.path().filename().string();
+            if (std::filesystem::is_directory(entry.path())) {
+                std::cout << "/";
+            }
+            std::cout << std::endl;
+            
+            // 如果是assets目录，列出其内容
+            if (std::filesystem::is_directory(entry.path()) && 
+                entry.path().filename().string() == "assets") {
+                std::cout << "    assets/ 目录内容:" << std::endl;
+                try {
+                    for (const auto& assetEntry : std::filesystem::directory_iterator(entry.path())) {
+                        std::cout << "      " << assetEntry.path().filename().string() << std::endl;
+                    }
+                } catch (const std::exception& e) {
+                    std::cerr << "      无法列出assets目录内容: " << e.what() << std::endl;
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "  无法列出静态资源目录内容: " << e.what() << std::endl;
+    }
+    
+    // 添加静态资源路径监听
+    drogon::app().registerHandler("/assets/{path}", 
+        [distPath](const drogon::HttpRequestPtr& req, 
+           std::function<void(const drogon::HttpResponsePtr&)>&& callback,
+           const std::string& path) {
+            std::string assetPath = distPath + "/assets/" + path;
+            std::cout << "请求静态资源: " << assetPath << std::endl;
+            if (fileExists(assetPath)) {
+                auto resp = drogon::HttpResponse::newFileResponse(assetPath);
+                callback(resp);
+            } else {
+                std::cout << "静态资源不存在: " << assetPath << std::endl;
+                auto resp = drogon::HttpResponse::newNotFoundResponse();
+                callback(resp);
+            }
+        });
+    
     // 配置默认首页
     drogon::app().registerHandler("/", 
         [distPath, currentDir](const drogon::HttpRequestPtr& req, 

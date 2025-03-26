@@ -63,12 +63,27 @@ private:
     bool validatePostData(const Json::Value& data, std::string& error) const;
 
     /**
-     * 处理文章分类
+     * 异步处理文章分类
+     */
+    void handleCategoriesAsync(int articleId, const Json::Value& categories, std::function<void()> finalCallback) const;
+
+    /**
+     * 异步处理文章标签
+     */
+    void handleTagsAsync(int articleId, const Json::Value& tags, std::function<void()> finalCallback) const;
+
+    /**
+     * 从分类名生成slug
+     */
+    std::string generateSlug(const std::string& name) const;
+
+    /**
+     * 同步处理文章分类（已弃用，使用异步版本）
      */
     void handleCategories(int articleId, const Json::Value& categories) const;
 
     /**
-     * 处理文章标签
+     * 同步处理文章标签（已弃用，使用异步版本）
      */
     void handleTags(int articleId, const Json::Value& tags) const;
 

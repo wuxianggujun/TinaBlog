@@ -4,6 +4,8 @@
 #include "blog/db/DbManager.hpp"
 #include <regex>
 #include <iostream>
+#include <algorithm>
+#include <cctype>
 
 /**
  * 创建文章
@@ -392,49 +394,68 @@ bool PostController::validatePostData(const Json::Value& data, std::string& erro
  * 处理文章分类
  */
 void PostController::handleCategories(int articleId, const Json::Value& categories) const {
-    auto& dbManager = DbManager::getInstance();
-    
+    // 对每个分类进行处理
     for (const auto& category : categories) {
-        std::string categoryName = category.asString();
+        if (!category.isString()) continue;
         
-        // 检查分类是否存在
-        dbManager.executeQuery(
-            "SELECT id FROM categories WHERE name = $1",
-            [=, &dbManager](const drogon::orm::Result& result) {
-                if (result.empty()) {
-                    // 创建新分类
+        std::string categoryName = category.asString();
+        if (categoryName.empty()) continue;
+        
+        try {
+            // 从分类名生成slug - 替换空格为连字符，转小写
+            std::string slug = categoryName;
+            // 转为小写
+            std::transform(slug.begin(), slug.end(), slug.begin(), 
+                [](unsigned char c){ return std::tolower(c); });
+            // 替换空格为连字符
+            std::replace(slug.begin(), slug.end(), ' ', '-');
+            // 移除非字母数字和连字符的字符
+            slug.erase(std::remove_if(slug.begin(), slug.end(), 
+                [](unsigned char c){ return !(std::isalnum(c) || c == '-'); }), slug.end());
+            
+            std::cout << "正在处理分类: " << categoryName << ", slug: " << slug << std::endl;
+            
+            // 首先查找分类是否已存在
+            DbManager& dbManager = DbManager::getInstance();
+            auto result = dbManager.execSyncQuery("SELECT id FROM categories WHERE name=$1", categoryName);
+            
+            int categoryId;
+            if (result.size() > 0) {
+                // 分类已存在，获取ID
+                categoryId = result[0]["id"].as<int>();
+                
+                // 可能需要更新slug
+                if (!slug.empty()) {
                     dbManager.executeQuery(
-                        "INSERT INTO categories (name) VALUES ($1) RETURNING id",
-                        [=, &dbManager](const drogon::orm::Result& newCategory) {
-                            int categoryId = newCategory[0]["id"].as<int>();
-                            
-                            // 创建文章分类关联
-                            dbManager.executeQuery(
-                                "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2)",
-                                [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {},
-                                articleId,
-                                categoryId
-                            );
+                        "UPDATE categories SET slug=$1 WHERE id=$2",
+                        [](const drogon::orm::Result&) {}, 
+                        [](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "更新分类slug失败: " << e.base().what() << std::endl;
                         },
-                        [](const drogon::orm::DrogonDbException&) {},
-                        categoryName
-                    );
-                } else {
-                    // 使用现有分类
-                    int categoryId = result[0]["id"].as<int>();
-                    
-                    // 创建文章分类关联
-                    dbManager.executeQuery(
-                        "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2)",
-                        [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {},
-                        articleId,
-                        categoryId
+                        slug, categoryId
                     );
                 }
-            },
-            [](const drogon::orm::DrogonDbException&) {},
-            categoryName
-        );
+            } else {
+                // 分类不存在，创建新分类
+                auto insertResult = dbManager.execSyncQuery(
+                    "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id",
+                    categoryName, slug
+                );
+                categoryId = insertResult[0]["id"].as<int>();
+            }
+            
+            // 创建文章与分类的关联
+            dbManager.executeQuery(
+                "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                [](const drogon::orm::Result&) {}, 
+                [](const drogon::orm::DrogonDbException& e) {
+                    std::cerr << "创建文章分类关联失败: " << e.base().what() << std::endl;
+                },
+                articleId, categoryId
+            );
+        } catch (const std::exception& e) {
+            std::cerr << "处理分类时出错: " << e.what() << std::endl;
+        }
     }
 }
 
@@ -442,49 +463,68 @@ void PostController::handleCategories(int articleId, const Json::Value& categori
  * 处理文章标签
  */
 void PostController::handleTags(int articleId, const Json::Value& tags) const {
-    auto& dbManager = DbManager::getInstance();
-    
+    // 对每个标签进行处理
     for (const auto& tag : tags) {
-        std::string tagName = tag.asString();
+        if (!tag.isString()) continue;
         
-        // 检查标签是否存在
-        dbManager.executeQuery(
-            "SELECT id FROM tags WHERE name = $1",
-            [=, &dbManager](const drogon::orm::Result& result) {
-                if (result.empty()) {
-                    // 创建新标签
+        std::string tagName = tag.asString();
+        if (tagName.empty()) continue;
+        
+        try {
+            // 从标签名生成slug - 替换空格为连字符，转小写
+            std::string slug = tagName;
+            // 转为小写
+            std::transform(slug.begin(), slug.end(), slug.begin(), 
+                [](unsigned char c){ return std::tolower(c); });
+            // 替换空格为连字符
+            std::replace(slug.begin(), slug.end(), ' ', '-');
+            // 移除非字母数字和连字符的字符
+            slug.erase(std::remove_if(slug.begin(), slug.end(), 
+                [](unsigned char c){ return !(std::isalnum(c) || c == '-'); }), slug.end());
+            
+            std::cout << "正在处理标签: " << tagName << ", slug: " << slug << std::endl;
+            
+            // 首先查找标签是否已存在
+            DbManager& dbManager = DbManager::getInstance();
+            auto result = dbManager.execSyncQuery("SELECT id FROM tags WHERE name=$1", tagName);
+            
+            int tagId;
+            if (result.size() > 0) {
+                // 标签已存在，获取ID
+                tagId = result[0]["id"].as<int>();
+                
+                // 可能需要更新slug
+                if (!slug.empty()) {
                     dbManager.executeQuery(
-                        "INSERT INTO tags (name) VALUES ($1) RETURNING id",
-                        [=, &dbManager](const drogon::orm::Result& newTag) {
-                            int tagId = newTag[0]["id"].as<int>();
-                            
-                            // 创建文章标签关联
-                            dbManager.executeQuery(
-                                "INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2)",
-                                [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {},
-                                articleId,
-                                tagId
-                            );
+                        "UPDATE tags SET slug=$1 WHERE id=$2",
+                        [](const drogon::orm::Result&) {}, 
+                        [](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "更新标签slug失败: " << e.base().what() << std::endl;
                         },
-                        [](const drogon::orm::DrogonDbException&) {},
-                        tagName
-                    );
-                } else {
-                    // 使用现有标签
-                    int tagId = result[0]["id"].as<int>();
-                    
-                    // 创建文章标签关联
-                    dbManager.executeQuery(
-                        "INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2)",
-                        [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {},
-                        articleId,
-                        tagId
+                        slug, tagId
                     );
                 }
-            },
-            [](const drogon::orm::DrogonDbException&) {},
-            tagName
-        );
+            } else {
+                // 标签不存在，创建新标签
+                auto insertResult = dbManager.execSyncQuery(
+                    "INSERT INTO tags (name, slug) VALUES ($1, $2) RETURNING id",
+                    tagName, slug
+                );
+                tagId = insertResult[0]["id"].as<int>();
+            }
+            
+            // 创建文章与标签的关联
+            dbManager.executeQuery(
+                "INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                [](const drogon::orm::Result&) {}, 
+                [](const drogon::orm::DrogonDbException& e) {
+                    std::cerr << "创建文章标签关联失败: " << e.base().what() << std::endl;
+                },
+                articleId, tagId
+            );
+        } catch (const std::exception& e) {
+            std::cerr << "处理标签时出错: " << e.what() << std::endl;
+        }
     }
 }
 
@@ -562,29 +602,103 @@ void PostController::createArticleWithTransaction(DbManager& dbManager,
                 int articleId = result[0]["id"].as<int>();
                 std::string returnedSlug = result[0]["slug"].as<std::string>();
 
-                // 处理分类 - 只有当categories是数组且非空时
-                if (jsonBody.isMember("categories") && jsonBody["categories"].isArray()) {
-                    if (!jsonBody["categories"].empty()) {
-                        handleCategories(articleId, jsonBody["categories"]);
-                    }
-                }
-
-                // 处理标签 - 只有当tags是数组且非空时
-                if (jsonBody.isMember("tags") && jsonBody["tags"].isArray()) {
-                    if (!jsonBody["tags"].empty()) {
-                        handleTags(articleId, jsonBody["tags"]);
-                    }
-                }
-
-                // 提交事务
-                dbManager.executeQuery("COMMIT", [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {});
-
-                // 返回成功响应
+                // 准备响应数据
                 Json::Value responseData;
                 responseData["id"] = articleId;
                 responseData["slug"] = returnedSlug;
-                responseData["message"] = "文章创建成功";
-                callback(utils::createSuccessResponse("文章创建成功", responseData));
+
+                // 使用异步处理分类 - 只有当categories是数组且非空时
+                if (jsonBody.isMember("categories") && jsonBody["categories"].isArray() && !jsonBody["categories"].empty()) {
+                    // 创建安全的回调函数
+                    auto categoriesComplete = std::make_shared<std::function<void()>>([=, &dbManager]() {
+                        // 分类处理完成，处理标签
+                        if (jsonBody.isMember("tags") && jsonBody["tags"].isArray() && !jsonBody["tags"].empty()) {
+                            // 创建安全的标签处理完成回调
+                            auto tagsComplete = std::make_shared<std::function<void()>>([=, &dbManager]() {
+                                // 标签处理完成，提交事务并返回响应
+                                try {
+                                    dbManager.executeQuery(
+                                        "COMMIT", 
+                                        [](const drogon::orm::Result&) {
+                                            std::cout << "事务提交成功" << std::endl;
+                                        }, 
+                                        [](const drogon::orm::DrogonDbException& e) {
+                                            std::cerr << "事务提交失败: " << e.base().what() << std::endl;
+                                        }
+                                    );
+                                    callback(utils::createSuccessResponse("文章创建成功", responseData));
+                                } catch (const std::exception& e) {
+                                    std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
+                                    callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
+                                }
+                            });
+                            
+                            // 处理标签
+                            handleTagsAsync(articleId, jsonBody["tags"], (*tagsComplete));
+                        } else {
+                            // 没有标签需要处理，直接提交事务并返回响应
+                            try {
+                                dbManager.executeQuery(
+                                    "COMMIT", 
+                                    [](const drogon::orm::Result&) {
+                                        std::cout << "事务提交成功" << std::endl;
+                                    }, 
+                                    [](const drogon::orm::DrogonDbException& e) {
+                                        std::cerr << "事务提交失败: " << e.base().what() << std::endl;
+                                    }
+                                );
+                                callback(utils::createSuccessResponse("文章创建成功", responseData));
+                            } catch (const std::exception& e) {
+                                std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
+                                callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
+                            }
+                        }
+                    });
+                    
+                    // 处理分类
+                    handleCategoriesAsync(articleId, jsonBody["categories"], (*categoriesComplete));
+                } else if (jsonBody.isMember("tags") && jsonBody["tags"].isArray() && !jsonBody["tags"].empty()) {
+                    // 没有分类但有标签
+                    // 创建安全的回调函数
+                    auto tagsComplete = std::make_shared<std::function<void()>>([=, &dbManager]() {
+                        // 标签处理完成，提交事务并返回响应
+                        try {
+                            dbManager.executeQuery(
+                                "COMMIT", 
+                                [](const drogon::orm::Result&) {
+                                    std::cout << "事务提交成功" << std::endl;
+                                }, 
+                                [](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "事务提交失败: " << e.base().what() << std::endl;
+                                }
+                            );
+                            callback(utils::createSuccessResponse("文章创建成功", responseData));
+                        } catch (const std::exception& e) {
+                            std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
+                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
+                        }
+                    });
+                    
+                    // 处理标签
+                    handleTagsAsync(articleId, jsonBody["tags"], (*tagsComplete));
+                } else {
+                    // 既没有分类也没有标签，直接提交事务并返回响应
+                    try {
+                        dbManager.executeQuery(
+                            "COMMIT", 
+                            [](const drogon::orm::Result&) {
+                                std::cout << "事务提交成功" << std::endl;
+                            }, 
+                            [](const drogon::orm::DrogonDbException& e) {
+                                std::cerr << "事务提交失败: " << e.base().what() << std::endl;
+                            }
+                        );
+                        callback(utils::createSuccessResponse("文章创建成功", responseData));
+                    } catch (const std::exception& e) {
+                        std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
+                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
+                    }
+                }
             },
             [=, &dbManager, callback=callback](const drogon::orm::DrogonDbException& e) {
                 // 回滚事务
@@ -604,4 +718,265 @@ void PostController::createArticleWithTransaction(DbManager& dbManager,
         dbManager.executeQuery("ROLLBACK", [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {});
         callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
     }
+}
+
+/**
+ * 从名称生成slug
+ */
+std::string PostController::generateSlug(const std::string& name) const {
+    std::string slug = name;
+    // 转为小写
+    std::transform(slug.begin(), slug.end(), slug.begin(), 
+        [](unsigned char c){ return std::tolower(c); });
+    // 替换空格为连字符
+    std::replace(slug.begin(), slug.end(), ' ', '-');
+    // 移除非字母数字和连字符的字符
+    slug.erase(std::remove_if(slug.begin(), slug.end(), 
+        [](unsigned char c){ return !(std::isalnum(c) || c == '-'); }), slug.end());
+    // 确保没有连续的连字符
+    slug = std::regex_replace(slug, std::regex("-+"), "-");
+    // 去除首尾连字符
+    slug = std::regex_replace(slug, std::regex("^-|-$"), "");
+    
+    return slug;
+}
+
+/**
+ * 异步处理文章分类
+ */
+void PostController::handleCategoriesAsync(int articleId, const Json::Value& categories, std::function<void()> finalCallback) const {
+    if (!categories.isArray() || categories.empty()) {
+        if (finalCallback) finalCallback();
+        return;
+    }
+    
+    auto& dbManager = DbManager::getInstance();
+    auto categoryIter = std::make_shared<Json::Value::const_iterator>(categories.begin());
+    auto endIter = categories.end();
+
+    // 使用递归lambda处理每个分类
+    std::shared_ptr<std::function<void()>> processNextCategory = 
+        std::make_shared<std::function<void()>>();
+    
+    *processNextCategory = [=, &dbManager, processNextCategory]() mutable {
+        if (*categoryIter == endIter) {
+            // 所有分类处理完毕
+            if (finalCallback) finalCallback();
+            return;
+        }
+
+        const auto& category = **categoryIter;
+        ++(*categoryIter); // 移到下一个
+
+        if (!category.isString()) {
+            (*processNextCategory)(); // 跳过非字符串
+            return;
+        }
+
+        std::string categoryName = category.asString();
+        if (categoryName.empty()) {
+            (*processNextCategory)(); // 跳过空字符串
+            return;
+        }
+
+        // 生成slug
+        std::string slug = generateSlug(categoryName);
+        std::cout << "异步处理分类: " << categoryName << ", slug: " << slug << std::endl;
+
+        // 1. 异步检查分类是否存在
+        auto nextCategoryCallback = processNextCategory; // 创建本地副本
+        dbManager.executeQuery(
+            "SELECT id FROM categories WHERE name=$1",
+            [=, &dbManager](const drogon::orm::Result& result) {
+                if (!result.empty()) {
+                    // 2a. 分类存在，获取ID
+                    int categoryId = result[0]["id"].as<int>();
+                    
+                    // 3. 异步关联文章和分类
+                    dbManager.executeQuery(
+                        "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                        [=](const drogon::orm::Result&) { 
+                            // 关联成功，处理下一个分类
+                            if (nextCategoryCallback) (*nextCategoryCallback)(); 
+                        }, 
+                        [=](const drogon::orm::DrogonDbException& e) { 
+                            std::cerr << "创建文章分类关联失败: " << e.base().what() << std::endl;
+                            if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                        },
+                        articleId, categoryId
+                    );
+                    
+                    // 可选：更新slug（可以并行进行，不影响主流程）
+                    if (!slug.empty()) {
+                        // 使用简单的回调，避免可能的循环引用
+                        auto dummyCallback = [](const drogon::orm::Result&) {};
+                        auto errorCallback = [](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "更新分类slug失败: " << e.base().what() << std::endl;
+                        };
+                        
+                        dbManager.executeQuery(
+                            "UPDATE categories SET slug=$1 WHERE id=$2", 
+                            dummyCallback, errorCallback,
+                            slug, categoryId
+                        );
+                    }
+                } else {
+                    // 2b. 分类不存在，异步插入
+                    dbManager.executeQuery(
+                        "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id",
+                        [=, &dbManager](const drogon::orm::Result& insertResult) {
+                            int categoryId = insertResult[0]["id"].as<int>();
+
+                            // 3. 异步关联文章和分类
+                            dbManager.executeQuery(
+                                "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                                [=](const drogon::orm::Result&) {
+                                    if (nextCategoryCallback) (*nextCategoryCallback)(); // 处理下一个
+                                },
+                                [=](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "创建文章分类关联失败: " << e.base().what() << std::endl;
+                                    if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                                },
+                                articleId, categoryId
+                            );
+                        },
+                        [=](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "创建分类失败: " << e.base().what() << std::endl;
+                            if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                        },
+                        categoryName, slug
+                    );
+                }
+            },
+            [=](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "查询分类失败: " << e.base().what() << std::endl;
+                if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+            },
+            categoryName
+        );
+    };
+
+    // 启动处理第一个分类
+    (*processNextCategory)();
+}
+
+/**
+ * 异步处理文章标签
+ */
+void PostController::handleTagsAsync(int articleId, const Json::Value& tags, std::function<void()> finalCallback) const {
+    if (!tags.isArray() || tags.empty()) {
+        if (finalCallback) finalCallback();
+        return;
+    }
+    
+    auto& dbManager = DbManager::getInstance();
+    auto tagIter = std::make_shared<Json::Value::const_iterator>(tags.begin());
+    auto endIter = tags.end();
+
+    // 使用递归lambda处理每个标签
+    std::shared_ptr<std::function<void()>> processNextTag = 
+        std::make_shared<std::function<void()>>();
+    
+    *processNextTag = [=, &dbManager, processNextTag]() mutable {
+        if (*tagIter == endIter) {
+            // 所有标签处理完毕
+            if (finalCallback) finalCallback();
+            return;
+        }
+
+        const auto& tag = **tagIter;
+        ++(*tagIter); // 移到下一个
+
+        if (!tag.isString()) {
+            (*processNextTag)(); // 跳过非字符串
+            return;
+        }
+
+        std::string tagName = tag.asString();
+        if (tagName.empty()) {
+            (*processNextTag)(); // 跳过空字符串
+            return;
+        }
+
+        // 生成slug
+        std::string slug = generateSlug(tagName);
+        std::cout << "异步处理标签: " << tagName << ", slug: " << slug << std::endl;
+
+        // 创建本地副本以避免循环引用
+        auto nextTagCallback = processNextTag;
+
+        // 1. 异步检查标签是否存在
+        dbManager.executeQuery(
+            "SELECT id FROM tags WHERE name=$1",
+            [=, &dbManager](const drogon::orm::Result& result) {
+                if (!result.empty()) {
+                    // 2a. 标签存在，获取ID
+                    int tagId = result[0]["id"].as<int>();
+
+                    // 3. 异步关联文章和标签
+                    dbManager.executeQuery(
+                        "INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                        [=](const drogon::orm::Result&) {
+                            // 关联成功，处理下一个标签
+                            if (nextTagCallback) (*nextTagCallback)();
+                        },
+                        [=](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "创建文章标签关联失败: " << e.base().what() << std::endl;
+                            if (nextTagCallback) (*nextTagCallback)(); // 出错也处理下一个
+                        },
+                        articleId, tagId
+                    );
+                    
+                    // 可选：更新slug（可以并行进行，不影响主流程）
+                    if (!slug.empty()) {
+                        // 使用简单的回调，避免可能的循环引用
+                        auto dummyCallback = [](const drogon::orm::Result&) {};
+                        auto errorCallback = [](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "更新标签slug失败: " << e.base().what() << std::endl;
+                        };
+
+                        dbManager.executeQuery(
+                            "UPDATE tags SET slug=$1 WHERE id=$2",
+                            dummyCallback, errorCallback,
+                            slug, tagId
+                        );
+                    }
+                } else {
+                    // 2b. 标签不存在，异步插入
+                    dbManager.executeQuery(
+                        "INSERT INTO tags (name, slug) VALUES ($1, $2) RETURNING id",
+                        [=, &dbManager](const drogon::orm::Result& insertResult) {
+                            int tagId = insertResult[0]["id"].as<int>();
+
+                            // 3. 异步关联文章和标签
+                            dbManager.executeQuery(
+                                "INSERT INTO article_tags (article_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                                [=](const drogon::orm::Result&) {
+                                    if (nextTagCallback) (*nextTagCallback)(); // 处理下一个
+                                },
+                                [=](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "创建文章标签关联失败: " << e.base().what() << std::endl;
+                                    if (nextTagCallback) (*nextTagCallback)(); // 出错也处理下一个
+                                },
+                                articleId, tagId
+                            );
+                        },
+                        [=](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "创建标签失败: " << e.base().what() << std::endl;
+                            if (nextTagCallback) (*nextTagCallback)(); // 出错也处理下一个
+                        },
+                        tagName, slug
+                    );
+                }
+            },
+            [=](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "查询标签失败: " << e.base().what() << std::endl;
+                if (nextTagCallback) (*nextTagCallback)(); // 出错也处理下一个
+            },
+            tagName
+        );
+    };
+
+    // 启动处理第一个标签
+    (*processNextTag)();
 } 
