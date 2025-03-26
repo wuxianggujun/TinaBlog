@@ -9,6 +9,7 @@
 
 #include <string>
 #include <chrono>
+#include <exception>
 #include <jwt-cpp/jwt.h>
 #include <drogon/drogon.h>
 #include <json/json.h>
@@ -50,41 +51,18 @@ public:
     }
 
     /**
-     * 获取JWT配置
+     * 构造函数
      */
-    static Json::Value getJwtConfig() {
-        auto& app = drogon::app();
-        const auto& config = app.getCustomConfig();
-        return config["jwt"];
-    }
-
-    /**
-     * 获取JWT密钥
-     */
-    static std::string getJwtSecret() {
-        const auto& jwtConfig = getJwtConfig();
-        std::string secret = jwtConfig["secret"].asString();
-        if (secret.empty()) {
-            LOG_ERROR << "警告: JWT密钥未配置或为空，将使用默认密钥";
-            secret = "wuxianggujun-tina-blog-3344207732";
-        }
-        return secret;
-    }
-
-    /**
-     * 获取JWT发行者
-     */
-    static std::string getJwtIssuer() {
-        const auto& jwtConfig = getJwtConfig();
-        return jwtConfig["issuer"].asString();
-    }
-
-    /**
-     * 获取JWT过期时间
-     */
-    static int getJwtExpireTime() {
-        const auto& jwtConfig = getJwtConfig();
-        return jwtConfig["expire_time"].asInt();
+    JwtManager() {
+        // 直接硬编码JWT配置
+        m_secret = "wuxianggujun-tina-blog-3344207732";
+        m_issuer = "tinablog";
+        m_expireTime = 15 * 24 * 3600; // 15天
+        
+        LOG_INFO << "JwtManager初始化成功, 使用硬编码配置";
+        LOG_INFO << "  - 密钥长度: " << m_secret.length();
+        LOG_INFO << "  - 发行者: " << m_issuer;
+        LOG_INFO << "  - 过期时间: " << m_expireTime << "秒";
     }
 
     /**
@@ -94,19 +72,19 @@ public:
                             const std::string& username, 
                             bool isAdmin) const {
         auto now = std::chrono::system_clock::now();
-        auto expireTime = now + std::chrono::seconds(getJwtExpireTime());
+        auto expireTime = now + std::chrono::seconds(m_expireTime);
 
         std::string isAdminStr = isAdmin ? "true" : "false";
 
         auto token = jwt::create()
-            .set_issuer(getJwtIssuer())
+            .set_issuer(m_issuer)
             .set_type("JWS")
             .set_issued_at(now)
             .set_expires_at(expireTime)
             .set_payload_claim("user_uuid", jwt::claim(userUuid))
             .set_payload_claim("username", jwt::claim(username))
             .set_payload_claim("is_admin", jwt::claim(isAdminStr))
-            .sign(jwt::algorithm::hs256{getJwtSecret()});
+            .sign(jwt::algorithm::hs256{m_secret});
 
         return token;
     }
@@ -116,11 +94,31 @@ public:
      */
     bool verifyToken(const std::string& token, VerifyResult& result) const {
         try {
+            LOG_INFO << "开始验证令牌";
+            
+            if (m_secret.empty()) {
+                result.isValid = false;
+                result.reason = "JWT密钥未配置";
+                LOG_ERROR << "JWT密钥未配置";
+                return false;
+            }
+
             auto verifier = jwt::verify()
-                .allow_algorithm(jwt::algorithm::hs256{getJwtSecret()})
-                .with_issuer(getJwtIssuer());
+                .allow_algorithm(jwt::algorithm::hs256{m_secret})
+                .with_issuer(m_issuer);
 
             auto decoded = jwt::decode(token);
+            
+            // 检查令牌是否过期
+            auto now = std::chrono::system_clock::now();
+            auto exp = decoded.get_expires_at();
+            if (exp < now) {
+                result.isValid = false;
+                result.reason = "令牌已过期";
+                LOG_WARN << "令牌已过期，过期时间: " << std::chrono::system_clock::to_time_t(exp);
+                return false;
+            }
+
             verifier.verify(decoded);
 
             result.isValid = true;
@@ -129,10 +127,16 @@ public:
             result.isAdmin = decoded.get_payload_claim("is_admin").as_string() == "true";
             result.reason = "验证成功";
 
+            LOG_INFO << "令牌验证成功:";
+            LOG_INFO << "  - 用户UUID: " << result.userUuid;
+            LOG_INFO << "  - 用户名: " << result.username;
+            LOG_INFO << "  - 是否管理员: " << (result.isAdmin ? "是" : "否");
+
             return true;
         } catch (const std::exception& e) {
             result.isValid = false;
             result.reason = std::string("验证失败: ") + e.what();
+            LOG_ERROR << "验证失败: " << e.what();
             return false;
         }
     }
@@ -178,4 +182,10 @@ public:
             return false;
         }
     }
+
+private:
+    // 存储JWT配置
+    std::string m_secret;
+    std::string m_issuer;
+    int m_expireTime;
 };

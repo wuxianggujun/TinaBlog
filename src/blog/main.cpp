@@ -13,6 +13,8 @@
 #include <Windows.h>
 #endif
 
+#include <fstream>
+
 #include "blog/db/DbManager.hpp"
 #include "blog/auth/JwtManager.hpp"
 #include "blog/auth/JwtAuthFilter.hpp"
@@ -209,12 +211,11 @@ int main()
     // 配置Drogon服务器
     drogon::app().addListener("0.0.0.0", 8080);
     
-    // 设置JWT密钥作为应用程序全局配置
-    Json::Value config;
-    config["jwt"]["secret"] = JWT_SECRET;
-    config["jwt"]["issuer"] = "tinablog";
-    config["jwt"]["expire_time"] = 15 * 24 * 3600;  // 15天过期
-    drogon::app().loadConfigJson(config);
+    // 记录JWT配置信息（现在已经硬编码在JwtManager类中）
+    std::cout << "JWT配置信息：" << std::endl;
+    std::cout << "  - 密钥长度: " << JWT_SECRET.length() << std::endl;
+    std::cout << "  - 发行者: tinablog" << std::endl;
+    std::cout << "  - 过期时间: 1296000秒" << std::endl;
     
     // 设置文档根目录
     const std::string distPath = "./html/blog";

@@ -40,7 +40,7 @@ void JwtAuthFilter::doFilter(const drogon::HttpRequestPtr &req,
         // 检查令牌是否提供
         if (token.empty()) {
             LOG_WARN << "无法从请求中获取认证令牌";
-            auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED);
+            auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "未提供认证令牌");
             fcb(resp);
             return;
         }
@@ -49,7 +49,7 @@ void JwtAuthFilter::doFilter(const drogon::HttpRequestPtr &req,
         JwtManager::VerifyResult result;
         if (!m_jwtManager->verifyToken(token, result)) {
             LOG_WARN << "令牌验证失败: " << result.reason;
-            auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED);
+            auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, result.reason);
             fcb(resp);
             return;
         }
