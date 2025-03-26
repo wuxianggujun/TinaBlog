@@ -146,6 +146,7 @@ export default {
 
     async handleLogin() {
       try {
+        console.log('开始登录请求...');
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
@@ -154,37 +155,77 @@ export default {
           body: JSON.stringify({
             username: this.loginForm.username,
             password: this.loginForm.password,
-            auth_type: 'both'
+            auth_type: 'both' // 同时在Cookie和响应体中返回token
           }),
-          credentials: 'include'
+          credentials: 'include' // 确保接收和发送Cookie
         });
 
         const data = await response.json();
         console.log('登录响应:', data);
 
         if (data.status === "success") {
-          // 最简化处理: 直接从响应获取用户数据并保存
-          console.log('登录成功, 开始保存用户数据');
+          console.log('登录成功，保存用户数据...');
           
-          // 保存基本数据到localStorage
+          // 清除旧数据
+          localStorage.removeItem('isLoggedIn');
+          localStorage.removeItem('username');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user_uuid');
+          
+          // 保存新数据
           localStorage.setItem('isLoggedIn', 'true');
           localStorage.setItem('username', this.loginForm.username);
           
-          // 如果有token也保存
+          // 从响应中保存token
           if (data.data && data.data.token) {
+            console.log('从响应中获取到token');
             localStorage.setItem('token', data.data.token);
+          } else {
+            console.log('响应中没有token，尝试从cookie获取');
+            try {
+              const cookies = document.cookie.split(';');
+              const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('token='));
+              if (tokenCookie) {
+                const token = tokenCookie.split('=')[1];
+                console.log('从cookie获取到token:', token ? '有值' : '无值');
+                if (token) {
+                  localStorage.setItem('token', token);
+                }
+              }
+            } catch (e) {
+              console.error('解析cookie出错:', e);
+            }
           }
           
-          // 保存用户ID(如果有)
+          // 保存UUID
           if (data.data && data.data.uuid) {
             localStorage.setItem('user_uuid', data.data.uuid);
           }
           
-          console.log('用户数据保存完成，准备跳转');
+          console.log('用户数据保存完成');
           
-          // 简单直接的跳转方式
-          const redirect = this.$route.query.redirect || '/';
-          this.$router.push(redirect);
+          // 触发登录状态变更事件
+          console.log('尝试触发登录状态变更事件');
+          if (window.eventBus) {
+            console.log('使用window.eventBus触发事件');
+            try {
+              window.eventBus.emit('login-state-changed');
+              console.log('事件已触发');
+            } catch (e) {
+              console.error('触发事件出错:', e);
+            }
+          } else {
+            console.log('window.eventBus不存在');
+            // 尝试发送组件事件
+            this.$emit('login-state-changed');
+          }
+          
+          // 短暂延迟后导航，确保数据保存
+          setTimeout(() => {
+            const redirect = this.$route.query.redirect || '/';
+            console.log('准备跳转到:', redirect);
+            this.$router.push(redirect);
+          }, 100);
         } else {
           alert(data.message || '登录失败，请检查用户名和密码');
         }
@@ -212,43 +253,62 @@ export default {
             email: this.registerForm.email,
             password: this.registerForm.password,
             display_name: this.registerForm.username,
-            auth_type: 'both'
+            auth_type: 'both' // 同时在Cookie和响应体中返回token
           }),
-          credentials: 'include'
+          credentials: 'include' // 确保接收和发送Cookie
         });
 
-        console.log('收到注册响应');
         const data = await response.json();
-        console.log('注册响应数据:', data);
+        console.log('注册响应:', data);
 
         if (data.status === "success") {
-          console.log('注册成功，保存基本用户数据');
+          console.log('注册成功，保存用户数据...');
           
-          // 最简化处理: 直接保存基本数据到localStorage
+          // 保存基本信息
           localStorage.setItem('isLoggedIn', 'true');
           localStorage.setItem('username', this.registerForm.username);
           
-          // 如果有token也保存
+          // 重要：保存token
           if (data.data && data.data.token) {
+            console.log('从响应中获取到token');
             localStorage.setItem('token', data.data.token);
+          } else {
+            // 尝试从cookie获取
+            console.log('响应中没有token，检查cookie...');
+            const cookies = document.cookie.split(';');
+            const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('token='));
+            if (tokenCookie) {
+              const token = tokenCookie.split('=')[1];
+              console.log('从cookie获取到token');
+              localStorage.setItem('token', token);
+            } else {
+              console.warn('未找到token，用户可能无法访问受保护资源');
+            }
           }
           
-          // 保存用户ID(如果有)
+          // 保存UUID (如果有)
           if (data.data && data.data.uuid) {
             localStorage.setItem('user_uuid', data.data.uuid);
           }
           
-          console.log('用户数据保存完成，准备跳转');
+          console.log('用户数据保存完成');
           
-          // 简单直接的跳转方式
+          // 触发登录状态变更事件
+          if (window.eventBus) {
+            console.log('触发登录状态变更事件');
+            window.eventBus.emit('login-state-changed');
+          }
+          
+          // 使用router导航
           const redirect = this.$route.query.redirect || '/';
+          console.log('跳转到:', redirect);
           this.$router.push(redirect);
         } else {
           console.error('注册失败:', data.message);
           alert(data.message || '注册失败，请稍后重试');
         }
       } catch (error) {
-        console.error('注册过程出错：', error);
+        console.error('注册失败:', error);
         alert('注册失败，请稍后重试');
       }
     },

@@ -7,8 +7,8 @@ import { watchEffect } from 'vue';
 export default {
   data() {
     return {
-      isLoggedIn: false,
-      username: '',
+      isLoggedIn: localStorage.getItem('isLoggedIn') === 'true',
+      username: localStorage.getItem('username') || '',
       showDropdown: false,
       loginValidationInterval: null,
       forceUpdateFlag: 0  // 新增强制更新标志
@@ -32,35 +32,43 @@ export default {
     }
   },
   created() {
-    // 完全简化created钩子，只做最基本的初始化
     console.debug('[App] created生命周期钩子');
     
-    // 检查localStorage中的登录状态，不涉及任何可能为null的对象
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const username = localStorage.getItem('username');
-    
-    // 直接设置组件数据
-    this.isLoggedIn = isLoggedIn;
-    this.username = username || '';
-    
-    // 不再在created中调用checkLoginStatus
+    // 不要在created钩子中调用可能访问未初始化对象的方法
+    // 只设置最基本的数据
+    this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    this.username = localStorage.getItem('username') || '';
   },
   mounted() {
+    console.debug('[App] mounted生命周期钩子');
+    
+    // 在mounted中进行所有复杂操作，此时组件已完全初始化
+    
+    // 注册localStorage变化监听器
+    window.addEventListener('storage', this.handleStorageChange);
+    
+    // 延迟处理，确保Vue实例完全初始化
+    this.$nextTick(() => {
+      // 现在可以安全地检查登录状态和验证token
+      try {
+        this.checkLoginStatus();
+        this.verifyToken();
+      } catch (error) {
+        console.error('[App] 初始化检查登录状态出错:', error);
+      }
+      
+      // 设置事件监听
+      if (window.eventBus) {
+        window.eventBus.on('login-state-changed', this.handleLoginStateChanged);
+      }
+    });
+
     // 如果已登录但在登录页面，自动重定向
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     if (isLoggedIn && this.$route.path === '/login') {
       // 获取重定向参数，如果有则跳转
       const redirect = this.$route.query.redirect || '/';
       this.$router.replace(redirect);
-    }
-    
-    // 监听登录状态变化事件
-    window.addEventListener('storage', this.handleStorageChange);
-    
-    // 立即验证token有效性
-    const token = localStorage.getItem('token');
-    if (isLoggedIn && token) {
-      this.checkTokenValidity(token);
     }
     
     // 定期验证登录状态的一致性
@@ -76,36 +84,115 @@ export default {
     }, 1000);
   },
   beforeUnmount() {
+    // 清理事件监听器
     window.removeEventListener('storage', this.handleStorageChange);
+    
+    if (window.eventBus) {
+      window.eventBus.off('login-state-changed', this.handleLoginStateChanged);
+    }
     if (this.loginValidationInterval) {
       clearInterval(this.loginValidationInterval);
     }
-    // 移除事件监听
-    eventBus.off('login-state-changed', this.checkLoginStatus);
-    eventBus.off('user-info-updated', this.handleUserInfoUpdate);
   },
   methods: {
+    // 添加一个安全的事件处理器
+    handleLoginStateChanged() {
+      console.debug('[App] 收到登录状态变更事件');
+      // 使用setTimeout避免在事件处理过程中可能出现的问题
+      setTimeout(() => {
+        this.checkLoginStatus();
+      }, 0);
+    },
+    
+    handleStorageChange(event) {
+      if (event.key === 'isLoggedIn' || event.key === 'token' || event.key === 'username') {
+        console.debug('[App] localStorage变化:', event.key);
+        // 安全地调用checkLoginStatus
+        setTimeout(() => {
+          this.checkLoginStatus();
+        }, 0);
+      }
+    },
+    
     checkLoginStatus() {
+      // 使用try-catch包裹整个方法
       try {
         console.debug('[App] 检查登录状态...');
+        
+        // 只访问本地存储和简单数据，不访问复杂对象
         const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
         const username = localStorage.getItem('username');
-        console.debug('[App] 从localStorage获取的状态:', { isLoggedIn, username });
+        const token = localStorage.getItem('token');
+        
+        console.debug('[App] 从localStorage获取的状态:', { isLoggedIn, username, hasToken: !!token });
         
         // 更新组件数据
-        this.isLoggedIn = isLoggedIn;
-        this.username = username || '';
+        this.isLoggedIn = isLoggedIn && !!token;
+        this.username = this.isLoggedIn ? (username || '') : '';
         
         console.debug('[App] 更新后的状态:', { isLoggedIn: this.isLoggedIn, username: this.username });
-        
-        // 简化后的方法，不访问任何可能为null的对象
-        // 移除对this.$route的访问
-        
-        // 强制刷新UI
-        this.$forceUpdate();
       } catch (error) {
         console.error('[App] 检查登录状态时出错:', error);
       }
+    },
+    
+    // 添加token验证方法，确保token有效
+    verifyToken() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.debug('[App] 没有token，跳过验证');
+        return;
+      }
+      
+      console.debug('[App] 验证token...');
+      fetch('/api/auth/verify', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.debug('[App] 验证响应:', data);
+        if (data.status === 'success') {
+          console.debug('[App] token有效');
+          
+          // 确保localStorage标记为已登录
+          localStorage.setItem('isLoggedIn', 'true');
+          
+          // 如果服务器返回了用户信息，更新本地存储
+          if (data.data && data.data.user) {
+            localStorage.setItem('username', data.data.user.username);
+            if (data.data.user.uuid) {
+              localStorage.setItem('user_uuid', data.data.user.uuid);
+            }
+          }
+          
+          // 重新检查状态
+          this.checkLoginStatus();
+        } else {
+          console.warn('[App] token无效，清除登录状态');
+          this.clearLoginState();
+        }
+      })
+      .catch(error => {
+        console.error('[App] 验证token出错:', error);
+        // 验证请求失败，但不清除登录状态，可能是网络问题
+      });
+    },
+    
+    // 添加清除登录状态的方法
+    clearLoginState() {
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('username');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user_uuid');
+      
+      this.isLoggedIn = false;
+      this.username = '';
+      
+      // 强制刷新UI
+      this.$forceUpdate();
     },
     
     // 新增方法：直接获取当前登录状态
@@ -173,11 +260,6 @@ export default {
       
       return true;
     },
-    handleStorageChange(event) {
-      if (event.key === 'isLoggedIn' || event.key === 'username') {
-        this.checkLoginStatus();
-      }
-    },
     toggleDropdown() {
       this.showDropdown = !this.showDropdown;
     },
@@ -240,50 +322,9 @@ export default {
         
         // 如果登录了，立即检查token有效性
         if (isLoggedIn && token) {
-          this.checkTokenValidity(token);
+          this.verifyToken();
         }
       }, 5 * 60 * 1000); // 5分钟
-    },
-    
-    async checkTokenValidity(token) {
-      try {
-        // 调用验证token API
-        const response = await fetch('/api/auth/verify', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        const data = await response.json();
-        
-        // 如果返回401，说明token无效
-        if (response.status === 401) {
-          console.warn('Token已失效，清除登录状态');
-          localStorage.removeItem('token');
-          localStorage.removeItem('username');
-          localStorage.removeItem('isLoggedIn');
-          this.checkLoginStatus();
-        } else if (data.status === 'success') {
-          // 正常响应，token有效
-          console.log('Token有效，用户已登录');
-          // 更新用户信息
-          if (data.data && data.data.user) {
-            this.username = data.data.user.username;
-            this.isLoggedIn = true;
-          }
-        } else {
-          // 其他错误情况
-          console.warn('Token验证失败:', data.message);
-          localStorage.removeItem('token');
-          localStorage.removeItem('username');
-          localStorage.removeItem('isLoggedIn');
-          this.checkLoginStatus();
-        }
-      } catch (error) {
-        console.error('验证token时出错:', error);
-        // 连接错误不清除token，因为可能是网络问题
-      }
     },
     handlePublish() {
       try {
