@@ -20,6 +20,7 @@
 #include "blog/auth/JwtAuthFilter.hpp"
 #include "blog/controllers/AuthController.hpp"
 #include "blog/controllers/HealthController.hpp"
+#include "blog/controllers/PostController.hpp"
 #include <drogon/drogon.h>
 #include <json/json.h>
 
