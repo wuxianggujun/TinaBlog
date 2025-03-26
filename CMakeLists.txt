@@ -112,21 +112,15 @@ install(TARGETS TinaBlog DESTINATION bin)
 # 设置前端构建目录
 set(FRONTEND_BUILD_DIR ${CMAKE_BINARY_DIR}/html)
 
-# 添加复制前端文件的命令
-add_custom_command(
-    OUTPUT ${FRONTEND_BUILD_DIR}/blog/index.html
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/html/blog/dist
-    ${FRONTEND_BUILD_DIR}/blog
-    COMMENT "Copying frontend files..."
+# 确保每次构建都执行拷贝，不依赖于文件存在性
+add_custom_target(copy_frontend ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${FRONTEND_BUILD_DIR}/blog
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/html/blog/dist ${FRONTEND_BUILD_DIR}/blog
+    COMMENT "复制前端文件..."
+    VERBATIM
 )
 
-# 添加自定义目标
-add_custom_target(copy_frontend
-    DEPENDS ${FRONTEND_BUILD_DIR}/blog/index.html
-)
-
-# 将复制前端文件的目标添加到主目标的依赖中
+# 确保在主应用构建前完成前端文件复制
 add_dependencies(${PROJECT_NAME} copy_frontend)
 
 # 输出信息
