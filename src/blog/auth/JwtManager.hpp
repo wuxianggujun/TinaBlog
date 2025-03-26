@@ -11,102 +11,132 @@
 #include <chrono>
 #include <jwt-cpp/jwt.h>
 #include <drogon/drogon.h>
-
+#include <json/json.h>
 
 /**
- * JWT令牌管理器
- * 负责生成和验证JWT令牌
+ * JWT管理器类，用于处理JWT令牌的生成和验证
  */
 class JwtManager {
 public:
     /**
-     * 构造函数
-     * @param secret JWT签名密钥
-     * @param issuer JWT发行者
-     * @param tokenExpireTime 令牌过期时间(秒)
+     * 验证结果结构体
      */
-    JwtManager(const std::string& secret, 
-               const std::string& issuer = "tinablog", 
-               int tokenExpireTime = 3600) 
-        : m_secret(secret)
-        , m_issuer(issuer)
-        , m_tokenExpireTime(tokenExpireTime) 
-    {
+    struct VerifyResult {
+        bool isValid;
+        std::string userUuid;
+        std::string username;
+        bool isAdmin;
+        std::string reason;
+    };
+
+    /**
+     * 从请求中获取token
+     */
+    static std::string getTokenFromRequest(const drogon::HttpRequestPtr& req) {
+        // 首先从Cookie中获取
+        auto cookies = req->getCookies();
+        auto it = cookies.find("token");
+        if (it != cookies.end()) {
+            return it->second;
+        }
+
+        // 然后从Authorization头中获取
+        std::string authHeader = req->getHeader("Authorization");
+        if (!authHeader.empty() && authHeader.substr(0, 7) == "Bearer ") {
+            return authHeader.substr(7);
+        }
+
+        return "";
+    }
+
+    /**
+     * 获取JWT配置
+     */
+    static Json::Value getJwtConfig() {
+        auto& app = drogon::app();
+        const auto& config = app.getCustomConfig();
+        return config["jwt"];
+    }
+
+    /**
+     * 获取JWT密钥
+     */
+    static std::string getJwtSecret() {
+        const auto& jwtConfig = getJwtConfig();
+        std::string secret = jwtConfig["secret"].asString();
+        if (secret.empty()) {
+            LOG_ERROR << "警告: JWT密钥未配置或为空，将使用默认密钥";
+            secret = "wuxianggujun-tina-blog-3344207732";
+        }
+        return secret;
+    }
+
+    /**
+     * 获取JWT发行者
+     */
+    static std::string getJwtIssuer() {
+        const auto& jwtConfig = getJwtConfig();
+        return jwtConfig["issuer"].asString();
+    }
+
+    /**
+     * 获取JWT过期时间
+     */
+    static int getJwtExpireTime() {
+        const auto& jwtConfig = getJwtConfig();
+        return jwtConfig["expire_time"].asInt();
     }
 
     /**
      * 生成JWT令牌
-     * @param userUuid 用户UUID
-     * @param username 用户名
-     * @param isAdmin 是否管理员
-     * @return JWT令牌
      */
-    std::string generateToken(const std::string& userUuid, const std::string& username, bool isAdmin = false) {
+    std::string generateToken(const std::string& userUuid, 
+                            const std::string& username, 
+                            bool isAdmin) const {
         auto now = std::chrono::system_clock::now();
-        auto expireTime = now + std::chrono::seconds(m_tokenExpireTime);
-        
-        // 将isAdmin转为字符串
+        auto expireTime = now + std::chrono::seconds(getJwtExpireTime());
+
         std::string isAdminStr = isAdmin ? "true" : "false";
-        
+
         auto token = jwt::create()
-            .set_issuer(m_issuer)
-            .set_type("JWT")
+            .set_issuer(getJwtIssuer())
+            .set_type("JWS")
             .set_issued_at(now)
             .set_expires_at(expireTime)
             .set_payload_claim("user_uuid", jwt::claim(userUuid))
             .set_payload_claim("username", jwt::claim(username))
             .set_payload_claim("is_admin", jwt::claim(isAdminStr))
-            .sign(jwt::algorithm::hs256{m_secret});
-            
+            .sign(jwt::algorithm::hs256{getJwtSecret()});
+
         return token;
     }
-    
+
     /**
      * 验证JWT令牌
-     * @param token JWT令牌
-     * @return 验证是否成功
      */
-    bool verifyToken(const std::string& token) {
+    bool verifyToken(const std::string& token, VerifyResult& result) const {
         try {
-            auto decoded = jwt::decode(token);
             auto verifier = jwt::verify()
-                .allow_algorithm(jwt::algorithm::hs256{m_secret})
-                .with_issuer(m_issuer);
-                
+                .allow_algorithm(jwt::algorithm::hs256{getJwtSecret()})
+                .with_issuer(getJwtIssuer());
+
+            auto decoded = jwt::decode(token);
             verifier.verify(decoded);
+
+            result.isValid = true;
+            result.userUuid = decoded.get_payload_claim("user_uuid").as_string();
+            result.username = decoded.get_payload_claim("username").as_string();
+            result.isAdmin = decoded.get_payload_claim("is_admin").as_string() == "true";
+            result.reason = "验证成功";
+
             return true;
         } catch (const std::exception& e) {
+            result.isValid = false;
+            result.reason = std::string("验证失败: ") + e.what();
             return false;
         }
     }
-    
-    /**
-     * 从请求中获取JWT令牌
-     * @param req HTTP请求
-     * @return JWT令牌，如果没有找到则返回空字符串
-     */
-    static std::string getTokenFromRequest(const drogon::HttpRequestPtr& req) {
-        // 从Authorization头获取
-        std::string authHeader = req->getHeader("Authorization");
-        if (!authHeader.empty() && authHeader.substr(0, 7) == "Bearer ") {
-            return authHeader.substr(7);
-        }
-        
-        // 从Cookie获取
-        std::string tokenCookie = req->getCookie("token");
-        if (!tokenCookie.empty()) {
-            return tokenCookie;
-        }
-        
-        // 从查询参数获取
-        std::string tokenParam = req->getParameter("token");
-        if (!tokenParam.empty()) {
-            return tokenParam;
-        }
-        
-        return "";
-    }
-    
+
     /**
      * 从令牌中获取用户UUID
      * @param token JWT令牌
@@ -143,15 +173,9 @@ public:
     bool isAdminFromToken(const std::string& token) {
         try {
             auto decoded = jwt::decode(token);
-            std::string isAdmin = decoded.get_payload_claim("is_admin").as_string();
-            return isAdmin == "true";
+            return decoded.get_payload_claim("is_admin").as_string() == "true";
         } catch (const std::exception& e) {
             return false;
         }
     }
-
-private:
-    std::string m_secret;
-    std::string m_issuer;
-    int m_tokenExpireTime;
 };

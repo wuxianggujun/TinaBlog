@@ -209,6 +209,13 @@ int main()
     // 配置Drogon服务器
     drogon::app().addListener("0.0.0.0", 8080);
     
+    // 设置JWT密钥作为应用程序全局配置
+    Json::Value config;
+    config["jwt"]["secret"] = JWT_SECRET;
+    config["jwt"]["issuer"] = "tinablog";
+    config["jwt"]["expire_time"] = 15 * 24 * 3600;  // 15天过期
+    drogon::app().loadConfigJson(config);
+    
     // 设置文档根目录
     const std::string distPath = "./html/blog";
     std::cout << "设置静态资源目录: " << distPath << std::endl;
@@ -270,11 +277,6 @@ int main()
             auto resp = drogon::HttpResponse::newFileResponse(indexPath);
             callback(resp);
         }, {drogon::Get});
-    
-    // 设置JWT密钥作为应用程序全局配置
-    Json::Value config;
-    config["jwt_secret"] = JWT_SECRET;
-    drogon::app().loadConfigJson(config);
     
     // Drogon会自动发现并注册继承自HttpController的控制器类
     // 不需要手动注册控制器

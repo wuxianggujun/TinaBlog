@@ -7,14 +7,11 @@
  * 构造函数
  */
 AuthController::AuthController() {
-    // 在实际应用中应从配置文件中获取JWT密钥
-    m_jwtSecret = "your-secret-key-change-this-in-production";
-    
     // 使用单例模式获取数据库管理器
     m_dbManager = std::shared_ptr<DbManager>(&DbManager::getInstance());
     
     // 初始化JWT管理器
-    m_jwtManager = std::make_shared<JwtManager>(m_jwtSecret);
+    m_jwtManager = std::make_shared<JwtManager>();
     
     // 初始化密码工具类
     utils::PasswordUtils::initialize();
@@ -299,7 +296,7 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             LOG_INFO << "用户数据插入成功，开始生成JWT令牌";
                             
                             // 生成JWT令牌
-                            JwtManager jwtManager(m_jwtSecret);
+                            JwtManager jwtManager;
                             std::string token;
                             try {
                                 token = jwtManager.generateToken(
@@ -368,22 +365,29 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
  */
 void AuthController::verifyToken(const drogon::HttpRequestPtr& req, 
                                std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
-    // 由于使用了JwtAuthFilter，如果请求能到达这里，说明token是有效的
-    Json::Value responseData;
-    responseData["success"] = true;
-    responseData["message"] = "Token有效";
-    
-    // 从请求属性中获取用户信息
-    std::string userUuid = req->getAttributes()->get<std::string>("user_uuid");
-    std::string username = req->getAttributes()->get<std::string>("username");
-    bool isAdmin = req->getAttributes()->get<bool>("is_admin");
-    
+    // 从请求中获取token
+    std::string token = JwtManager::getTokenFromRequest(req);
+    if (token.empty()) {
+        callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED));
+        return;
+    }
+
+    // 验证token
+    JwtManager::VerifyResult result;
+    if (!m_jwtManager->verifyToken(token, result)) {
+        callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, result.reason));
+        return;
+    }
+
     // 创建用户数据对象
     Json::Value userData;
-    userData["uuid"] = userUuid;
-    userData["username"] = username;
-    userData["is_admin"] = isAdmin;
+    userData["uuid"] = result.userUuid;
+    userData["username"] = result.username;
+    userData["is_admin"] = result.isAdmin;
     
+    Json::Value responseData;
+    responseData["success"] = true;
+    responseData["message"] = "Token验证成功";
     responseData["user"] = userData;
     
     callback(utils::createSuccessResponse("Token验证成功", responseData));
