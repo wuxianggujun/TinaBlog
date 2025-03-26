@@ -74,7 +74,7 @@ find_package(Drogon CONFIG REQUIRED)
 find_package(jwt-cpp CONFIG REQUIRED)
 find_package(unofficial-sodium CONFIG REQUIRED)
 # 添加PostgreSQL客户端库
-find_package(PostgreSQL REQUIRED)
+#find_package(PostgreSQL REQUIRED)
 
 # 添加定义确保启用PostgreSQL支持
 add_compile_definitions(USE_POSTGRESQL)
@@ -83,7 +83,7 @@ set(TINA_BLOG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # 包含目录
 include_directories(${TINA_BLOG_SOURCE_DIR})
-include_directories(${PostgreSQL_INCLUDE_DIRS})
+#include_directories(${PostgreSQL_INCLUDE_DIRS})
 
 # 源文件
 file(GLOB_RECURSE SOURCES
@@ -103,7 +103,7 @@ target_link_libraries(TinaBlog PRIVATE
         jwt-cpp::jwt-cpp
         unofficial-sodium::sodium
         # 添加PostgreSQL库
-        ${PostgreSQL_LIBRARIES}
+#        ${PostgreSQL_LIBRARIES}
 )
 
 # 安装规则
