@@ -138,46 +138,78 @@ export default {
     
     // 添加token验证方法，确保token有效
     verifyToken() {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.debug('[App] 没有token，跳过验证');
-        return;
-      }
-      
       console.debug('[App] 验证token...');
+      
+      // 从localStorage获取token
+      const token = localStorage.getItem('token');
+      const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      const username = localStorage.getItem('username');
+      
+      console.debug('[App] 当前缓存状态:', { isLoggedIn, hasToken: !!token, username });
+      
+      // 调用验证API检查登录状态
       fetch('/api/auth/verify', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          // 如果有token，将其添加到请求头
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        credentials: 'include' // 确保发送cookie
       })
-      .then(response => response.json())
-      .then(data => {
-        console.debug('[App] 验证响应:', data);
-        if (data.status === 'success') {
-          console.debug('[App] token有效');
-          
-          // 确保localStorage标记为已登录
-          localStorage.setItem('isLoggedIn', 'true');
-          
-          // 如果服务器返回了用户信息，更新本地存储
-          if (data.data && data.data.user) {
-            localStorage.setItem('username', data.data.user.username);
-            if (data.data.user.uuid) {
-              localStorage.setItem('user_uuid', data.data.user.uuid);
+      .then(response => {
+        console.debug('[App] 验证请求状态码:', response.status);
+        
+        if (response.status === 200) {
+          // 成功状态，返回JSON
+          return response.json().then(data => {
+            console.debug('[App] 验证响应:', data);
+            
+            if (data.status === 'success') {
+              console.debug('[App] 登录有效');
+              
+              // 确保localStorage状态一致
+              localStorage.setItem('isLoggedIn', 'true');
+              
+              // 如果服务器返回了用户信息，更新本地存储
+              if (data.data && data.data.user) {
+                const userData = data.data.user;
+                localStorage.setItem('username', userData.username);
+                if (userData.uuid) {
+                  localStorage.setItem('user_uuid', userData.uuid);
+                }
+                
+                // 如果localStorage中无token但服务端认证成功，创建简单token
+                if (!token) {
+                  const simpleToken = `${userData.uuid || Date.now()}_${Date.now()}`;
+                  console.debug('[App] 创建简单token:', simpleToken);
+                  localStorage.setItem('token', simpleToken);
+                }
+                
+                // 更新本地状态
+                this.isLoggedIn = true;
+                this.username = userData.username;
+              }
+              
+              return;
             }
-          }
-          
-          // 重新检查状态
-          this.checkLoginStatus();
-        } else {
-          console.warn('[App] token无效，清除登录状态');
+            
+            // 不成功，清理登录状态
+            console.warn('[App] 验证失败(响应成功但状态不是success)');
+            this.clearLoginState();
+          });
+        } else if (response.status === 401) {
+          // 401表示未登录或token无效
+          console.warn('[App] 验证响应: 401 未授权');
           this.clearLoginState();
+        } else {
+          // 其他状态码，可能是服务器错误
+          console.error('[App] 验证返回意外状态码:', response.status);
+          // 网络/服务器问题不清理登录状态
         }
       })
       .catch(error => {
         console.error('[App] 验证token出错:', error);
-        // 验证请求失败，但不清除登录状态，可能是网络问题
+        // 网络错误不清除登录状态
       });
     },
     

@@ -56,9 +56,18 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
 
         std::string username = requestJson["username"].asString();
         std::string password = requestJson["password"].asString();
-        bool returnTokenInBody = requestJson.get("return_token_in_body", false).asBool();
-
-        LOG_INFO << "用户 " << username << " 尝试登录";
+        
+        // 检查auth_type参数
+        std::string authType = "both"; // 默认同时使用cookie和响应体
+        if (requestJson.isMember("auth_type") && requestJson["auth_type"].isString()) {
+            authType = requestJson["auth_type"].asString();
+        }
+        bool returnTokenInBody = (authType == "token" || authType == "both");
+        bool returnTokenInCookie = (authType == "cookie" || authType == "both");
+        
+        LOG_INFO << "用户 " << username << " 尝试登录, auth_type=" << authType;
+        LOG_INFO << "返回token方式: cookie=" << (returnTokenInCookie ? "是" : "否") 
+                 << ", body=" << (returnTokenInBody ? "是" : "否");
 
         // 检查数据库连接
         if (!m_dbManager->isConnected()) {
@@ -69,7 +78,7 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
         // 查询用户
         m_dbManager->executeQuery(
             "SELECT username, password, display_name, uuid, is_admin FROM users WHERE username = $1",
-            [this, username, password, returnTokenInBody, callback](const drogon::orm::Result& result) {
+            [this, username, password, authType, returnTokenInBody, returnTokenInCookie, callback](const drogon::orm::Result& result) {
                 if (result.empty()) {
                     callback(utils::createErrorResponse(utils::ErrorCode::USER_NOT_FOUND));
                     return;
@@ -84,12 +93,16 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
 
                 // 生成JWT令牌
                 std::string token;
+                std::string userUuid = result[0]["uuid"].as<std::string>();
+                bool isAdmin = result[0]["is_admin"].as<bool>();
+                
                 try {
                     token = m_jwtManager->generateToken(
-                        result[0]["uuid"].as<std::string>(),  // userUuid
-                        username,                              // username
-                        result[0]["is_admin"].as<bool>()      // isAdmin
+                        userUuid,
+                        username,
+                        isAdmin
                     );
+                    LOG_INFO << "生成JWT令牌成功, 长度: " << token.length();
                 } catch (const std::exception& e) {
                     LOG_ERROR << "生成JWT令牌失败: " << e.what();
                     callback(utils::createErrorResponse(utils::ErrorCode::SYSTEM_ERROR, "生成认证令牌失败"));
@@ -98,22 +111,29 @@ void AuthController::login(const drogon::HttpRequestPtr& req,
 
                 // 准备响应数据
                 Json::Value userData;
-                userData["uuid"] = result[0]["uuid"].as<std::string>();
+                userData["uuid"] = userUuid;
                 userData["username"] = result[0]["username"].as<std::string>();
                 userData["display_name"] = result[0]["display_name"].as<std::string>();
                 
                 if (returnTokenInBody) {
+                    LOG_INFO << "在响应体中返回token";
                     userData["token"] = token;
                 }
 
                 auto resp = utils::createSuccessResponse("登录成功", userData);
-                if (!returnTokenInBody) {
+                
+                if (returnTokenInCookie) {
+                    LOG_INFO << "在Cookie中设置token";
                     drogon::Cookie tokenCookie("token", token);
                     tokenCookie.setHttpOnly(true);
                     tokenCookie.setPath("/");
                     resp->addCookie(std::move(tokenCookie));
                 }
-
+                
+                LOG_INFO << "用户 " << username << " 登录成功，发送响应";
+                LOG_INFO << "响应状态码: " << resp->getStatusCode();
+                LOG_INFO << "响应Cookie数量: " << resp->cookies().size();
+                
                 callback(resp);
             },
             [callback](const drogon::orm::DrogonDbException& e) {
@@ -209,12 +229,16 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
     
     LOG_INFO << "开始注册用户: " << username;
     
-    // 检查认证方式首选项（如果有）
-    bool returnTokenInBody = true;
+    // 检查认证方式首选项
+    std::string authType = "both"; // 默认同时使用cookie和响应体
     if ((*jsonBody)["auth_type"].isString()) {
-        std::string authType = (*jsonBody)["auth_type"].asString();
-        returnTokenInBody = (authType == "token" || authType == "both");
+        authType = (*jsonBody)["auth_type"].asString();
     }
+    bool returnTokenInBody = (authType == "token" || authType == "both");
+    bool returnTokenInCookie = (authType == "cookie" || authType == "both");
+    
+    LOG_INFO << "返回token方式: cookie=" << (returnTokenInCookie ? "是" : "否") 
+             << ", body=" << (returnTokenInBody ? "是" : "否");
     
     // 获取可选字段
     std::string email = (*jsonBody)["email"].isString() ? (*jsonBody)["email"].asString() : username + "@example.com";
@@ -276,13 +300,19 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             
                             // 生成JWT令牌
                             JwtManager jwtManager(m_jwtSecret);
-                            std::string token = jwtManager.generateToken(
-                                result[0]["uuid"].as<std::string>(),  // userUuid
-                                username,                              // username
-                                false                                  // isAdmin，新注册用户默认不是管理员
-                            );
-                            
-                            LOG_INFO << "JWT令牌生成成功";
+                            std::string token;
+                            try {
+                                token = jwtManager.generateToken(
+                                    uuid,  // userUuid
+                                    username,  // username
+                                    false   // isAdmin，新注册用户默认不是管理员
+                                );
+                                LOG_INFO << "生成JWT令牌成功, 长度: " << token.length();
+                            } catch (const std::exception& e) {
+                                LOG_ERROR << "生成JWT令牌失败: " << e.what();
+                                callback(utils::createErrorResponse(utils::ErrorCode::SYSTEM_ERROR, "生成认证令牌失败"));
+                                return;
+                            }
                             
                             // 创建精简的响应数据
                             Json::Value userData;
@@ -292,19 +322,26 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
                             
                             // 如果客户端需要，在响应体中返回token
                             if (returnTokenInBody) {
+                                LOG_INFO << "在响应体中返回token";
                                 userData["token"] = token;
                             }
                             
                             // 返回成功响应
                             auto resp = utils::createSuccessResponse("注册成功", userData);
                             
-                            // 默认总是在Cookie中设置token，便于浏览器环境
-                            drogon::Cookie tokenCookie("token", token);
-                            tokenCookie.setHttpOnly(true);
-                            tokenCookie.setPath("/");
-                            resp->addCookie(std::move(tokenCookie));
+                            // 在Cookie中设置token
+                            if (returnTokenInCookie) {
+                                LOG_INFO << "在Cookie中设置token";
+                                drogon::Cookie tokenCookie("token", token);
+                                tokenCookie.setHttpOnly(true);
+                                tokenCookie.setPath("/");
+                                resp->addCookie(std::move(tokenCookie));
+                            }
                             
-                            LOG_INFO << "注册流程完成，返回响应";
+                            LOG_INFO << "注册流程完成，发送响应";
+                            LOG_INFO << "响应状态码: " << resp->getStatusCode();
+                            LOG_INFO << "响应Cookie数量: " << resp->cookies().size();
+                            
                             callback(resp);
                         },
                         [callback=callback](const drogon::orm::DrogonDbException& e) {

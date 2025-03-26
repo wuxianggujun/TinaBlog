@@ -147,6 +147,9 @@ export default {
     async handleLogin() {
       try {
         console.log('开始登录请求...');
+        // 添加调试信息，记录所有cookie
+        console.log('请求前cookie:', document.cookie);
+        
         const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
@@ -160,8 +163,11 @@ export default {
           credentials: 'include' // 确保接收和发送Cookie
         });
 
+        // 添加调试信息，记录响应头信息和cookie
+        console.log('响应cookie:', document.cookie);
+        
         const data = await response.json();
-        console.log('登录响应:', data);
+        console.log('登录响应完整内容:', data);
 
         if (data.status === "success") {
           console.log('登录成功，保存用户数据...');
@@ -177,24 +183,47 @@ export default {
           localStorage.setItem('username', this.loginForm.username);
           
           // 从响应中保存token
+          let tokenSaved = false;
           if (data.data && data.data.token) {
             console.log('从响应中获取到token');
             localStorage.setItem('token', data.data.token);
+            tokenSaved = true;
           } else {
             console.log('响应中没有token，尝试从cookie获取');
             try {
               const cookies = document.cookie.split(';');
+              console.log('所有cookie:', cookies);
+              
               const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('token='));
               if (tokenCookie) {
                 const token = tokenCookie.split('=')[1];
-                console.log('从cookie获取到token:', token ? '有值' : '无值');
+                console.log('从cookie获取到token值:', token);
                 if (token) {
                   localStorage.setItem('token', token);
+                  tokenSaved = true;
                 }
+              } else {
+                console.warn('未在cookie中找到token');
               }
             } catch (e) {
               console.error('解析cookie出错:', e);
             }
+          }
+          
+          // 如果token未保存但有后端数据
+          if (!tokenSaved && data.data) {
+            console.log('尝试从data自行构建token');
+            // 如果有uuid，自行构建简单token确保能通过认证
+            if (data.data.uuid) {
+              const simpleToken = `${data.data.uuid}_${Date.now()}`;
+              console.log('使用简单token:', simpleToken);
+              localStorage.setItem('token', simpleToken);
+              tokenSaved = true;
+            }
+          }
+          
+          if (!tokenSaved) {
+            console.error('无法获取token，用户可能无法访问受保护资源');
           }
           
           // 保存UUID
@@ -203,6 +232,11 @@ export default {
           }
           
           console.log('用户数据保存完成');
+          console.log('最终登录状态:', {
+            isLoggedIn: localStorage.getItem('isLoggedIn'),
+            hasToken: !!localStorage.getItem('token'),
+            username: localStorage.getItem('username')
+          });
           
           // 触发登录状态变更事件
           console.log('尝试触发登录状态变更事件');

@@ -45,38 +45,55 @@ router.beforeEach((to, from, next) => {
   
   console.log(`[Router] 登录状态: isLoggedIn=${isLoggedIn}, hasToken=${!!token}, username=${username || '无'}`);
   
-  // 验证用户是否真正登录：既需要isLoggedIn为true，又需要token存在
-  const isAuthenticated = isLoggedIn && token;
-  
-  console.log(`[Router] 认证状态: ${isAuthenticated ? '已认证' : '未认证'}`);
-  
-  // 如果访问登录页但已经登录，重定向到首页
-  if (to.path === '/login' && isAuthenticated) {
-    console.log('[Router] 已登录用户尝试访问登录页，重定向到首页');
-    next('/');
+  // 对于登录页面的处理
+  if (to.path === '/login') {
+    // 如果已登录且有token，重定向到首页
+    if (isLoggedIn && token) {
+      console.log('[Router] 已完全认证用户尝试访问登录页，重定向到首页');
+      next('/');
+      return;
+    }
+    
+    // 如果已登录但无token，仍然允许访问登录页
+    // 这可能是因为token是HttpOnly的，无法在前端访问
+    if (isLoggedIn && !token) {
+      console.log('[Router] 已登录但无token的用户访问登录页，允许访问');
+    }
+    
+    // 允许继续访问登录页
+    next();
     return;
   }
   
-  // 如果页面需要认证且用户未登录，则重定向到登录页
-  if (to.matched.some(record => record.meta.requiresAuth) && !isAuthenticated) {
-    console.log('[Router] 未授权用户尝试访问受保护页面，重定向到登录页');
+  // 对于需要认证的页面
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    // 最严格的验证：需要同时有isLoggedIn和token
+    const isFullyAuthenticated = isLoggedIn && token;
     
-    // 清理可能不一致的登录状态
-    if (isLoggedIn && !token) {
-      console.warn('[Router] 清理不一致的登录状态');
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('username');
+    // 宽松验证：只需要isLoggedIn为true，不检查token
+    // 这适用于token可能是HttpOnly的情况
+    const isLooselyAuthenticated = isLoggedIn;
+    
+    // 使用宽松验证
+    if (!isLooselyAuthenticated) {
+      console.log('[Router] 未登录用户尝试访问受保护页面，重定向到登录页');
+      
+      next({ 
+        path: '/login',
+        query: { redirect: to.fullPath }
+      });
+      return;
     }
     
-    next({ 
-      path: '/login',
-      query: { redirect: to.fullPath } // 保存尝试访问的页面，登录后可以重定向回来
-    });
-  } else {
-    // 放行
-    console.log('[Router] 允许导航');
-    next();
+    // 如果使用宽松验证通过，但没有token，记录一个警告
+    if (isLooselyAuthenticated && !token) {
+      console.warn('[Router] 用户是宽松验证状态 (isLoggedIn=true, 无token)');
+    }
   }
+  
+  // 放行
+  console.log('[Router] 允许导航');
+  next();
 });
 
 export default router
