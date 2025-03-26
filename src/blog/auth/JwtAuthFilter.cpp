@@ -15,27 +15,8 @@ void JwtAuthFilter::doFilter(const drogon::HttpRequestPtr &req,
     LOG_INFO << "JWT认证过滤器开始处理请求: " << req->getPath();
     
     try {
-        // 尝试从请求头中获取Bearer令牌
-        std::string token;
-        std::string authHeader = req->getHeader("Authorization");
-        
-        LOG_INFO << "Authorization头: " << (authHeader.empty() ? "未提供" : "已提供");
-        
-        // 检查Authorization头
-        if (!authHeader.empty() && authHeader.find("Bearer ") == 0) {
-            token = authHeader.substr(7); // 跳过"Bearer "
-            LOG_INFO << "从Authorization头中获取到令牌, 长度: " << token.length();
-        } else {
-            // 尝试从Cookie中获取令牌
-            const auto& cookies = req->getCookies();
-            auto it = cookies.find("token");
-            if (it != cookies.end()) {
-                token = it->second;
-                LOG_INFO << "从Cookie中获取到令牌, 长度: " << token.length();
-            } else {
-                LOG_INFO << "未在Cookie中找到令牌";
-            }
-        }
+        // 尝试从请求中获取token
+        std::string token = m_jwtManager->getTokenFromRequest(req);
         
         // 检查令牌是否提供
         if (token.empty()) {

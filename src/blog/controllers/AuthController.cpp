@@ -364,32 +364,43 @@ void AuthController::registerUser(const drogon::HttpRequestPtr& req,
  */
 void AuthController::verifyToken(const drogon::HttpRequestPtr& req, 
                                std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
-    // 从请求中获取token
-    std::string token = JwtManager::getTokenFromRequest(req);
-    if (token.empty()) {
-        callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED));
-        return;
-    }
+    try {
+        // 从请求中获取token
+        std::string token = m_jwtManager->getTokenFromRequest(req);
+        if (token.empty()) {
+            LOG_WARN << "验证token失败：未提供token";
+            callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "未提供认证令牌"));
+            return;
+        }
 
-    // 验证token
-    JwtManager::VerifyResult result;
-    if (!m_jwtManager->verifyToken(token, result)) {
-        callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, result.reason));
-        return;
-    }
+        LOG_INFO << "开始验证token，token长度: " << token.length();
 
-    // 创建用户数据对象
-    Json::Value userData;
-    userData["uuid"] = result.userUuid;
-    userData["username"] = result.username;
-    userData["is_admin"] = result.isAdmin;
-    
-    Json::Value responseData;
-    responseData["success"] = true;
-    responseData["message"] = "Token验证成功";
-    responseData["user"] = userData;
-    
-    callback(utils::createSuccessResponse("Token验证成功", responseData));
+        // 验证token
+        JwtManager::VerifyResult result;
+        if (!m_jwtManager->verifyToken(token, result)) {
+            LOG_WARN << "验证token失败：" << result.reason;
+            callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, result.reason));
+            return;
+        }
+
+        LOG_INFO << "token验证成功，用户: " << result.username;
+
+        // 创建用户数据对象
+        Json::Value userData;
+        userData["uuid"] = result.userUuid;
+        userData["username"] = result.username;
+        userData["is_admin"] = result.isAdmin;
+        
+        Json::Value responseData;
+        responseData["success"] = true;
+        responseData["message"] = "Token验证成功";
+        responseData["user"] = userData;
+        
+        callback(utils::createSuccessResponse("Token验证成功", responseData));
+    } catch (const std::exception& e) {
+        LOG_ERROR << "验证token时发生异常: " << e.what();
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
+    }
 }
 
 /**

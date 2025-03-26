@@ -41,20 +41,23 @@ public:
     /**
      * 从请求中获取token
      */
-    static std::string getTokenFromRequest(const drogon::HttpRequestPtr& req) {
+    std::string getTokenFromRequest(const drogon::HttpRequestPtr& req) const {
         // 首先从Cookie中获取
         auto cookies = req->getCookies();
         auto it = cookies.find("token");
         if (it != cookies.end()) {
+            LOG_INFO << "从Cookie中获取到token";
             return it->second;
         }
 
         // 然后从Authorization头中获取
         std::string authHeader = req->getHeader("Authorization");
         if (!authHeader.empty() && authHeader.substr(0, 7) == "Bearer ") {
+            LOG_INFO << "从Authorization头中获取到token";
             return authHeader.substr(7);
         }
 
+        LOG_WARN << "未从请求中获取到token";
         return "";
     }
 
