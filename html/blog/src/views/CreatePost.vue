@@ -10,55 +10,55 @@
           <h3>发布文章</h3>
           <button type="button" class="close-btn" @click="cancelPublish">&times;</button>
         </div>
-        
+
         <div class="dialog-body">
           <div class="form-group">
             <label for="title">文章标题 *</label>
-            <input 
-              type="text" 
-              id="title" 
-              v-model="postForm.title" 
-              placeholder="请输入文章标题" 
-              required
+            <input
+                type="text"
+                id="title"
+                v-model="postForm.title"
+                placeholder="请输入文章标题"
+                required
             />
           </div>
-          
+
           <div class="form-group">
             <label for="summary">文章摘要</label>
-            <textarea 
-              id="summary" 
-              v-model="postForm.summary" 
-              placeholder="请输入文章摘要（可选）"
-              rows="3"
+            <textarea
+                id="summary"
+                v-model="postForm.summary"
+                placeholder="请输入文章摘要（可选）"
+                rows="3"
             ></textarea>
           </div>
-          
+
           <div class="form-group">
             <label for="slug">文章链接(slug)</label>
-            <input 
-              type="text" 
-              id="slug" 
-              v-model="postForm.slug" 
-              placeholder="自定义文章链接，不填将自动生成"
+            <input
+                type="text"
+                id="slug"
+                v-model="postForm.slug"
+                placeholder="自定义文章链接，不填将自动生成"
             />
             <small class="form-hint">链接格式如：my-first-post（仅使用字母、数字和连字符）</small>
           </div>
-          
+
           <div class="form-group">
             <label for="categories">分类</label>
             <div class="tag-input-container">
-              <input 
-                type="text" 
-                id="categories"
-                v-model="categoryInput"
-                @keydown.enter.prevent="addCategory"
-                placeholder="输入分类名称并按回车添加"
+              <input
+                  type="text"
+                  id="categories"
+                  v-model="categoryInput"
+                  @keydown.enter.prevent="addCategory"
+                  placeholder="输入分类名称并按回车添加"
               />
               <div class="tags-container">
-                <span 
-                  v-for="(category, index) in postForm.categories" 
-                  :key="'cat-'+index" 
-                  class="tag"
+                <span
+                    v-for="(category, index) in postForm.categories"
+                    :key="'cat-'+index"
+                    class="tag"
                 >
                   {{ category }}
                   <button type="button" @click="removeCategory(index)" class="tag-remove">&times;</button>
@@ -66,22 +66,22 @@
               </div>
             </div>
           </div>
-          
+
           <div class="form-group">
             <label for="tags">标签</label>
             <div class="tag-input-container">
-              <input 
-                type="text" 
-                id="tags"
-                v-model="tagInput"
-                @keydown.enter.prevent="addTag"
-                placeholder="输入标签名称并按回车添加"
+              <input
+                  type="text"
+                  id="tags"
+                  v-model="tagInput"
+                  @keydown.enter.prevent="addTag"
+                  placeholder="输入标签名称并按回车添加"
               />
               <div class="tags-container">
-                <span 
-                  v-for="(tag, index) in postForm.tags" 
-                  :key="'tag-'+index" 
-                  class="tag"
+                <span
+                    v-for="(tag, index) in postForm.tags"
+                    :key="'tag-'+index"
+                    class="tag"
                 >
                   {{ tag }}
                   <button type="button" @click="removeTag(index)" class="tag-remove">&times;</button>
@@ -89,7 +89,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="form-group publish-option">
             <label class="checkbox-container">
               <input type="checkbox" v-model="postForm.published">
@@ -98,7 +98,7 @@
             </label>
           </div>
         </div>
-        
+
         <div class="dialog-footer">
           <button type="button" class="cancel-btn" @click="cancelPublish">取消</button>
           <button type="button" class="submit-btn" @click="submitPost" :disabled="isSubmitting">
@@ -138,7 +138,7 @@ export default {
   mounted() {
     // 初始化Cherry Markdown编辑器
     this.initEditor();
-    
+
     // 组件挂载后，验证登录状态
     const token = localStorage.getItem('token');
     if (token) {
@@ -146,23 +146,23 @@ export default {
         this.verifyToken(token);
       }, 500);
     }
-    
+
     // 检查登录状态
     this.checkLoginStatus();
-    
+
     // 添加监听器
     window.addEventListener('storage', this.handleStorageChange);
-    
+
     // 监听发布文章事件
     eventBus.on('openPublishDialog', this.showPublishDialog);
   },
   beforeUnmount() {
     // 移除监听器
     window.removeEventListener('storage', this.handleStorageChange);
-    
+
     // 移除事件总线监听
     eventBus.off('openPublishDialog', this.showPublishDialog);
-    
+
     // 销毁编辑器实例
     if (this.editor) {
       this.editor.destroy();
@@ -178,7 +178,7 @@ export default {
         mermaidScript.src = 'https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js';
         document.head.appendChild(mermaidScript);
       }
-      
+
       // 加载KaTeX库
       if (!document.getElementById('katex-script')) {
         const katexCSS = document.createElement('link');
@@ -186,20 +186,20 @@ export default {
         katexCSS.rel = 'stylesheet';
         katexCSS.href = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css';
         document.head.appendChild(katexCSS);
-        
+
         const katexScript = document.createElement('script');
         katexScript.id = 'katex-script';
         katexScript.src = 'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js';
         document.head.appendChild(katexScript);
       }
-      
+
       // 加载ECharts库
       if (!document.getElementById('echarts-script')) {
         const echartsScript = document.createElement('script');
         echartsScript.id = 'echarts-script';
         echartsScript.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
         document.head.appendChild(echartsScript);
-        
+
         // 确保ECharts完全加载
         return new Promise((resolve) => {
           echartsScript.onload = () => {
@@ -208,18 +208,18 @@ export default {
           };
         });
       }
-      
+
       return Promise.resolve();
     },
-    
+
     // 初始化Cherry Markdown编辑器
     async initEditor() {
       try {
         console.log('开始初始化编辑器...');
-        
+
         // 加载必要外部库（可选）- 等待加载完成
         await this.loadExternalLibraries();
-        
+
         // 确保容器元素存在
         const editorContainer = document.getElementById('markdown');
         if (!editorContainer) {
@@ -227,15 +227,35 @@ export default {
           setTimeout(() => this.initEditor(), 500); // 延迟重试
           return;
         }
-        
-        // 使用简洁的配置
+
+        // 使用新的配置格式
         const config = {
           id: 'markdown',
           value: '# 欢迎使用Tina Blog编辑器\n\n开始撰写你的精彩文章吧！',
           editor: {
             theme: 'default',
             height: '100%',
-            defaultModel: 'edit&preview'
+            defaultModel: 'edit&preview',
+            toolbar: [
+              'bold',
+              'italic',
+              'strikethrough',
+              '|',
+              {header: []},     // 修改：使用对象格式
+              {list: []},       // 修改：使用对象格式
+              'ordered-list',
+              'quote',
+              '|',
+              'code',
+              'code-block',
+              '|',
+              {table: []},      // 修改：使用对象格式
+              'link',
+              'image',
+              '|',
+              'preview',
+              'fullscreen'
+            ]
           },
           callback: {
             onChange: (markdown) => {
@@ -256,36 +276,36 @@ export default {
         console.log('创建Cherry实例...');
         this.editor = new Cherry(config);
         console.log('Cherry Markdown编辑器已初始化:', !!this.editor);
-        
+
         // 全局暴露编辑器实例，便于调试
         window.cherryEditor = this.editor;
-        
+
       } catch (error) {
         console.error('初始化编辑器失败:', error);
         alert('编辑器初始化失败，请刷新页面重试');
       }
     },
-    
+
     // 验证和处理slug
     validateSlug() {
       if (!this.postForm.slug) return; // 如果为空，后端会自动生成
-      
+
       // 转为小写
       this.postForm.slug = this.postForm.slug.toLowerCase();
-      
+
       // 替换空格为连字符
       this.postForm.slug = this.postForm.slug.replace(/\s+/g, '-');
-      
+
       // 移除非法字符（只保留字母、数字和连字符）
       this.postForm.slug = this.postForm.slug.replace(/[^a-z0-9-]/g, '');
-      
+
       // 确保没有连续的连字符
       this.postForm.slug = this.postForm.slug.replace(/-+/g, '-');
-      
+
       // 去除首尾连字符
       this.postForm.slug = this.postForm.slug.replace(/^-+|-+$/g, '');
     },
-    
+
     // 显示发布对话框
     showPublishDialog() {
       console.log('CreatePost组件的showPublishDialog方法被调用');
@@ -296,7 +316,7 @@ export default {
       } else {
         console.warn('编辑器实例不存在');
       }
-      
+
       if (!this.postForm.content || !this.postForm.content.trim()) {
         console.warn('文章内容为空');
         alert('请先编辑文章内容');
@@ -306,74 +326,74 @@ export default {
       this.showDialog = true;
       console.log('showDialog当前值:', this.showDialog);
     },
-    
+
     // 取消发布
     cancelPublish() {
       this.showDialog = false;
     },
-    
+
     // 检查登录状态
     checkLoginStatus() {
       const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
       const token = localStorage.getItem('token');
-      
+
       if (!isLoggedIn || !token) {
         console.warn('未登录状态下访问创建文章页面');
         this.$router.push({
           path: '/login',
-          query: { redirect: '/create' }
+          query: {redirect: '/create'}
         });
       } else {
         // 检查token有效性
         this.verifyToken(token);
       }
     },
-    
+
     handleStorageChange(event) {
       if (event.key === 'isLoggedIn' || event.key === 'token') {
         this.checkLoginStatus();
       }
     },
-    
+
     addCategory() {
       if (this.categoryInput.trim() && !this.postForm.categories.includes(this.categoryInput.trim())) {
         this.postForm.categories.push(this.categoryInput.trim());
       }
       this.categoryInput = '';
     },
-    
+
     removeCategory(index) {
       this.postForm.categories.splice(index, 1);
     },
-    
+
     addTag() {
       if (this.tagInput.trim() && !this.postForm.tags.includes(this.tagInput.trim())) {
         this.postForm.tags.push(this.tagInput.trim());
       }
       this.tagInput = '';
     },
-    
+
     removeTag(index) {
       this.postForm.tags.splice(index, 1);
     },
-    
+
     async submitPost() {
       // 确保获取最新的编辑器内容
       if (this.editor) {
         this.postForm.content = this.editor.getMarkdown();
       }
-      
+
       if (!this.postForm.title || !this.postForm.content) {
         alert('请填写必填字段');
         return;
       }
-      
+
       // 验证和处理slug
       this.validateSlug();
-      
+
       try {
         this.isSubmitting = true;
-        
+
         // 从localStorage获取token
         const token = localStorage.getItem('token');
         if (!token) {
@@ -381,14 +401,14 @@ export default {
           this.$router.push('/login');
           return;
         }
-        
+
         // 验证token格式
         if (token.trim() === '') {
           alert('登录凭证无效，请重新登录');
           this.handleTokenError();
           return;
         }
-        
+
         // 先验证token有效性
         try {
           const verifyResponse = await fetch('/api/auth/verify', {
@@ -397,7 +417,7 @@ export default {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (verifyResponse.status === 401) {
             alert('登录已过期，请重新登录');
             this.handleTokenError();
@@ -407,7 +427,7 @@ export default {
           console.warn('验证token时出错，继续尝试发布:', verifyError);
           // 验证出错不阻止发布尝试
         }
-        
+
         // 创建文章
         const response = await fetch('/api/posts', {
           method: 'POST',
@@ -417,20 +437,20 @@ export default {
           },
           body: JSON.stringify(this.postForm)
         });
-        
+
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
           // 创建成功
           this.showDialog = false;
-          
+
           // 构建文章链接
           const postLink = data.slug ? `/post/${data.slug}` : `/post/${data.id}`;
-          
+
           // 显示成功信息包含链接
           const message = `文章创建成功！文章ID: ${data.id}`;
           alert(message);
-          
+
           // 跳转到文章详情页或首页
           this.$router.push('/');
         } else {
@@ -450,21 +470,21 @@ export default {
         this.isSubmitting = false;
       }
     },
-    
+
     // 处理token错误
     handleTokenError() {
       // 清除无效的登录状态
       localStorage.removeItem('token');
       localStorage.removeItem('username');
       localStorage.removeItem('isLoggedIn');
-      
+
       // 跳转到登录页
       this.$router.push({
         path: '/login',
-        query: { redirect: '/create' }
+        query: {redirect: '/create'}
       });
     },
-    
+
     async verifyToken(token) {
       try {
         const response = await fetch('/api/auth/verify', {
@@ -473,7 +493,7 @@ export default {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (response.status === 401) {
           console.warn('Token已失效');
           this.handleTokenError();
