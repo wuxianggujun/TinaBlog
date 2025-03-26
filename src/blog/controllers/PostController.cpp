@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 
 /**
  * 创建文章
@@ -402,20 +403,11 @@ void PostController::handleCategories(int articleId, const Json::Value& categori
         if (categoryName.empty()) continue;
         
         try {
-            // 从分类名生成slug - 替换空格为连字符，转小写
-            std::string slug = categoryName;
-            // 转为小写
-            std::transform(slug.begin(), slug.end(), slug.begin(), 
-                [](unsigned char c){ return std::tolower(c); });
-            // 替换空格为连字符
-            std::replace(slug.begin(), slug.end(), ' ', '-');
-            // 移除非字母数字和连字符的字符
-            slug.erase(std::remove_if(slug.begin(), slug.end(), 
-                [](unsigned char c){ return !(std::isalnum(c) || c == '-'); }), slug.end());
-            
+            // 从分类名生成slug
+            std::string slug = generateSlug(categoryName);
             std::cout << "正在处理分类: " << categoryName << ", slug: " << slug << std::endl;
             
-            // 首先查找分类是否已存在
+            // 首先查找分类是否已存在，使用精确匹配
             DbManager& dbManager = DbManager::getInstance();
             auto result = dbManager.execSyncQuery("SELECT id FROM categories WHERE name=$1", categoryName);
             
@@ -436,7 +428,7 @@ void PostController::handleCategories(int articleId, const Json::Value& categori
                     );
                 }
             } else {
-                // 分类不存在，创建新分类
+                // 分类不存在，创建新分类 - 原样保存名称
                 auto insertResult = dbManager.execSyncQuery(
                     "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id",
                     categoryName, slug
@@ -471,20 +463,11 @@ void PostController::handleTags(int articleId, const Json::Value& tags) const {
         if (tagName.empty()) continue;
         
         try {
-            // 从标签名生成slug - 替换空格为连字符，转小写
-            std::string slug = tagName;
-            // 转为小写
-            std::transform(slug.begin(), slug.end(), slug.begin(), 
-                [](unsigned char c){ return std::tolower(c); });
-            // 替换空格为连字符
-            std::replace(slug.begin(), slug.end(), ' ', '-');
-            // 移除非字母数字和连字符的字符
-            slug.erase(std::remove_if(slug.begin(), slug.end(), 
-                [](unsigned char c){ return !(std::isalnum(c) || c == '-'); }), slug.end());
-            
+            // 从标签名生成slug
+            std::string slug = generateSlug(tagName);
             std::cout << "正在处理标签: " << tagName << ", slug: " << slug << std::endl;
             
-            // 首先查找标签是否已存在
+            // 首先查找标签是否已存在，使用精确匹配
             DbManager& dbManager = DbManager::getInstance();
             auto result = dbManager.execSyncQuery("SELECT id FROM tags WHERE name=$1", tagName);
             
@@ -505,7 +488,7 @@ void PostController::handleTags(int articleId, const Json::Value& tags) const {
                     );
                 }
             } else {
-                // 标签不存在，创建新标签
+                // 标签不存在，创建新标签 - 原样保存名称
                 auto insertResult = dbManager.execSyncQuery(
                     "INSERT INTO tags (name, slug) VALUES ($1, $2) RETURNING id",
                     tagName, slug
@@ -724,10 +707,33 @@ void PostController::createArticleWithTransaction(DbManager& dbManager,
  * 从名称生成slug
  */
 std::string PostController::generateSlug(const std::string& name) const {
+    if (name.empty()) {
+        return "";
+    }
+    
     std::string slug = name;
+    // 特殊处理：保留C++, C#等常见编程语言名称的原始形式
+    if (slug == "C++" || slug == "c++") {
+        return "cpp";
+    }
+    if (slug == "C#" || slug == "c#") {
+        return "csharp";
+    }
+    
     // 转为小写
     std::transform(slug.begin(), slug.end(), slug.begin(), 
         [](unsigned char c){ return std::tolower(c); });
+        
+    // 特殊字符处理
+    for (size_t i = 0; i < slug.length(); i++) {
+        unsigned char c = slug[i];
+        // 对于非ASCII字符(可能是中文、日文等)，用拼音转换系统替换会更好
+        // 但在这里，我们简单地将它们替换为x以保证生成有效的slug
+        if (c > 127) {
+            slug[i] = 'x';
+        }
+    }
+    
     // 替换空格为连字符
     std::replace(slug.begin(), slug.end(), ' ', '-');
     // 移除非字母数字和连字符的字符
@@ -737,6 +743,15 @@ std::string PostController::generateSlug(const std::string& name) const {
     slug = std::regex_replace(slug, std::regex("-+"), "-");
     // 去除首尾连字符
     slug = std::regex_replace(slug, std::regex("^-|-$"), "");
+    
+    // 如果slug为空(可能全是中文被替换后被移除)，则使用格式化时间戳
+    if (slug.empty()) {
+        auto now = std::chrono::system_clock::now();
+        auto time_t_now = std::chrono::system_clock::to_time_t(now);
+        char buffer[32];
+        std::strftime(buffer, sizeof(buffer), "category-%Y%m%d%H%M%S", std::localtime(&time_t_now));
+        slug = buffer;
+    }
     
     return slug;
 }
@@ -779,11 +794,11 @@ void PostController::handleCategoriesAsync(int articleId, const Json::Value& cat
             return;
         }
 
-        // 生成slug
+        // 从分类名生成slug，确保特殊字符和中文得到处理
         std::string slug = generateSlug(categoryName);
         std::cout << "异步处理分类: " << categoryName << ", slug: " << slug << std::endl;
 
-        // 1. 异步检查分类是否存在
+        // 1. 异步检查分类是否存在，使用精确匹配名称
         auto nextCategoryCallback = processNextCategory; // 创建本地副本
         dbManager.executeQuery(
             "SELECT id FROM categories WHERE name=$1",
@@ -806,7 +821,7 @@ void PostController::handleCategoriesAsync(int articleId, const Json::Value& cat
                         articleId, categoryId
                     );
                     
-                    // 可选：更新slug（可以并行进行，不影响主流程）
+                    // 可选：确保slug已设置
                     if (!slug.empty()) {
                         // 使用简单的回调，避免可能的循环引用
                         auto dummyCallback = [](const drogon::orm::Result&) {};
@@ -821,7 +836,7 @@ void PostController::handleCategoriesAsync(int articleId, const Json::Value& cat
                         );
                     }
                 } else {
-                    // 2b. 分类不存在，异步插入
+                    // 2b. 分类不存在，异步插入，原样保存名称
                     dbManager.executeQuery(
                         "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id",
                         [=, &dbManager](const drogon::orm::Result& insertResult) {
@@ -898,14 +913,14 @@ void PostController::handleTagsAsync(int articleId, const Json::Value& tags, std
             return;
         }
 
-        // 生成slug
+        // 从标签名生成slug，确保特殊字符和中文得到处理
         std::string slug = generateSlug(tagName);
         std::cout << "异步处理标签: " << tagName << ", slug: " << slug << std::endl;
 
         // 创建本地副本以避免循环引用
         auto nextTagCallback = processNextTag;
 
-        // 1. 异步检查标签是否存在
+        // 1. 异步检查标签是否存在，使用精确匹配名称
         dbManager.executeQuery(
             "SELECT id FROM tags WHERE name=$1",
             [=, &dbManager](const drogon::orm::Result& result) {
@@ -927,7 +942,7 @@ void PostController::handleTagsAsync(int articleId, const Json::Value& tags, std
                         articleId, tagId
                     );
                     
-                    // 可选：更新slug（可以并行进行，不影响主流程）
+                    // 可选：确保slug已设置
                     if (!slug.empty()) {
                         // 使用简单的回调，避免可能的循环引用
                         auto dummyCallback = [](const drogon::orm::Result&) {};
@@ -942,7 +957,7 @@ void PostController::handleTagsAsync(int articleId, const Json::Value& tags, std
                         );
                     }
                 } else {
-                    // 2b. 标签不存在，异步插入
+                    // 2b. 标签不存在，异步插入，原样保存名称
                     dbManager.executeQuery(
                         "INSERT INTO tags (name, slug) VALUES ($1, $2) RETURNING id",
                         [=, &dbManager](const drogon::orm::Result& insertResult) {
