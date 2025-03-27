@@ -16,7 +16,7 @@
             <article v-for="post in posts" :key="post.id" class="post-card">
               <div class="post-header">
                 <h3 class="post-title">
-                  <router-link :to="`/article/${post.author_username || 'author'}/${post.slug}`">{{ post.title }}</router-link>
+                  <router-link :to="`/article/${post.author || post.author_username || 'anonymous'}/${post.slug}`">{{ post.title }}</router-link>
                 </h3>
                 <div class="post-meta">
                   <span class="post-date">{{ formatDate(post.created_at) }}</span>
@@ -24,7 +24,7 @@
                 </div>
               </div>
               <p class="post-excerpt">{{ post.summary }}</p>
-              <router-link :to="`/article/${post.author_username || 'author'}/${post.slug}`" class="read-more">
+              <router-link :to="`/article/${post.author || post.author_username || 'anonymous'}/${post.slug}`" class="read-more">
                 阅读更多
               </router-link>
             </article>

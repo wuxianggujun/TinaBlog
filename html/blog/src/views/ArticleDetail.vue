@@ -282,13 +282,16 @@ export default {
             this.article = response.data.data.article;
             this.articleId = this.article.id;
             
-            // 更新URL，确保包含作者名
-            if (this.article.author && this.$route.params.author !== this.article.author_username) {
-              const authorUsername = this.article.author_username || 'author';
+            // 获取作者用户名 - 如果API返回了author_username则使用，否则使用author
+            const authorName = this.article.author_username || this.article.author || 'anonymous';
+            
+            // 更新URL，确保包含正确的作者名
+            if (this.$route.params.author !== authorName && authorName !== 'anonymous') {
+              console.log(`更新URL作者: ${this.$route.params.author} -> ${authorName}`);
               this.$router.replace({
                 name: 'article-detail',
                 params: { 
-                  author: authorUsername,
+                  author: authorName,
                   slug: slug 
                 }
               });
@@ -491,16 +494,45 @@ export default {
     },
     
     fetchRelatedArticles() {
-      // 此函数目前为模拟函数，实际应调用后端API
-      // 假设我们根据分类或标签获取相关文章
-      if (this.article && this.article.categories && this.article.categories.length > 0) {
-        const categoryId = this.article.categories[0].id;
+      // 如果后端有API支持，可以调用API获取相关文章
+      
+      // 替代方案：获取同一作者的文章或同一分类的文章
+      if (this.article) {
+        const authorName = this.article.author || '';
+        const categoryId = this.article.categories && this.article.categories.length > 0 
+          ? this.article.categories[0].id 
+          : null;
+          
+        // 这里仅模拟数据，实际应当调用API
+        // 相关文章可以是：
+        // 1. 同一作者的其他文章
+        // 2. 同一分类的其他文章
+        // 3. 同一标签的其他文章
         
-        // 模拟数据，实际应从API获取
+        // 在实际项目中，添加相应的API:
+        // /api/articles/related?author=${authorName}&exclude=${this.articleId}
+        // 或
+        // /api/articles/related?category=${categoryId}&exclude=${this.articleId}
+        
         this.relatedArticles = [
-          { id: 101, title: '相关文章1', slug: 'related-article-1', author_username: 'author' },
-          { id: 102, title: '相关文章2', slug: 'related-article-2', author_username: 'author' },
-          { id: 103, title: '相关文章3', slug: 'related-article-3', author_username: 'author' }
+          { 
+            id: 101, 
+            title: `${authorName}的其他文章1`, 
+            slug: 'related-article-1', 
+            author_username: authorName 
+          },
+          { 
+            id: 102, 
+            title: `${authorName}的其他文章2`, 
+            slug: 'related-article-2', 
+            author_username: authorName 
+          },
+          { 
+            id: 103, 
+            title: `相关分类文章`, 
+            slug: 'related-category-article', 
+            author_username: 'other-author' 
+          }
         ];
       }
     }

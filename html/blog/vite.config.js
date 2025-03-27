@@ -22,8 +22,12 @@ export default defineConfig({
         changeOrigin: true
       }
     },
-    // 配置回退，所有404的静态资源请求都指向index.html
-    historyApiFallback: true
+    // 确保单页应用路由工作正常
+    historyApiFallback: {
+      rewrites: [
+        { from: /^\/.*$/, to: '/index.html' }
+      ]
+    }
   },
   build: {
     chunkSizeWarningLimit: 1000, // 提高警告阈值到1000KB

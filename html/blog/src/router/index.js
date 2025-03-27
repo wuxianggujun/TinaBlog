@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import NotFound from '../views/NotFound.vue'
 
@@ -39,8 +39,8 @@ const routes = [
     path: '/article/:slug',
     redirect: to => {
       const { slug } = to.params;
-      // 重定向到新的URL结构，使用默认author参数
-      return { name: 'article-detail', params: { author: 'author', slug } };
+      // 当缺少作者名时，将在文章加载后动态更新URL
+      return { name: 'article-detail', params: { author: 'anonymous', slug } };
     }
   },
   // 404页面
@@ -49,15 +49,15 @@ const routes = [
     name: 'not-found',
     component: NotFound
   },
-  // 捕获所有未匹配的路由，定向到404页面
+  // 捕获所有未匹配的路由
   {
     path: '/:pathMatch(.*)*',
-    redirect: { name: 'not-found' }
+    component: Home // 默认回到首页
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHashHistory(), // 使用hash模式
   routes
 })
 
