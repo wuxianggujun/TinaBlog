@@ -38,6 +38,27 @@ const routes = [
     component: () => import('../views/ArchiveView.vue'),
     meta: { title: '归档 - Tina博客' }
   },
+  // 个人信息页面路由
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('../views/ProfileView.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '个人信息 - Tina博客'
+    }
+  },
+  // 修改密码页面路由
+  {
+    path: '/profile/password',
+    name: 'change-password',
+    component: () => import('../views/ProfileView.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '修改密码 - Tina博客'
+    },
+    props: { activeTab: 'security' }
+  },
   {
     path: '/login',
     name: 'Login',

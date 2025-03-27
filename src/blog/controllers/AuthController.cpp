@@ -2,6 +2,7 @@
 #include "blog/utils/HttpUtils.hpp"
 #include "blog/utils/PasswordUtils.hpp"
 #include "blog/utils/ErrorCode.hpp"
+#include <numeric> // 添加numeric头文件用于std::accumulate
 
 /**
  * 构造函数
@@ -421,4 +422,215 @@ void AuthController::logout(const drogon::HttpRequestPtr& req,
     resp->addCookie(std::move(tokenCookie));
     
     callback(resp);
+}
+
+/**
+ * 更新用户个人信息
+ */
+void AuthController::updateProfile(const drogon::HttpRequestPtr& req, 
+                                 std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    // 在函数入口处创建回调副本，确保catch块可以访问到
+    auto callbackPtr = std::make_shared<std::function<void(const drogon::HttpResponsePtr&)>>(std::move(callback));
+    
+    try {
+        // 从请求属性中获取用户UUID（已由JWT过滤器添加）
+        std::string userUuid = req->getAttributes()->get<std::string>("user_uuid");
+        if (userUuid.empty()) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "用户未认证"));
+            return;
+        }
+        
+        // 获取请求数据
+        auto jsonBody = req->getJsonObject();
+        if (!jsonBody) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的请求格式"));
+            return;
+        }
+        
+        // 获取要更新的字段
+        std::string displayName = (*jsonBody)["display_name"].isString() ? 
+                                (*jsonBody)["display_name"].asString() : "";
+        std::string email = (*jsonBody)["email"].isString() ? 
+                          (*jsonBody)["email"].asString() : "";
+        std::string bio = (*jsonBody)["bio"].isString() ? 
+                        (*jsonBody)["bio"].asString() : "";
+        
+        // 验证电子邮箱格式
+        if (!email.empty() && email.find('@') == std::string::npos) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "无效的电子邮箱格式"));
+            return;
+        }
+        
+        // 构建更新语句
+        std::vector<std::string> updateFields;
+        
+        if (!displayName.empty()) {
+            updateFields.push_back("display_name = $1");
+        }
+        
+        if (!email.empty()) {
+            updateFields.push_back("email = $" + std::to_string(updateFields.size() + 1));
+        }
+        
+        if (!bio.empty()) {
+            updateFields.push_back("bio = $" + std::to_string(updateFields.size() + 1));
+        }
+        
+        // 添加更新时间
+        updateFields.push_back("updated_at = NOW()");
+        
+        if (updateFields.size() == 1) { // 只有更新时间
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "没有要更新的内容"));
+            return;
+        }
+        
+        // 构建SQL语句 - 使用字符串连接而不是std::accumulate
+        std::string sql = "UPDATE users SET ";
+        for (size_t i = 0; i < updateFields.size(); ++i) {
+            sql += updateFields[i];
+            if (i < updateFields.size() - 1) {
+                sql += ", ";
+            }
+        }
+        sql += " WHERE uuid = $" + std::to_string(updateFields.size()) + " RETURNING username, display_name, email, bio";
+        
+        // 执行更新 - 单独传递每个参数
+        auto& dbManager = DbManager::getInstance();
+        
+        // 创建通用响应处理函数
+        auto responseHandler = [callbackPtr](const drogon::orm::Result& result) {
+            if (result.size() > 0) {
+                Json::Value userData;
+                userData["username"] = result[0]["username"].as<std::string>();
+                userData["display_name"] = result[0]["display_name"].as<std::string>();
+                userData["email"] = result[0]["email"].as<std::string>();
+                
+                if (!result[0]["bio"].isNull()) {
+                    userData["bio"] = result[0]["bio"].as<std::string>();
+                }
+                
+                (*callbackPtr)(utils::createSuccessResponse("个人信息更新成功", userData));
+            } else {
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+            }
+        };
+        
+        // 创建通用错误处理函数
+        auto errorHandler = [callbackPtr](const drogon::orm::DrogonDbException& e) {
+            std::cerr << "更新用户信息失败: " << e.base().what() << std::endl;
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新用户信息失败"));
+        };
+        
+        // 处理不同的更新字段组合
+        if (!displayName.empty() && !email.empty() && !bio.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, displayName, email, bio, userUuid);
+        }
+        else if (!displayName.empty() && !email.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, displayName, email, userUuid);
+        }
+        else if (!displayName.empty() && !bio.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, displayName, bio, userUuid);
+        }
+        else if (!email.empty() && !bio.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, email, bio, userUuid);
+        }
+        else if (!displayName.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, displayName, userUuid);
+        }
+        else if (!email.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, email, userUuid);
+        }
+        else if (!bio.empty()) {
+            dbManager.executeQuery(sql, responseHandler, errorHandler, bio, userUuid);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "更新用户信息异常: " << e.what() << std::endl;
+        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
+}
+
+/**
+ * 修改用户密码
+ */
+void AuthController::changePassword(const drogon::HttpRequestPtr& req, 
+                                  std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    // 在函数入口处创建回调副本，确保catch块可以访问到
+    auto callbackPtr = std::make_shared<std::function<void(const drogon::HttpResponsePtr&)>>(std::move(callback));
+    
+    try {
+        // 从请求属性中获取用户UUID（已由JWT过滤器添加）
+        std::string userUuid = req->getAttributes()->get<std::string>("user_uuid");
+        if (userUuid.empty()) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "用户未认证"));
+            return;
+        }
+        
+        // 获取请求数据
+        auto jsonBody = req->getJsonObject();
+        if (!jsonBody) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的请求格式"));
+            return;
+        }
+        
+        // 获取当前密码和新密码
+        if (!(*jsonBody)["current_password"].isString() || !(*jsonBody)["new_password"].isString()) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "缺少当前密码或新密码"));
+            return;
+        }
+        
+        std::string currentPassword = (*jsonBody)["current_password"].asString();
+        std::string newPassword = (*jsonBody)["new_password"].asString();
+        
+        // 验证新密码长度
+        if (newPassword.length() < 8) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "新密码长度必须至少为8个字符"));
+            return;
+        }
+        
+        // 首先获取用户当前密码
+        auto& dbManager = DbManager::getInstance();
+        auto thisPtr = this; // 存储this指针
+        
+        dbManager.executeQuery(
+            "SELECT password FROM users WHERE uuid = $1",
+            [thisPtr, userUuid, currentPassword, newPassword, callbackPtr](const drogon::orm::Result& result) {
+                if (result.size() == 0) {
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+                    return;
+                }
+                
+                // 验证当前密码
+                std::string storedPassword = result[0]["password"].as<std::string>();
+                if (!thisPtr->verifyPassword(currentPassword, storedPassword)) {
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::PASSWORD_ERROR, "当前密码不正确"));
+                    return;
+                }
+                
+                // 生成新密码的哈希
+                std::string newPasswordHash = utils::PasswordUtils::hashPassword(newPassword);
+                
+                // 更新密码
+                auto& dbManager = DbManager::getInstance();
+                dbManager.executeQuery(
+                    "UPDATE users SET password = $1, updated_at = NOW() WHERE uuid = $2",
+                    [callbackPtr](const drogon::orm::Result& result) {
+                        (*callbackPtr)(utils::createSuccessResponse("密码修改成功"));
+                    },
+                    [callbackPtr](const drogon::orm::DrogonDbException& e) {
+                        std::cerr << "修改密码失败: " << e.base().what() << std::endl;
+                        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "修改密码失败"));
+                    },
+                    newPasswordHash, userUuid
+                );
+            },
+            [callbackPtr](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "获取用户密码失败: " << e.base().what() << std::endl;
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "修改密码失败"));
+            },
+            userUuid
+        );
+    } catch (const std::exception& e) {
+        std::cerr << "修改密码异常: " << e.what() << std::endl;
+        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
 } 
