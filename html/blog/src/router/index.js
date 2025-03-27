@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
+import NotFound from '../views/NotFound.vue'
 
 const routes = [
   {
@@ -42,10 +43,16 @@ const routes = [
       return { name: 'article-detail', params: { author: 'author', slug } };
     }
   },
-  // 捕获所有路由，使刷新页面时不会404
+  // 404页面
+  {
+    path: '/404',
+    name: 'not-found',
+    component: NotFound
+  },
+  // 捕获所有未匹配的路由，定向到404页面
   {
     path: '/:pathMatch(.*)*',
-    component: Home
+    redirect: { name: 'not-found' }
   }
 ]
 

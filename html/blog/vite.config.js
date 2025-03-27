@@ -15,6 +15,16 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
+      }
+    },
+    // 配置回退，所有404的静态资源请求都指向index.html
+    historyApiFallback: true
+  },
   build: {
     chunkSizeWarningLimit: 1000, // 提高警告阈值到1000KB
     rollupOptions: {
