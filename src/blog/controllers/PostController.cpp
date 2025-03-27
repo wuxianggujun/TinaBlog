@@ -218,10 +218,10 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
         // 查询文章基本信息
         dbManager.executeQuery(
             "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
-            "a.updated_at, a.published, u.username as author "
+            "a.updated_at, a.is_published, u.username as author "
             "FROM articles a "
-            "LEFT JOIN users u ON a.user_id = u.id "
-            "WHERE a.slug = ? AND a.published = true",
+            "LEFT JOIN users u ON a.user_uuid = u.uuid "
+            "WHERE a.slug = $1 AND a.is_published = true",
             [this, callback=callback](const drogon::orm::Result& result) {
                 if (result.size() == 0) {
                     callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该文章"));
@@ -239,7 +239,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                 article["content"] = row["content"].as<std::string>();
                 article["created_at"] = row["created_at"].as<std::string>();
                 article["updated_at"] = row["updated_at"].as<std::string>();
-                article["published"] = row["published"].as<bool>();
+                article["is_published"] = row["is_published"].as<bool>();
                 article["author"] = row["author"].as<std::string>();
                 
                 // 创建共享指针用于跟踪完成状态
@@ -252,7 +252,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                     "SELECT c.id, c.name, c.slug "
                     "FROM categories c "
                     "JOIN article_categories ac ON c.id = ac.category_id "
-                    "WHERE ac.article_id = ?",
+                    "WHERE ac.article_id = $1",
                     [completed, articleData, callback](const drogon::orm::Result& catResult) {
                         Json::Value categories(Json::arrayValue);
                         
@@ -288,7 +288,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                     "SELECT t.id, t.name, t.slug "
                     "FROM tags t "
                     "JOIN article_tags at ON t.id = at.tag_id "
-                    "WHERE at.article_id = ?",
+                    "WHERE at.article_id = $1",
                     [completed, articleData, callback](const drogon::orm::Result& tagResult) {
                         Json::Value tags(Json::arrayValue);
                         

@@ -4,6 +4,7 @@
 #include "blog/utils/ArticleUtils.hpp"
 #include "blog/db/DbManager.hpp"
 #include <iostream>
+#include <regex>
 
 namespace api {
 namespace v1 {
@@ -24,8 +25,8 @@ void HomeController::getFeaturedArticles(const drogon::HttpRequestPtr& req,
             "FROM articles a "
             "LEFT JOIN users u ON a.user_uuid = u.uuid "
             "WHERE a.is_published = true "
-            "ORDER BY a.created_at DESC "  // 修改为按创建时间排序，而不是views
-            "LIMIT 5";
+            "ORDER BY a.created_at DESC "
+            "LIMIT 5";  // 直接使用字面值5，不使用占位符
         
         dbManager.executeQuery(
             sql,
@@ -97,7 +98,7 @@ void HomeController::getRecentArticles(const drogon::HttpRequestPtr& req,
         // 计算偏移量
         int offset = (page - 1) * pageSize;
         
-        // 查询最新文章
+        // 构建不使用参数的SQL查询
         std::string sql = 
             "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
             "a.updated_at, a.is_published, u.username as author, "
@@ -106,7 +107,7 @@ void HomeController::getRecentArticles(const drogon::HttpRequestPtr& req,
             "LEFT JOIN users u ON a.user_uuid = u.uuid "
             "WHERE a.is_published = true "
             "ORDER BY a.created_at DESC "
-            "LIMIT ? OFFSET ?";
+            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
         
         dbManager.executeQuery(
             sql,
@@ -117,8 +118,7 @@ void HomeController::getRecentArticles(const drogon::HttpRequestPtr& req,
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "获取最新文章出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            pageSize, offset
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "获取最新文章异常: " << e.what() << std::endl;
@@ -159,9 +159,15 @@ void HomeController::getCategoryArticles(const drogon::HttpRequestPtr& req,
         // 计算偏移量
         int offset = (page - 1) * pageSize;
         
-        // 首先获取分类信息
+        // 使用引号包裹slug，防止SQL注入
+        std::string escapedSlug = "'" + slug + "'";
+        escapedSlug = std::regex_replace(escapedSlug, std::regex("'"), "''");
+        
+        // 首先获取分类信息，不使用参数占位符
+        std::string categorySql = "SELECT id, name FROM categories WHERE slug = '" + escapedSlug + "'";
+        
         dbManager.executeQuery(
-            "SELECT id, name FROM categories WHERE slug = ?",
+            categorySql,
             [=, &dbManager, callback=callback](const drogon::orm::Result& categoryResult) {
                 if (categoryResult.size() == 0) {
                     callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该分类"));
@@ -171,19 +177,19 @@ void HomeController::getCategoryArticles(const drogon::HttpRequestPtr& req,
                 int categoryId = categoryResult[0]["id"].as<int>();
                 std::string categoryName = categoryResult[0]["name"].as<std::string>();
                 
-                // 查询该分类下的文章
+                // 构建SQL查询，不使用参数占位符
                 std::string sql = 
                     "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
                     "a.updated_at, a.is_published, u.username as author, "
                     "(SELECT COUNT(*) FROM articles a "
                     "JOIN article_categories ac ON a.id = ac.article_id "
-                    "WHERE ac.category_id = ? AND a.is_published = true) as total_count "
+                    "WHERE ac.category_id = " + std::to_string(categoryId) + " AND a.is_published = true) as total_count "
                     "FROM articles a "
                     "JOIN article_categories ac ON a.id = ac.article_id "
                     "LEFT JOIN users u ON a.user_uuid = u.uuid "
-                    "WHERE ac.category_id = ? AND a.is_published = true "
+                    "WHERE ac.category_id = " + std::to_string(categoryId) + " AND a.is_published = true "
                     "ORDER BY a.created_at DESC "
-                    "LIMIT ? OFFSET ?";
+                    "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
                 
                 dbManager.executeQuery(
                     sql,
@@ -195,15 +201,13 @@ void HomeController::getCategoryArticles(const drogon::HttpRequestPtr& req,
                     [callback=callback](const drogon::orm::DrogonDbException& e) {
                         std::cerr << "获取分类文章出错: " << e.base().what() << std::endl;
                         callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-                    },
-                    categoryId, categoryId, pageSize, offset
+                    }
                 );
             },
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "获取分类信息出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            slug
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "获取分类文章异常: " << e.what() << std::endl;
@@ -244,9 +248,15 @@ void HomeController::getTagArticles(const drogon::HttpRequestPtr& req,
         // 计算偏移量
         int offset = (page - 1) * pageSize;
         
-        // 首先获取标签信息
+        // 使用引号包裹slug，防止SQL注入
+        std::string escapedSlug = "'" + slug + "'";
+        escapedSlug = std::regex_replace(escapedSlug, std::regex("'"), "''");
+        
+        // 首先获取标签信息，不使用参数占位符
+        std::string tagSql = "SELECT id, name FROM tags WHERE slug = '" + escapedSlug + "'";
+        
         dbManager.executeQuery(
-            "SELECT id, name FROM tags WHERE slug = ?",
+            tagSql,
             [=, &dbManager, callback=callback](const drogon::orm::Result& tagResult) {
                 if (tagResult.size() == 0) {
                     callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该标签"));
@@ -256,19 +266,19 @@ void HomeController::getTagArticles(const drogon::HttpRequestPtr& req,
                 int tagId = tagResult[0]["id"].as<int>();
                 std::string tagName = tagResult[0]["name"].as<std::string>();
                 
-                // 查询该标签下的文章
+                // 构建SQL查询，不使用参数占位符
                 std::string sql = 
                     "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
                     "a.updated_at, a.is_published, u.username as author, "
                     "(SELECT COUNT(*) FROM articles a "
                     "JOIN article_tags at ON a.id = at.article_id "
-                    "WHERE at.tag_id = ? AND a.is_published = true) as total_count "
+                    "WHERE at.tag_id = " + std::to_string(tagId) + " AND a.is_published = true) as total_count "
                     "FROM articles a "
                     "JOIN article_tags at ON a.id = at.article_id "
                     "LEFT JOIN users u ON a.user_uuid = u.uuid "
-                    "WHERE at.tag_id = ? AND a.is_published = true "
+                    "WHERE at.tag_id = " + std::to_string(tagId) + " AND a.is_published = true "
                     "ORDER BY a.created_at DESC "
-                    "LIMIT ? OFFSET ?";
+                    "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
                 
                 dbManager.executeQuery(
                     sql,
@@ -280,15 +290,13 @@ void HomeController::getTagArticles(const drogon::HttpRequestPtr& req,
                     [callback=callback](const drogon::orm::DrogonDbException& e) {
                         std::cerr << "获取标签文章出错: " << e.base().what() << std::endl;
                         callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-                    },
-                    tagId, tagId, pageSize, offset
+                    }
                 );
             },
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "获取标签信息出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            slug
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "获取标签文章异常: " << e.what() << std::endl;

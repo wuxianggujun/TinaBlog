@@ -26,6 +26,7 @@ C:/Users/wuxianggujun/CodeSpace/CMakeProjects/TinaBlog/
    │  ├─PostController.*  # [已完成]文章管理
    │  ├─AuthController.*  # [已完成]用户认证
    │  ├─HomeController.*  # [已完成]首页功能
+   │  ├─CommentController.* # [已完成]评论功能
    │  └─HealthController.* # [已完成]健康检查
    ├─auth/                # Jwt验证
    ├─db/                  # 数据库和SQL语句
@@ -82,6 +83,7 @@ namespace v2 {
 4. **创建/更新时间**：所有表必须包含`created_at`和`updated_at`字段
 5. **索引**：为所有外键和常用查询字段创建索引
 6. **事务**：涉及多表操作必须使用事务
+7. **参数传递**：尽量使用SQL字符串连接而非参数占位符，避免PostgreSQL参数传递问题
 
 ## 六、测试要求
 1. **单元测试覆盖率**
@@ -102,5 +104,6 @@ namespace v2 {
 ✅ 主页分页功能
 ✅ 分类和标签文章分组
 ✅ 代码优化与重构
+✅ 评论系统功能
 ⏳ 文章搜索功能
 ⏳ 用户个人中心
