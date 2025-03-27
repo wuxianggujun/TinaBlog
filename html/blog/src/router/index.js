@@ -18,8 +18,30 @@ const routes = [
   },
   {
     path: '/login',
-    name: 'login',
+    name: 'Login',
     component: () => import('../views/Login.vue'),
+    meta: {
+      requiresGuest: true,
+      title: '登录 - Tina博客'
+    },
+    beforeEnter: (to, from, next) => {
+      // 如果用户已登录，重定向到首页
+      if (localStorage.getItem('isLoggedIn') === 'true') {
+        next('/');
+      } else {
+        // 验证并设置重定向参数，处理hash路由模式下的特殊情况
+        if (!to.query.redirect && from.path !== '/' && !from.path.includes('/login')) {
+          // 在hash模式下，重定向需要特殊处理，确保能够重定向回原来的URL
+          // 注意：使用fullPath确保包含查询参数
+          next({
+            path: '/login',
+            query: { redirect: from.fullPath }
+          });
+        } else {
+          next();
+        }
+      }
+    }
   },
   {
     path: '/create',

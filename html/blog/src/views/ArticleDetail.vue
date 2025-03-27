@@ -339,16 +339,9 @@ export default {
           }
         })
         .catch(error => {
-          // 如果是404错误，说明API不存在，我们不显示错误，只显示空评论列表
-          if (error.response && error.response.status === 404) {
-            console.warn('评论API不存在，显示空评论列表');
-            this.comments = [];
-            this.commentsError = false;
-          } else {
-            this.commentsError = true;
-            this.commentsErrorMessage = error.response?.data?.message || '获取评论时出错';
-            console.error('获取评论失败:', error);
-          }
+          this.commentsError = true;
+          this.commentsErrorMessage = error.response?.data?.message || '获取评论时出错';
+          console.error('获取评论失败:', error);
         })
         .finally(() => {
           this.commentsLoading = false;

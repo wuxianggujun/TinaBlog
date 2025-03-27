@@ -258,7 +258,21 @@ export default {
           setTimeout(() => {
             const redirect = this.$route.query.redirect || '/';
             console.log('准备跳转到:', redirect);
-            this.$router.push(redirect);
+            
+            // 处理hash模式下的重定向
+            try {
+              // 移除hash前缀（如果有）以确保导航正确
+              const cleanRedirect = redirect.startsWith('/#') 
+                ? redirect.substring(2) 
+                : redirect;
+              
+              console.log('清理后的重定向路径:', cleanRedirect);
+              this.$router.push(cleanRedirect);
+            } catch (e) {
+              console.error('导航出错:', e);
+              // 导航失败时，直接跳转到首页
+              this.$router.push('/');
+            }
           }, 100);
         } else {
           alert(data.message || '登录失败，请检查用户名和密码');
@@ -336,7 +350,21 @@ export default {
           // 使用router导航
           const redirect = this.$route.query.redirect || '/';
           console.log('跳转到:', redirect);
-          this.$router.push(redirect);
+          
+          // 处理hash模式下的重定向
+          try {
+            // 移除hash前缀（如果有）以确保导航正确
+            const cleanRedirect = redirect.startsWith('/#') 
+              ? redirect.substring(2) 
+              : redirect;
+            
+            console.log('清理后的重定向路径:', cleanRedirect);
+            this.$router.push(cleanRedirect);
+          } catch (e) {
+            console.error('导航出错:', e);
+            // 导航失败时，直接跳转到首页
+            this.$router.push('/');
+          }
         } else {
           console.error('注册失败:', data.message);
           alert(data.message || '注册失败，请稍后重试');
