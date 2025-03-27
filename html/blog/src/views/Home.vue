@@ -29,24 +29,47 @@
               </router-link>
             </article>
           </div>
-          <!-- 分页控件 -->
+          <!-- 增强分页控件样式和功能 -->
           <div class="pagination" v-if="totalPages > 1">
+            <button 
+              @click="changePage(1)" 
+              :disabled="currentPage === 1"
+              class="btn pagination-btn"
+            >
+              首页
+            </button>
             <button 
               @click="changePage(currentPage - 1)" 
               :disabled="currentPage === 1"
-              class="btn"
+              class="btn pagination-btn"
             >
               上一页
             </button>
             
-            <span class="page-info">{{ currentPage }} / {{ totalPages }}</span>
+            <div class="pagination-pages">
+              <button 
+                v-for="pageNum in displayedPages" 
+                :key="pageNum" 
+                @click="changePage(pageNum)"
+                :class="['btn', 'page-btn', { active: pageNum === currentPage }]"
+              >
+                {{ pageNum }}
+              </button>
+            </div>
             
             <button 
               @click="changePage(currentPage + 1)" 
               :disabled="currentPage === totalPages"
-              class="btn"
+              class="btn pagination-btn"
             >
               下一页
+            </button>
+            <button 
+              @click="changePage(totalPages)" 
+              :disabled="currentPage === totalPages"
+              class="btn pagination-btn"
+            >
+              末页
             </button>
           </div>
         </div>
@@ -139,15 +162,35 @@ export default {
     }
   },
   created() {
-    this.checkLoginStatus();
+    // 初始检查登录状态
+    this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     this.fetchArticles();
     this.fetchCategories();
+    // 添加事件监听，当用户登录状态改变时刷新标签
+    window.addEventListener('storage', this.handleStorageChange);
+    
+    // 如果已登录，获取用户标签
+    if (this.isLoggedIn) {
+      this.fetchUserTags();
+    }
+  },
+  beforeUnmount() {
+    // 移除事件监听器
+    window.removeEventListener('storage', this.handleStorageChange);
   },
   methods: {
-    checkLoginStatus() {
-      this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-      if (this.isLoggedIn) {
-        this.fetchUserTags();
+    // 添加监听localStorage的事件处理
+    handleStorageChange(event) {
+      if (event.key === 'isLoggedIn') {
+        const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+        this.isLoggedIn = isLoggedIn;
+        
+        if (isLoggedIn) {
+          this.fetchUserTags();
+        } else {
+          // 用户登出时清空标签
+          this.userTags = [];
+        }
       }
     },
     formatDate(dateString) {
@@ -231,21 +274,25 @@ export default {
         return;
       }
       
+      // 使用正确的API端点并确保设置了Authorization头
       axios.get('/api/tags/user', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
         .then(response => {
+          console.log('用户标签响应:', response.data);
           if (response.data.code === 0 && response.data.data) {
             this.userTags = response.data.data.tags || [];
+            console.log('获取到用户标签:', this.userTags.length);
           } else {
             this.tagsError = true;
+            console.error('获取用户标签响应错误:', response.data.message);
           }
         })
         .catch(error => {
-          this.tagsError = false; // 不显示错误，因为可能是未登录导致的
           console.error('获取用户标签失败:', error);
+          this.tagsError = true;
         })
         .finally(() => {
           this.tagsLoading = false;
@@ -274,6 +321,29 @@ export default {
       this.fetchArticles();
       // 滚动到页面顶部
       window.scrollTo(0, 0);
+    }
+  },
+  computed: {
+    // 计算要显示的页码按钮
+    displayedPages() {
+      const maxVisiblePages = 5; // 最多显示5个页码按钮
+      
+      if (this.totalPages <= maxVisiblePages) {
+        // 页数较少时显示所有页
+        return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+      }
+      
+      // 计算起始和结束页
+      let start = Math.max(this.currentPage - Math.floor(maxVisiblePages / 2), 1);
+      let end = start + maxVisiblePages - 1;
+      
+      // 确保结束页不超过总页数
+      if (end > this.totalPages) {
+        end = this.totalPages;
+        start = Math.max(end - maxVisiblePages + 1, 1);
+      }
+      
+      return Array.from({ length: end - start + 1 }, (_, i) => start + i);
     }
   }
 }
@@ -450,7 +520,27 @@ export default {
   justify-content: center;
   align-items: center;
   margin-top: 2rem;
-  gap: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.page-btn {
+  min-width: 2rem;
+  padding: 0.5rem;
+}
+
+.page-btn.active {
+  background-color: #4f46e5;
+  font-weight: bold;
+}
+
+.pagination-btn {
+  padding: 0.5rem 0.75rem;
 }
 
 .btn {
@@ -498,12 +588,13 @@ export default {
   color: #666;
   text-decoration: none;
   transition: all 0.3s;
-  font-size: 0.9rem;
+  text-align: center;
 }
 
 .tag-widget .tag-item:hover {
   background-color: #e6e7ff;
   color: #6366f1;
+  transform: translateY(-2px);
 }
 
 .empty-tags {
