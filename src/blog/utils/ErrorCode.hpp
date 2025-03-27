@@ -37,6 +37,7 @@ enum class ErrorCode {
     INVALID_REQUEST = 4001,
     INVALID_PARAMETER = 4002,
     SERVER_ERROR = 4003,
+    RESOURCE_NOT_FOUND = 4004,
     INTERNAL_ERROR = 500
 };
 
@@ -66,6 +67,7 @@ inline const std::unordered_map<ErrorCode, std::string> ERROR_MESSAGES = {
     {ErrorCode::INVALID_REQUEST, "无效的请求"},
     {ErrorCode::INVALID_PARAMETER, "无效的参数"},
     {ErrorCode::SERVER_ERROR, "服务器内部错误"},
+    {ErrorCode::RESOURCE_NOT_FOUND, "资源不存在"},
     {ErrorCode::INTERNAL_ERROR, "内部错误"}
 };
 

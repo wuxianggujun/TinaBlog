@@ -1,0 +1,106 @@
+# Tina博客系统开发规范（C++20+Drogon）
+
+## 一、技术栈要求
+1. **核心语言**  
+   - 使用 C++20 标准（编译选项：`-std=c++20`）
+   - 依赖管理工具：vcpkg 2023.11.20
+
+2. **框架与组件**  
+   - Web框架: Drogon 1.8.x (latest)
+   - 数据库: PostgreSQL 17.x (latest)
+   - 安全组件:
+     * jwt-cpp (latest)
+     * libsodium (latest)
+
+## 二、目录结构规范
+```plaintext
+C:/Users/wuxianggujun/CodeSpace/CMakeProjects/TinaBlog/
+├─html/blog/src/          # 前端工程
+│  ├─assets/              # 静态资源
+│  ├─router/              # 路由资源
+│  ├─utils/               # eventbus
+│  ├─views/               # 页面布局
+│  └─App.vue            
+└─src/blog/               # 后端工程
+   ├─controllers/         # [已完成]控制器
+   │  ├─PostController.*  # [已完成]文章管理
+   │  ├─AuthController.*  # [已完成]用户认证
+   │  ├─HomeController.*  # [已完成]首页功能
+   │  └─HealthController.* # [已完成]健康检查
+   ├─auth/                # Jwt验证
+   ├─db/                  # 数据库和SQL语句
+   │  ├─DbManager.*       # [已完成]数据库管理
+   │  └─schema.sql        # [已完成]数据库结构
+   └─utils/               # 工具类
+      ├─HttpUtils.hpp     # [已实现]响应包装器
+      ├─ErrorCode.hpp     # [已实现]响应错误码
+      ├─ArticleUtils.*    # [已实现]文章工具类
+      ├─PasswordUtils.hpp # [已实现]密码工具
+      └─PasswordUtils.cpp # [已实现]密码工具
+```
+
+## 三、编码准则
+### 3.1 命名规范
+```cpp
+// 类命名（PascalCase）
+class ArticleController {};
+
+// 方法命名（camelCase）
+void validateUserToken() {
+  // 成员变量（m_前缀）
+  int m_articleId;  
+}
+
+// 常量（SCREAMING_SNAKE_CASE）
+const int MAX_PAGE_SIZE = 50;
+```
+
+### 3.2 现代特性
+```cpp
+// 智能指针应用
+auto dbClient = std::make_unique<drogon::orm::DbClientPtr>();
+```
+
+### 3.3 命名空间规范
+```cpp
+// 所有API接口都应该放在适当的命名空间下
+namespace api {
+namespace v1 {
+    // API v1 版本的实现
+} // namespace v1
+
+namespace v2 {
+    // API v2 版本的实现（未来）
+} // namespace v2
+} // namespace api
+```
+
+## 四、数据库规范
+1. **表命名**：使用小写复数形式，如`users`、`articles`
+2. **主键**：统一使用`id`作为自增主键
+3. **外键**：格式为`表名_id`，如`user_id`
+4. **创建/更新时间**：所有表必须包含`created_at`和`updated_at`字段
+5. **索引**：为所有外键和常用查询字段创建索引
+6. **事务**：涉及多表操作必须使用事务
+
+## 六、测试要求
+1. **单元测试覆盖率**
+   - 控制器方法：100%
+   - 工具类方法：≥95%
+   - 异常分支：必须覆盖
+
+2. **性能指标**
+   ```plaintext
+   - 分页接口响应时间：<200ms (1万级数据量)
+   - 登录接口QPS：≥500
+   ```
+
+## 七、进度追踪
+✅ 用户认证系统  
+✅ 文章发布功能  
+✅ Token中间件  
+✅ 主页分页功能
+✅ 分类和标签文章分组
+✅ 代码优化与重构
+⏳ 文章搜索功能
+⏳ 用户个人中心

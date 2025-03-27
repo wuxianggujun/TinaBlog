@@ -1,7 +1,14 @@
 #pragma once
 #include <drogon/HttpController.h>
+#include <json/json.h>
 #include "blog/db/DbManager.hpp"
 #include "blog/utils/ErrorCode.hpp"
+#include <memory>
+#include <vector>
+#include <string>
+
+namespace api {
+namespace v1 {
 
 /**
  * 文章控制器
@@ -21,6 +28,16 @@ public:
     ADD_METHOD_TO(PostController::updatePost, "/api/posts/{id}", drogon::Put, "JwtAuthFilter");
     // 删除文章
     ADD_METHOD_TO(PostController::deletePost, "/api/posts/{id}", drogon::Delete, "JwtAuthFilter");
+    // 获取分类列表
+    ADD_METHOD_TO(PostController::getCategories, "/api/categories", drogon::Get);
+    // 获取标签列表
+    ADD_METHOD_TO(PostController::getTags, "/api/tags", drogon::Get);
+    // 获取文章列表
+    ADD_METHOD_TO(PostController::getArticles, "/api/articles", drogon::Get);
+    // 获取文章详情
+    ADD_METHOD_TO(PostController::getArticle, "/api/articles/{slug}", drogon::Get);
+    // 创建文章
+    ADD_METHOD_TO(PostController::createArticle, "/api/articles", drogon::Post, "JwtAuthFilter");
     METHOD_LIST_END
 
     /**
@@ -30,7 +47,7 @@ public:
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
 
     /**
-     * 获取文章列表
+     * 获取作者文章列表
      */
     void getPosts(const drogon::HttpRequestPtr& req,
                  std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
@@ -56,11 +73,52 @@ public:
                    std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                    int id) const;
 
+    /**
+     * 获取所有分类
+     */
+    void getCategories(const drogon::HttpRequestPtr& req,
+                      std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+
+    /**
+     * 获取所有标签
+     */
+    void getTags(const drogon::HttpRequestPtr& req,
+                 std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+
+    /**
+     * 获取公开文章列表
+     */
+    void getArticles(const drogon::HttpRequestPtr& req,
+                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+    
+    /**
+     * 获取文章详情
+     */
+    void getArticle(const drogon::HttpRequestPtr& req,
+                   std::function<void(const drogon::HttpResponsePtr&)>&& callback, 
+                   const std::string& slug) const;
+    
+    /**
+     * 创建文章
+     */
+    void createArticle(const drogon::HttpRequestPtr& req,
+                      std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+
 private:
     /**
      * 验证文章数据
      */
     bool validatePostData(const Json::Value& data, std::string& error) const;
+
+    /**
+     * 处理文章分类（同步版本）
+     */
+    void handleCategories(int articleId, const Json::Value& categories) const;
+
+    /**
+     * 处理文章标签（同步版本）
+     */
+    void handleTags(int articleId, const Json::Value& tags) const;
 
     /**
      * 异步处理文章分类
@@ -73,22 +131,13 @@ private:
     void handleTagsAsync(int articleId, const Json::Value& tags, std::function<void()> finalCallback) const;
 
     /**
-     * 从分类名生成slug
+     * 创建文章（使用事务）
      */
-    std::string generateSlug(const std::string& name) const;
-
-    /**
-     * 同步处理文章分类（已弃用，使用异步版本）
-     */
-    void handleCategories(int articleId, const Json::Value& categories) const;
-
-    /**
-     * 同步处理文章标签（已弃用，使用异步版本）
-     */
-    void handleTags(int articleId, const Json::Value& tags) const;
-
     void createArticleWithTransaction(DbManager& dbManager,
                                     const std::string& userUuid,
                                     const Json::Value& jsonBody,
                                     const std::function<void(const drogon::HttpResponsePtr&)>& callback) const;
-}; 
+};
+
+} // namespace v1
+} // namespace api 
