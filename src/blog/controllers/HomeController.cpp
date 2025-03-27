@@ -16,8 +16,7 @@ void HomeController::getFeaturedArticles(const drogon::HttpRequestPtr& req,
     try {
         auto& dbManager = DbManager::getInstance();
         
-        // 简单实现：返回阅读量最高的5篇文章
-        // 注意：这里未考虑文章质量、推荐度等更复杂的精选规则
+        // 简单实现：返回最新的5篇文章而不是阅读量最高的
         std::string sql = 
             "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
             "a.updated_at, a.is_published, u.username as author, "
@@ -25,7 +24,7 @@ void HomeController::getFeaturedArticles(const drogon::HttpRequestPtr& req,
             "FROM articles a "
             "LEFT JOIN users u ON a.user_uuid = u.uuid "
             "WHERE a.is_published = true "
-            "ORDER BY a.views DESC "  // 假设存在views字段表示阅读量
+            "ORDER BY a.created_at DESC "  // 修改为按创建时间排序，而不是views
             "LIMIT 5";
         
         dbManager.executeQuery(

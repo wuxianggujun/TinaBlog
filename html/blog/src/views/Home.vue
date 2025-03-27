@@ -1,56 +1,40 @@
 <template>
   <div class="home-container">
-    <div class="container">
-      <!-- 主内容区 -->
-      <div class="main-content">
-        <h1>最新文章</h1>
-        
-        <!-- 加载中状态 -->
-        <div v-if="isLoading" class="loading-container">
-          <div class="loading-spinner"></div>
-          <p>正在加载文章...</p>
-        </div>
-        
-        <!-- 加载错误状态 -->
-        <div v-else-if="error" class="error-message">
-          <p>{{ errorMessage }}</p>
-          <button @click="fetchPosts" class="btn-retry">重试</button>
-        </div>
-        
-        <!-- 没有文章状态 -->
-        <div v-else-if="posts.length === 0" class="no-posts">
-          <p>暂无文章</p>
-        </div>
-        
-        <!-- 文章列表 -->
-        <div v-else class="posts-container">
-          <div v-for="post in posts" :key="post.id" class="post-card">
-            <h2 class="post-title">
-              <router-link :to="'/article/' + post.slug">{{ post.title }}</router-link>
-            </h2>
-            
-            <div class="post-meta">
-              <span class="post-author">作者: {{ post.author }}</span>
-              <span class="post-date">发布于: {{ formatDate(post.created_at) }}</span>
-            </div>
-            
-            <div class="post-summary">
-              {{ post.summary || post.preview }}
-            </div>
-            
-            <div class="post-actions">
-              <router-link :to="'/article/' + post.slug" class="read-more">
-                阅读全文
-              </router-link>
-            </div>
+    <div class="main-container">
+      <!-- 左侧文章列表 -->
+      <div class="content">
+        <div class="content-card">
+          <h2 class="section-title">最新文章</h2>
+          <div v-if="isLoading" class="loading">
+            <p>加载中...</p>
           </div>
-          
+          <div v-else-if="error" class="error">
+            <p>{{ errorMessage }}</p>
+            <button @click="fetchArticles" class="read-more">重试</button>
+          </div>
+          <div v-else class="post-list">
+            <article v-for="post in posts" :key="post.id" class="post-card">
+              <div class="post-header">
+                <h3 class="post-title">
+                  <router-link :to="'/article/' + post.slug">{{ post.title }}</router-link>
+                </h3>
+                <div class="post-meta">
+                  <span class="post-date">{{ formatDate(post.created_at) }}</span>
+                  <span class="post-category" v-if="post.author">{{ post.author }}</span>
+                </div>
+              </div>
+              <p class="post-excerpt">{{ post.summary }}</p>
+              <router-link :to="'/article/' + post.slug" class="read-more">
+                阅读更多
+              </router-link>
+            </article>
+          </div>
           <!-- 分页控件 -->
           <div class="pagination" v-if="totalPages > 1">
             <button 
               @click="changePage(currentPage - 1)" 
               :disabled="currentPage === 1"
-              class="page-btn"
+              class="btn"
             >
               上一页
             </button>
@@ -60,7 +44,7 @@
             <button 
               @click="changePage(currentPage + 1)" 
               :disabled="currentPage === totalPages"
-              class="page-btn"
+              class="btn"
             >
               下一页
             </button>
@@ -68,53 +52,37 @@
         </div>
       </div>
       
-      <!-- 侧边栏 -->
-      <div class="sidebar">
-        <!-- 分类列表 -->
-        <div class="sidebar-section categories-section">
+      <!-- 右侧边栏 -->
+      <aside class="sidebar">
+        <!-- 博客标题区域 -->
+        <div class="blog-header">
+          <h1>Tina的个人博客</h1>
+          <p>分享技术，记录生活</p>
+        </div>
+        
+        <div class="widget about-widget">
+          <h3>关于我</h3>
+          <p>热爱技术，热爱生活的程序员</p>
+        </div>
+        
+        <div class="widget category-widget">
           <h3>分类</h3>
-          <div v-if="categoriesLoading" class="sidebar-loading">
-            <div class="sidebar-spinner"></div>
+          <div v-if="categoriesLoading" class="loading">
+            <p>加载中...</p>
           </div>
-          <div v-else-if="categoriesError" class="sidebar-error">
-            加载分类失败
-            <button @click="fetchCategories" class="btn-retry-small">重试</button>
+          <div v-else-if="categoriesError" class="error">
+            <p>加载分类失败</p>
+            <button @click="fetchCategories" class="btn">重试</button>
           </div>
-          <ul v-else class="categories-list">
-            <li v-for="category in categories" :key="category.id" class="category-item">
-              <router-link 
-                :to="{ path: '/', query: { category: category.slug } }"
-                :class="{ active: activeCategory === category.slug }"
-              >
+          <ul v-else>
+            <li v-for="category in categories" :key="category.id">
+              <router-link :to="'/category/' + category.slug">
                 {{ category.name }} ({{ category.count }})
               </router-link>
             </li>
           </ul>
         </div>
-        
-        <!-- 标签列表 -->
-        <div class="sidebar-section tags-section">
-          <h3>标签</h3>
-          <div v-if="tagsLoading" class="sidebar-loading">
-            <div class="sidebar-spinner"></div>
-          </div>
-          <div v-else-if="tagsError" class="sidebar-error">
-            加载标签失败
-            <button @click="fetchTags" class="btn-retry-small">重试</button>
-          </div>
-          <div v-else class="tags-cloud">
-            <router-link 
-              v-for="tag in tags" 
-              :key="tag.id"
-              :to="{ path: '/', query: { tag: tag.slug } }"
-              :class="{ 'tag-link': true, active: activeTag === tag.slug }"
-              :style="{ fontSize: getTagFontSize(tag.count) }"
-            >
-              {{ tag.name }}
-            </router-link>
-          </div>
-        </div>
-      </div>
+      </aside>
     </div>
   </div>
 </template>
@@ -123,37 +91,26 @@
 import axios from 'axios';
 
 export default {
-  name: 'HomeView',
-  
+  name: 'Home',
   data() {
     return {
       posts: [],
       categories: [],
-      tags: [],
       isLoading: true,
       categoriesLoading: true,
-      tagsLoading: true,
       error: false,
       categoriesError: false,
-      tagsError: false,
-      errorMessage: '',
+      errorMessage: '加载失败',
       currentPage: 1,
       pageSize: 10,
       totalPosts: 0,
       totalPages: 0
-    };
-  },
-
-  computed: {
-    activeCategory() {
-      return this.$route.query.category || '';
-    },
-    
-    activeTag() {
-      return this.$route.query.tag || '';
     }
   },
-  
+  created() {
+    this.fetchArticles();
+    this.fetchCategories();
+  },
   methods: {
     formatDate(dateString) {
       if (!dateString) return '';
@@ -167,26 +124,16 @@ export default {
       return new Date(dateString).toLocaleDateString('zh-CN', options);
     },
     
-    fetchPosts() {
+    fetchArticles() {
       this.isLoading = true;
       this.error = false;
       
-      // 构建查询参数
-      const params = {
-        page: this.currentPage,
-        pageSize: this.pageSize
-      };
-      
-      // 添加分类和标签过滤
-      if (this.activeCategory) {
-        params.category = this.activeCategory;
-      }
-      
-      if (this.activeTag) {
-        params.tag = this.activeTag;
-      }
-      
-      axios.get('/api/articles', { params })
+      axios.get('/api/home/recent', { 
+        params: {
+          page: this.currentPage,
+          pageSize: this.pageSize
+        }
+      })
         .then(response => {
           if (response.data.code === 0 && response.data.data) {
             this.posts = response.data.data.articles || [];
@@ -204,7 +151,7 @@ export default {
         })
         .catch(error => {
           this.error = true;
-          this.errorMessage = error.response?.data?.message || '获取文章时出错';
+          this.errorMessage = error.response?.data?.message || '网络错误，请稍后重试';
           console.error('获取文章列表失败:', error);
         })
         .finally(() => {
@@ -233,242 +180,202 @@ export default {
         });
     },
     
-    fetchTags() {
-      this.tagsLoading = true;
-      this.tagsError = false;
-      
-      axios.get('/api/tags')
-        .then(response => {
-          if (response.data.code === 0 && response.data.data) {
-            this.tags = response.data.data.tags || [];
-          } else {
-            this.tagsError = true;
-          }
-        })
-        .catch(error => {
-          this.tagsError = true;
-          console.error('获取标签失败:', error);
-        })
-        .finally(() => {
-          this.tagsLoading = false;
-        });
-    },
-    
-    changePage(page) {
-      if (page < 1 || page > this.totalPages) return;
-      
-      this.currentPage = page;
-      
-      // 更新查询参数但保留当前的分类和标签过滤
-      const query = { ...this.$route.query, page };
-      
-      // 使用 router 来更新 URL 而不重新加载页面
-      this.$router.push({ 
-        path: this.$route.path, 
-        query 
-      });
-      
-      // 获取新页面的文章
-      this.fetchPosts();
-      
+    changePage(newPage) {
+      this.currentPage = newPage;
+      this.fetchArticles();
       // 滚动到页面顶部
       window.scrollTo(0, 0);
-    },
-    
-    getTagFontSize(count) {
-      // 根据文章数量计算标签字体大小，最小 0.9rem，最大 1.5rem
-      const min = 0.9;
-      const max = 1.5;
-      
-      // 找出最大的 count 值
-      const maxCount = Math.max(...this.tags.map(tag => tag.count));
-      
-      if (maxCount <= 1) return `${min}rem`;
-      
-      // 计算字体大小
-      const size = min + ((count - 1) / (maxCount - 1)) * (max - min);
-      return `${size}rem`;
-    }
-  },
-  
-  mounted() {
-    // 读取URL中的页码
-    const pageParam = this.$route.query.page;
-    if (pageParam) {
-      this.currentPage = parseInt(pageParam, 10) || 1;
-    }
-    
-    // 获取数据
-    this.fetchPosts();
-    this.fetchCategories();
-    this.fetchTags();
-  },
-  
-  watch: {
-    // 监听路由变化，当分类或标签改变时刷新文章列表
-    '$route.query'(newQuery) {
-      // 如果分类或标签改变，重置到第一页
-      if (newQuery.category !== this.$route.query.category || 
-          newQuery.tag !== this.$route.query.tag) {
-        this.currentPage = 1;
-      }
-      
-      this.fetchPosts();
     }
   }
-};
+}
 </script>
 
 <style scoped>
 .home-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-.container {
-  display: flex;
-  flex-direction: row;
-  gap: 30px;
-}
-
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
-}
-
-.main-content {
+  width: 100%;
   flex: 1;
+  display: flex;
+  justify-content: center;
+  background-color: #f5f5f5;
+  padding: 2rem 1rem;
+  overflow-y: auto;
+}
+
+.main-container {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(300px, 1fr);
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.content {
+  min-width: 0;
+  width: 100%;
+}
+
+.content-card {
+  width: 100%;
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar {
-  width: 300px;
-}
-
-h1 {
-  margin-bottom: 25px;
-  font-size: 1.8rem;
-  color: #333;
-}
-
-.loading-container, .error-message, .no-posts {
-  text-align: center;
-  padding: 40px 0;
-}
-
-.loading-spinner, .sidebar-spinner {
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-radius: 50%;
-  border-top: 4px solid #3498db;
-  width: 30px;
-  height: 30px;
-  margin: 0 auto 20px;
-  animation: spin 1s linear infinite;
-}
-
-.sidebar-spinner {
-  width: 20px;
-  height: 20px;
-  margin-bottom: 10px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.posts-container {
+  width: 100%;
+  min-width: 300px;
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: #1a1a1a;
+  margin: 0 0 1.5rem;
+  padding-left: 0.5rem;
+  border-left: 4px solid #6366f1;
+}
+
+.post-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
 }
 
 .post-card {
-  border: 1px solid #eee;
+  background: white;
   border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s, box-shadow 0.2s;
+  padding: 1.25rem;
+  border: 1px solid #eee;
+  transition: transform 0.2s, box-shadow 0.3s;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .post-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.post-header {
+  margin-bottom: 0.75rem;
 }
 
 .post-title {
-  margin-top: 0;
-  margin-bottom: 10px;
-  font-size: 1.5rem;
-}
-
-.post-title a {
-  color: #333;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.post-title a:hover {
-  color: #3498db;
+  font-size: 1.3rem;
+  margin: 0 0 0.5rem;
+  color: #1a1a1a;
 }
 
 .post-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
-  margin-bottom: 15px;
   font-size: 0.9rem;
   color: #666;
+  margin-bottom: 0.75rem;
+  display: flex;
+  gap: 1rem;
 }
 
-.post-summary {
-  margin-bottom: 20px;
-  line-height: 1.5;
-  color: #444;
-}
-
-.post-actions {
-  text-align: right;
+.post-excerpt {
+  color: #4a4a4a;
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
 }
 
 .read-more {
   display: inline-block;
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
+  color: #6366f1;
   text-decoration: none;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  font-weight: 500;
 }
 
 .read-more:hover {
-  background-color: #2980b9;
+  text-decoration: underline;
+}
+
+.blog-header {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.blog-header h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.blog-header p {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+.widget {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.widget h3 {
+  margin: 0 0 1rem;
+  color: #1a1a1a;
+  font-size: 1.25rem;
+}
+
+.category-widget ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.category-widget li {
+  margin-bottom: 0.75rem;
+}
+
+.category-widget li:last-child {
+  margin-bottom: 0;
+}
+
+.category-widget a {
+  color: #4a4a4a;
+  text-decoration: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.category-widget a:hover {
+  color: #6366f1;
 }
 
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 30px;
-  gap: 15px;
+  margin-top: 2rem;
+  gap: 1rem;
 }
 
-.page-btn {
-  padding: 8px 16px;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
+.btn {
+  padding: 0.5rem 1rem;
+  background-color: #6366f1;
+  color: white;
+  border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  font-weight: 500;
 }
 
-.page-btn:hover:not(:disabled) {
-  background-color: #e9ecef;
-}
-
-.page-btn:disabled {
-  opacity: 0.5;
+.btn:disabled {
+  background-color: #c4c4c4;
   cursor: not-allowed;
 }
 
@@ -477,89 +384,35 @@ h1 {
   color: #666;
 }
 
-.sidebar-section {
-  margin-bottom: 30px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-}
-
-.sidebar-section h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-size: 1.2rem;
-  color: #333;
-  border-bottom: 1px solid #dee2e6;
-  padding-bottom: 10px;
-}
-
-.categories-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.category-item {
-  margin-bottom: 8px;
-}
-
-.category-item a {
-  display: block;
-  padding: 5px 0;
-  color: #333;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.category-item a:hover, .category-item a.active {
-  color: #3498db;
-}
-
-.tags-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.tag-link {
-  color: #3498db;
-  text-decoration: none;
-  padding: 3px 8px;
-  background-color: #e9f5fe;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.tag-link:hover, .tag-link.active {
-  background-color: #d0e8f9;
-}
-
-.sidebar-loading, .sidebar-error {
+.loading, .error {
   text-align: center;
-  padding: 10px 0;
-  font-size: 0.9rem;
+  padding: 2rem;
   color: #666;
 }
 
-.btn-retry, .btn-retry-small {
-  display: inline-block;
-  margin-top: 10px;
-  padding: 8px 16px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+.error button {
+  margin-top: 1rem;
 }
 
-.btn-retry-small {
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  margin-top: 5px;
+@media (max-width: 1600px) {
+  .main-container {
+    max-width: 100%;
+  }
 }
 
-.btn-retry:hover, .btn-retry-small:hover {
-  background-color: #2980b9;
+@media (max-width: 768px) {
+  .home-container {
+    padding: 1rem;
+  }
+
+  .main-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .sidebar {
+    min-width: 100%;
+  }
 }
 </style> 
