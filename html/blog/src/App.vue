@@ -431,7 +431,7 @@ export default {
   <div class="app" @click="hideDropdown">
     <nav class="nav">
       <div class="nav-container">
-        <!-- 左侧区域：品牌和导航链接 -->
+        <!-- 左侧导航 -->
         <div class="nav-left">
           <router-link to="/" class="nav-brand">Tina Blog</router-link>
           <div class="nav-links">

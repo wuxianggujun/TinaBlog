@@ -16,6 +16,28 @@ const routes = [
     // which is lazy-loaded when the route is visited.
     component: () => import('../views/AboutView.vue'),
   },
+  // 分类页面路由
+  {
+    path: '/categories',
+    name: 'categories',
+    component: () => import('../views/CategoryView.vue'),
+    meta: { title: '分类 - Tina博客' }
+  },
+  // 单个分类页面路由
+  {
+    path: '/category/:slug',
+    name: 'category-detail',
+    component: () => import('../views/CategoryDetailView.vue'),
+    props: true,
+    meta: { title: '分类文章 - Tina博客' }
+  },
+  // 归档页面路由
+  {
+    path: '/archives',
+    name: 'archives',
+    component: () => import('../views/ArchiveView.vue'),
+    meta: { title: '归档 - Tina博客' }
+  },
   {
     path: '/login',
     name: 'Login',

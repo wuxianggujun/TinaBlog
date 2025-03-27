@@ -25,6 +25,10 @@ public:
     ADD_METHOD_TO(HomeController::getTagArticles, "/api/tag/{slug}", drogon::Get);
     // 网站统计信息
     ADD_METHOD_TO(HomeController::getSiteStats, "/api/stats", drogon::Get);
+    // 获取归档文章列表
+    ADD_METHOD_TO(HomeController::getArchives, "/api/archives", drogon::Get);
+    // 获取所有分类列表
+    ADD_METHOD_TO(HomeController::getAllCategories, "/api/categories/all", drogon::Get);
     METHOD_LIST_END
 
     /**
@@ -58,6 +62,18 @@ public:
      */
     void getSiteStats(const drogon::HttpRequestPtr& req,
                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+                    
+    /**
+     * 获取归档文章列表
+     */
+    void getArchives(const drogon::HttpRequestPtr& req,
+                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+                    
+    /**
+     * 获取所有分类列表(含文章数量)
+     */
+    void getAllCategories(const drogon::HttpRequestPtr& req,
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
 };
 
 } // namespace v1

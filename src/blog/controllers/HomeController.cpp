@@ -373,5 +373,124 @@ void HomeController::getSiteStats(const drogon::HttpRequestPtr& req,
     }
 }
 
+/**
+ * 获取归档文章列表
+ */
+void HomeController::getArchives(const drogon::HttpRequestPtr& req,
+                               std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    try {
+        auto& dbManager = DbManager::getInstance();
+        
+        // 构建SQL查询，获取所有已发布文章按时间排序
+        std::string sql = 
+            "SELECT a.id, a.title, a.slug, a.summary, a.created_at, "
+            "u.username as author "
+            "FROM articles a "
+            "LEFT JOIN users u ON a.user_uuid = u.uuid "
+            "WHERE a.is_published = true "
+            "ORDER BY a.created_at DESC";
+        
+        dbManager.executeQuery(
+            sql,
+            [callback=callback](const drogon::orm::Result& result) {
+                if (result.size() == 0) {
+                    callback(utils::createSuccessResponse("暂无归档文章", Json::Value(Json::arrayValue)));
+                    return;
+                }
+                
+                // 将结果转换为JSON数组
+                Json::Value articlesArray(Json::arrayValue);
+                
+                // 遍历结果集构建文章列表
+                for (const auto& row : result) {
+                    Json::Value article;
+                    article["id"] = row["id"].as<int>();
+                    article["title"] = row["title"].as<std::string>();
+                    article["slug"] = row["slug"].as<std::string>();
+                    
+                    if (!row["summary"].isNull()) {
+                        article["summary"] = row["summary"].as<std::string>();
+                    }
+                    
+                    if (!row["author"].isNull()) {
+                        article["author"] = row["author"].as<std::string>();
+                    }
+                    
+                    article["created_at"] = row["created_at"].as<std::string>();
+                    
+                    articlesArray.append(article);
+                }
+                
+                // 返回成功响应
+                callback(utils::createSuccessResponse("获取归档文章成功", articlesArray));
+            },
+            [callback=callback](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "获取归档文章出错: " << e.base().what() << std::endl;
+                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+            }
+        );
+    } catch (const std::exception& e) {
+        std::cerr << "获取归档文章异常: " << e.what() << std::endl;
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
+}
+
+/**
+ * 获取所有分类列表(含文章数量)
+ */
+void HomeController::getAllCategories(const drogon::HttpRequestPtr& req,
+                                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    try {
+        auto& dbManager = DbManager::getInstance();
+        
+        // 构建SQL查询，查询分类及每个分类的文章数量
+        std::string sql = 
+            "SELECT c.id, c.name, c.slug, c.description, "
+            "(SELECT COUNT(*) FROM article_categories ac "
+            "JOIN articles a ON ac.article_id = a.id "
+            "WHERE ac.category_id = c.id AND a.is_published = true) as article_count "
+            "FROM categories c "
+            "ORDER BY c.name ASC";
+        
+        dbManager.executeQuery(
+            sql,
+            [callback=callback](const drogon::orm::Result& result) {
+                if (result.size() == 0) {
+                    callback(utils::createSuccessResponse("暂无分类", Json::Value(Json::arrayValue)));
+                    return;
+                }
+                
+                // 将结果转换为JSON数组
+                Json::Value categoriesArray(Json::arrayValue);
+                
+                // 遍历结果集构建分类列表
+                for (const auto& row : result) {
+                    Json::Value category;
+                    category["id"] = row["id"].as<int>();
+                    category["name"] = row["name"].as<std::string>();
+                    category["slug"] = row["slug"].as<std::string>();
+                    category["article_count"] = row["article_count"].as<int>();
+                    
+                    if (!row["description"].isNull()) {
+                        category["description"] = row["description"].as<std::string>();
+                    }
+                    
+                    categoriesArray.append(category);
+                }
+                
+                // 返回成功响应
+                callback(utils::createSuccessResponse("获取分类列表成功", categoriesArray));
+            },
+            [callback=callback](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "获取分类列表出错: " << e.base().what() << std::endl;
+                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+            }
+        );
+    } catch (const std::exception& e) {
+        std::cerr << "获取分类列表异常: " << e.what() << std::endl;
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
+}
+
 } // namespace v1
 } // namespace api 
