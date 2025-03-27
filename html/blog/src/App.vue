@@ -147,6 +147,12 @@ export default {
       
       console.debug('[App] 当前缓存状态:', { isLoggedIn, hasToken: !!token, username });
       
+      // 如果没有登录状态，不需要验证token
+      if (!isLoggedIn) {
+        console.debug('[App] 用户未登录，跳过token验证');
+        return;
+      }
+      
       // 调用验证API检查登录状态
       fetch('/api/auth/verify', {
         method: 'GET',
@@ -164,7 +170,7 @@ export default {
           return response.json().then(data => {
             console.debug('[App] 验证响应:', data);
             
-            if (data.status === 'success') {
+            if (data.code === 0 && data.status === 'success') {
               console.debug('[App] 登录有效');
               
               // 确保localStorage状态一致

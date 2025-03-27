@@ -28,10 +28,24 @@ const routes = [
     props: true
   },
   {
-    path: '/article/:slug',
+    path: '/article/:author/:slug',
     name: 'article-detail',
     component: () => import('../views/ArticleDetail.vue'),
     props: true
+  },
+  // 兼容旧的URL格式
+  {
+    path: '/article/:slug',
+    redirect: to => {
+      const { slug } = to.params;
+      // 重定向到新的URL结构，使用默认author参数
+      return { name: 'article-detail', params: { author: 'author', slug } };
+    }
+  },
+  // 捕获所有路由，使刷新页面时不会404
+  {
+    path: '/:pathMatch(.*)*',
+    component: Home
   }
 ]
 
