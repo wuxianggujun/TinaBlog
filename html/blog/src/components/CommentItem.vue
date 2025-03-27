@@ -24,11 +24,11 @@
     </div>
     
     <!-- 嵌套评论 -->
-    <div class="child-comments" v-if="comment.children && comment.children.length > 0">
+    <div class="child-comments" v-if="comment.replies && comment.replies.length > 0">
       <comment-item 
-        v-for="child in comment.children" 
-        :key="child.id" 
-        :comment="child"
+        v-for="reply in comment.replies" 
+        :key="reply.id" 
+        :comment="reply"
         :article-id="articleId"
         @reply="$emit('reply', $event)"
         @delete="$emit('delete', $event)"

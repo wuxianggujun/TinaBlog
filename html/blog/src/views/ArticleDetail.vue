@@ -356,6 +356,9 @@ export default {
       
       this.submittingComment = true;
       
+      // 保存当前滚动位置
+      const scrollPosition = window.scrollY;
+      
       const commentData = {
         article_id: this.articleId,
         content: this.newComment.content,
@@ -368,11 +371,16 @@ export default {
         .then(response => {
           if (response.data.code === 0) {
             console.log('评论发表成功，ID:', response.data.data.id);
-            // 评论成功，重新获取评论列表
+            // 评论成功，只刷新评论列表
             this.fetchComments();
             // 清空评论框
             this.newComment.content = '';
             this.replyingToComment = null;
+            
+            // 恢复滚动位置
+            this.$nextTick(() => {
+              window.scrollTo(0, scrollPosition);
+            });
           } else {
             alert(response.data.message || '发表评论失败');
           }
@@ -392,6 +400,9 @@ export default {
       
       this.submittingComment = true;
       
+      // 保存当前滚动位置
+      const scrollPosition = window.scrollY;
+      
       const commentData = {
         article_id: this.articleId,
         content: this.newComment.content,
@@ -404,13 +415,18 @@ export default {
         .then(response => {
           if (response.data.code === 0) {
             console.log('匿名评论发表成功，ID:', response.data.data.id);
-            // 评论成功，重新获取评论列表
+            // 评论成功，只刷新评论列表
             this.fetchComments();
             // 清空评论框
             this.newComment.content = '';
             this.newComment.author_name = '';
             this.newComment.author_email = '';
             this.replyingToComment = null;
+            
+            // 恢复滚动位置
+            this.$nextTick(() => {
+              window.scrollTo(0, scrollPosition);
+            });
           } else {
             alert(response.data.message || '发表评论失败');
           }
