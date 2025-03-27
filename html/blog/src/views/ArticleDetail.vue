@@ -326,13 +326,16 @@ export default {
     fetchComments() {
       if (!this.articleId) return;
       
+      console.log('开始获取文章ID为', this.articleId, '的评论');
       this.commentsLoading = true;
       this.commentsError = false;
       
       axios.get(`/api/articles/${this.articleId}/comments`)
         .then(response => {
+          console.log('获取评论成功:', response.data);
           if (response.data.code === 0 && response.data.data) {
             this.comments = response.data.data.comments || [];
+            console.log('更新评论列表，数量:', this.comments.length);
           } else {
             this.commentsError = true;
             this.commentsErrorMessage = response.data.message || '获取评论失败';
@@ -364,6 +367,7 @@ export default {
       })
         .then(response => {
           if (response.data.code === 0) {
+            console.log('评论发表成功，ID:', response.data.data.id);
             // 评论成功，重新获取评论列表
             this.fetchComments();
             // 清空评论框
@@ -399,10 +403,13 @@ export default {
       axios.post('/api/comments/anonymous', commentData)
         .then(response => {
           if (response.data.code === 0) {
+            console.log('匿名评论发表成功，ID:', response.data.data.id);
             // 评论成功，重新获取评论列表
             this.fetchComments();
             // 清空评论框
             this.newComment.content = '';
+            this.newComment.author_name = '';
+            this.newComment.author_email = '';
             this.replyingToComment = null;
           } else {
             alert(response.data.message || '发表评论失败');

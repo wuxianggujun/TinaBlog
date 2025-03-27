@@ -173,7 +173,6 @@ bool DbManager::createTables() {
                 parent_id INTEGER REFERENCES comments(id) ON DELETE CASCADE,
                 author_name VARCHAR(50),
                 author_email VARCHAR(100),
-                is_approved BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         )");

@@ -26,6 +26,7 @@ void CommentController::getArticleComments(const drogon::HttpRequestPtr& req,
                 }
                 
                 // 查询文章评论，以树状结构返回
+                // 简化SQL查询，获取所有评论，不考虑登录状态，不需要is_approved过滤
                 std::string sql = 
                     "WITH RECURSIVE comment_tree AS ("
                     "  SELECT c.id, c.content, c.user_uuid, c.article_id, c.parent_id, "
@@ -43,13 +44,20 @@ void CommentController::getArticleComments(const drogon::HttpRequestPtr& req,
                     "SELECT * FROM comment_tree "
                     "ORDER BY level, created_at DESC";
                 
+                // 调试日志：输出SQL
+                std::cout << "执行评论查询SQL: " << sql << std::endl;
+                std::cout << "文章ID: " << article_id << std::endl;
+                
                 dbManager.executeQuery(
                     sql,
                     [callback=callback](const drogon::orm::Result& result) {
                         Json::Value commentsArray(Json::arrayValue);
-                        std::map<int, Json::Value> commentMap;
+                        std::map<int, Json::Value*> commentMap;
                         
-                        // 构建评论树结构
+                        // 调试日志：结果行数
+                        std::cout << "查询到的评论数量: " << result.size() << std::endl;
+                        
+                        // 先添加所有评论到map中
                         for (const auto& row : result) {
                             Json::Value comment;
                             int id = row["id"].as<int>();
@@ -67,24 +75,46 @@ void CommentController::getArticleComments(const drogon::HttpRequestPtr& req,
                                 comment["isAuthenticated"] = false;
                             }
                             
+                            comment["parent_id"] = parentId;
                             comment["created_at"] = row["created_at"].as<std::string>();
                             comment["replies"] = Json::Value(Json::arrayValue);
                             
                             // 放入评论映射
-                            commentMap[id] = comment;
-                            
-                            // 将根评论添加到数组，或将子评论添加到父评论
-                            if (parentId == 0) {
+                            if (commentMap.find(id) == commentMap.end()) {
                                 commentsArray.append(comment);
-                            } else if (commentMap.find(parentId) != commentMap.end()) {
-                                Json::Value& parentComment = commentMap[parentId];
-                                parentComment["replies"].append(comment);
+                                // 获取指向刚添加到数组的元素的指针
+                                commentMap[id] = &commentsArray[commentsArray.size() - 1];
+                            }
+                        }
+                        
+                        // 第二步：处理回复关系
+                        for (auto& item : commentMap) {
+                            int id = item.first;
+                            Json::Value* comment = item.second;
+                            
+                            // 获取父评论ID
+                            int parentId = (*comment)["parent_id"].asInt();
+                            if (parentId > 0) {
+                                // 这是一个回复评论，需要从主数组中移除
+                                if (commentMap.find(parentId) != commentMap.end()) {
+                                    // 将当前评论添加到父评论的replies中
+                                    Json::Value* parentComment = commentMap[parentId];
+                                    (*parentComment)["replies"].append(*comment);
+                                }
+                            }
+                        }
+                        
+                        // 第三步：只保留根评论在主数组中
+                        Json::Value filteredArray(Json::arrayValue);
+                        for (unsigned i = 0; i < commentsArray.size(); i++) {
+                            if (commentsArray[i]["parent_id"].asInt() == 0) {
+                                filteredArray.append(commentsArray[i]);
                             }
                         }
                         
                         Json::Value responseData;
-                        responseData["comments"] = commentsArray;
-                        responseData["total"] = commentsArray.size();
+                        responseData["comments"] = filteredArray;
+                        responseData["total"] = filteredArray.size();
                         
                         callback(utils::createSuccessResponse("获取评论成功", responseData));
                     },
@@ -476,7 +506,7 @@ void CommentController::insertComment(DbManager& dbManager, int articleId, const
                 [callback=callback](const drogon::orm::Result& result) {
                     Json::Value responseData;
                     responseData["id"] = result[0]["id"].as<int>();
-                    responseData["message"] = "评论添加成功，等待审核";
+                    responseData["message"] = "评论添加成功";
                     callback(utils::createSuccessResponse("评论添加成功", responseData));
                 },
                 [callback=callback](const drogon::orm::DrogonDbException& e) {
@@ -491,7 +521,7 @@ void CommentController::insertComment(DbManager& dbManager, int articleId, const
                 [callback=callback](const drogon::orm::Result& result) {
                     Json::Value responseData;
                     responseData["id"] = result[0]["id"].as<int>();
-                    responseData["message"] = "评论添加成功，等待审核";
+                    responseData["message"] = "评论添加成功";
                     callback(utils::createSuccessResponse("评论添加成功", responseData));
                 },
                 [callback=callback](const drogon::orm::DrogonDbException& e) {
