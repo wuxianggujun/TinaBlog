@@ -210,14 +210,14 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                               std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                               const std::string& slug) const {
     try {
-        // 防止多次响应的标志，在整个函数中共享
-        static std::mutex responseMutex;
+        // 使用共享指针追踪响应状态和线程安全保护，避免静态互斥锁
         auto responseGuard = std::make_shared<bool>(false);
+        auto responseMutex = std::make_shared<std::mutex>();
         
         // 安全地发送响应的辅助函数
-        auto sendResponse = [responseGuard, callback](const drogon::HttpResponsePtr& resp) {
-            static std::mutex localMutex; // 使用局部静态互斥锁
-            std::lock_guard<std::mutex> lock(localMutex);
+        auto sendResponse = [responseGuard, responseMutex, callback](const drogon::HttpResponsePtr& resp) {
+            // 这里使用的是非静态互斥锁，避免死锁
+            std::lock_guard<std::mutex> lock(*responseMutex);
             if (!*responseGuard) {
                 *responseGuard = true;
                 callback(resp);
@@ -232,9 +232,15 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
         auto& dbManager = DbManager::getInstance();
         
         // 设置超时处理，确保不会无限等待
-        auto timeoutTimer = std::make_shared<std::thread>([responseGuard, sendResponse]() {
+        auto timeoutTimer = std::make_shared<std::thread>([responseGuard, responseMutex, callback]() {
             std::this_thread::sleep_for(std::chrono::seconds(5)); // 5秒超时
-            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "获取文章超时，请稍后重试"));
+            
+            // 直接使用传入的callback和guard，避免使用sendResponse函数
+            std::lock_guard<std::mutex> lock(*responseMutex);
+            if (!*responseGuard) {
+                *responseGuard = true;
+                callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "获取文章超时，请稍后重试"));
+            }
         });
         timeoutTimer->detach(); // 分离线程，允许它在后台运行
         
@@ -247,7 +253,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                 "FROM articles a "
                 "LEFT JOIN users u ON a.user_uuid = u.uuid "
                 "WHERE a.slug = $1 AND a.is_published = true",
-                [this, sendResponse, responseGuard, &dbManager](const drogon::orm::Result& result) {
+                [this, sendResponse, responseGuard, responseMutex, &dbManager](const drogon::orm::Result& result) {
                     if (result.size() == 0) {
                         sendResponse(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该文章"));
                         return;
@@ -292,7 +298,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                             
                             dbManager.executeQuery(
                                 authorStatsSql,
-                                [completed, articleData, authorInfoPtr, sendResponse, responseGuard](const drogon::orm::Result& statsResult) {
+                                [completed, articleData, authorInfoPtr, sendResponse, responseGuard, responseMutex](const drogon::orm::Result& statsResult) {
                                     try {
                                         if (statsResult.size() > 0) {
                                             (*authorInfoPtr)["article_count"] = statsResult[0]["article_count"].as<int>();
@@ -320,7 +326,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [sendResponse, responseGuard](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse, responseGuard, responseMutex](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取作者统计信息出错: " << e.base().what() << std::endl;
                                     sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 }
@@ -342,7 +348,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                         try {
                             dbManager.executeQuery(
                                 authorArticlesSql,
-                                [completed, articleData, sendResponse](const drogon::orm::Result& authorArticles) {
+                                [completed, articleData, sendResponse, responseMutex](const drogon::orm::Result& authorArticles) {
                                     try {
                                         Json::Value otherArticles(Json::arrayValue);
                                         
@@ -371,7 +377,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [sendResponse](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse, responseMutex](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取作者其他文章出错: " << e.base().what() << std::endl;
                                     sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 }
@@ -389,7 +395,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                 "FROM categories c "
                                 "JOIN article_categories ac ON c.id = ac.category_id "
                                 "WHERE ac.article_id = $1",
-                                [this, completed, articleData, sendResponse, &dbManager, articleId](const drogon::orm::Result& catResult) {
+                                [this, completed, articleData, sendResponse, responseMutex, &dbManager, articleId](const drogon::orm::Result& catResult) {
                                     try {
                                         Json::Value categories(Json::arrayValue);
                                         std::string categoryId = "0";
@@ -425,7 +431,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                                 
                                                 dbManager.executeQuery(
                                                     relatedArticlesSql,
-                                                    [completed, articleData, sendResponse](const drogon::orm::Result& relatedArticles) {
+                                                    [completed, articleData, sendResponse, responseMutex](const drogon::orm::Result& relatedArticles) {
                                                         try {
                                                             Json::Value relatedArticlesArray(Json::arrayValue);
                                                             
@@ -454,7 +460,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                                             sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                                         }
                                                     },
-                                                    [sendResponse](const drogon::orm::DrogonDbException& e) {
+                                                    [sendResponse, responseMutex](const drogon::orm::DrogonDbException& e) {
                                                         std::cerr << "获取相关文章出错: " << e.base().what() << std::endl;
                                                         sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                                     }
@@ -483,7 +489,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [sendResponse](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse, responseMutex](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取文章分类出错: " << e.base().what() << std::endl;
                                     sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 },
@@ -502,7 +508,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                 "FROM tags t "
                                 "JOIN article_tags at ON t.id = at.tag_id "
                                 "WHERE at.article_id = $1",
-                                [completed, articleData, sendResponse](const drogon::orm::Result& tagResult) {
+                                [completed, articleData, sendResponse, responseMutex](const drogon::orm::Result& tagResult) {
                                     try {
                                         Json::Value tags(Json::arrayValue);
                                         
@@ -530,7 +536,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [sendResponse](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse, responseMutex](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取文章标签出错: " << e.base().what() << std::endl;
                                     sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 },
@@ -546,7 +552,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                         sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                     }
                 },
-                [sendResponse](const drogon::orm::DrogonDbException& e) {
+                [sendResponse, responseMutex](const drogon::orm::DrogonDbException& e) {
                     std::cerr << "获取文章详情出错: " << e.base().what() << std::endl;
                     sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                 },
@@ -559,10 +565,8 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
     } catch (const std::exception& e) {
         std::cerr << "获取文章详情异常: " << e.what() << std::endl;
         
-        // 创建一个局部版本的sendResponse以处理这种情况
+        // 直接调用callback避免使用可能导致死锁的互斥锁
         auto errorResponse = utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what());
-        static std::mutex errorMutex;
-        std::lock_guard<std::mutex> errorLock(errorMutex);
         callback(errorResponse);
     }
 }
