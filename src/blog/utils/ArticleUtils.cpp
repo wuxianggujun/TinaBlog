@@ -58,13 +58,14 @@ Json::Value ArticleUtils::buildArticleResponse(const drogon::orm::Result& result
         }
     }
     
-    // 确保总记录数至少为pageSize*2，以便显示分页UI
-    if (totalCount < pageSize * 2) {
-        totalCount = pageSize * 2;
+    // 使用实际的记录数和页数，不再强制设置最小值
+    // 如果没有获取到总数，就使用当前结果集的大小
+    if (totalCount == 0) {
+        totalCount = result.size();
     }
     
-    // 计算总页数，并确保至少有2页
-    int totalPages = std::max(2, (totalCount + pageSize - 1) / pageSize);
+    // 计算真实的总页数
+    int totalPages = (totalCount + pageSize - 1) / pageSize;
     
     // 构建响应数据
     Json::Value responseData;

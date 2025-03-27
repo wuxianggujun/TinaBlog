@@ -29,8 +29,8 @@
               </router-link>
             </article>
           </div>
-          <!-- 分页控件 - 确保始终显示 -->
-          <div class="pagination">
+          <!-- 分页控件 - 只在有多页时显示 -->
+          <div class="pagination" v-if="totalPages > 1">
             <button 
               @click="changePage(1)" 
               :disabled="currentPage === 1"
@@ -162,11 +162,7 @@ export default {
     }
   },
   created() {
-    // 初始化默认分页设置
-    this.totalPages = 5; // 默认设置5页，确保UI显示
-    this.currentPage = 1;
-    
-    // 初始检查登录状态
+    // 不再默认设置页数，而是从服务器获取正确的页数
     this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     this.fetchArticles();
     this.fetchCategories();
@@ -226,15 +222,15 @@ export default {
           if (response.data.code === 0 && response.data.data) {
             this.posts = response.data.data.articles || [];
             
-            // 更新分页信息
+            // 更新分页信息 - 使用服务器返回的准确数据
             if (response.data.data.pagination) {
               this.totalPosts = response.data.data.pagination.total || 0;
               this.totalPages = response.data.data.pagination.totalPages || 0;
               this.currentPage = response.data.data.pagination.page || 1;
               
-              // 强制确保totalPages至少为2，以便显示分页UI
-              if (this.totalPages < 2) {
-                this.totalPages = Math.max(2, Math.ceil(this.posts.length / this.pageSize));
+              // 确保currentPage不超过实际页数
+              if (this.currentPage > this.totalPages && this.totalPages > 0) {
+                this.currentPage = this.totalPages;
               }
               
               console.log('分页信息更新:', {
@@ -244,26 +240,20 @@ export default {
               });
             } else {
               console.warn('响应中缺少分页信息');
-              // 设置默认分页以防止错误
-              this.totalPages = Math.max(2, Math.ceil(this.posts.length / this.pageSize));
-              console.log('使用默认分页:', this.totalPages);
+              // 根据实际文章数量计算页数
+              this.totalPages = Math.ceil(this.posts.length / this.pageSize);
+              console.log('根据文章数量计算分页:', this.totalPages);
             }
           } else {
             this.error = true;
             this.errorMessage = response.data.message || '获取文章失败';
             console.error('文章响应错误:', this.errorMessage);
-            
-            // 即使出错也设置一些默认值确保UI显示
-            this.totalPages = 5;
           }
         })
         .catch(error => {
           this.error = true;
           this.errorMessage = error.response?.data?.message || '网络错误，请稍后重试';
           console.error('获取文章列表失败:', error);
-          
-          // 即使出错也设置一些默认值确保UI显示
-          this.totalPages = 5;
         })
         .finally(() => {
           this.isLoading = false;
