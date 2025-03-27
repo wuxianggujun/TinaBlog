@@ -31,10 +31,6 @@
               <span>{{ article.view_count }} 次阅读</span>
             </div>
           </div>
-          
-          <div class="article-summary" v-if="article.summary">
-            <strong>摘要:</strong> {{ article.summary }}
-          </div>
         </div>
         
         <div class="article-content">
@@ -143,15 +139,17 @@
             <div v-else-if="comments.length === 0" class="no-comments">
               <p>暂无评论，快来发表第一条评论吧！</p>
             </div>
-            <div v-else class="comments-list">
-              <comment-item 
-                v-for="comment in comments" 
-                :key="comment.id" 
-                :comment="comment"
-                :article-id="articleId"
-                @reply="replyToComment"
-                @delete="deleteComment"
-              />
+            <div v-else class="comments-container">
+              <div class="comments-list">
+                <comment-item 
+                  v-for="comment in comments" 
+                  :key="comment.id" 
+                  :comment="comment"
+                  :article-id="articleId"
+                  @reply="replyToComment"
+                  @delete="deleteComment"
+                />
+              </div>
               
               <!-- 评论分页 -->
               <div class="comments-pagination" v-if="commentTotalPages > 1">
@@ -182,6 +180,7 @@
       
       <!-- 右侧边栏 -->
       <div class="article-sidebar">
+        <!-- 关于作者 -->
         <div class="sidebar-card author-card">
           <h3>关于作者</h3>
           <div class="author-info">
@@ -189,6 +188,36 @@
             <div class="author-name">{{ article.author }}</div>
           </div>
           <div class="author-bio" v-if="article.author_bio">{{ article.author_bio }}</div>
+          <div class="author-bio" v-else>这位作者很懒，还没有填写个人简介...</div>
+          
+          <!-- 添加作者社交链接 -->
+          <div class="author-social">
+            <a href="#" class="social-link" title="访问作者的个人网站">
+              <span class="social-icon">🌐</span>
+            </a>
+            <a href="#" class="social-link" title="在GitHub上关注作者">
+              <span class="social-icon">📦</span>
+            </a>
+            <a href="#" class="social-link" title="关注作者的微博">
+              <span class="social-icon">📱</span>
+            </a>
+          </div>
+          
+          <!-- 作者统计信息 -->
+          <div class="author-stats">
+            <div class="stat-item">
+              <span class="stat-value">{{ authorStats.articleCount }}</span>
+              <span class="stat-label">文章</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ authorStats.totalViews }}</span>
+              <span class="stat-label">阅读</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ authorStats.totalComments }}</span>
+              <span class="stat-label">评论</span>
+            </div>
+          </div>
         </div>
         
         <div class="sidebar-card toc-card" v-if="toc.length > 0">
@@ -200,13 +229,30 @@
           </ul>
         </div>
         
-        <div class="sidebar-card related-card" v-if="relatedArticles.length > 0">
-          <h3>相关文章</h3>
+        <!-- 作者其他文章 -->
+        <div class="sidebar-card author-articles-card" v-if="authorArticles.length > 0">
+          <h3>{{ article.author }}的其他文章</h3>
           <ul class="related-list">
-            <li v-for="(article, index) in relatedArticles" :key="index">
+            <li v-for="(article, index) in authorArticles" :key="'author-' + index">
               <router-link :to="`/article/${article.author_username || 'author'}/${article.slug}`">
                 {{ article.title }}
               </router-link>
+            </li>
+          </ul>
+        </div>
+        
+        <!-- 同分类推荐文章 -->
+        <div class="sidebar-card category-articles-card" v-if="categoryArticles.length > 0">
+          <h3>{{ getCategoryName() }}下的热门文章</h3>
+          <ul class="related-list">
+            <li v-for="(article, index) in categoryArticles" :key="'category-' + index">
+              <router-link :to="`/article/${article.author_username || 'author'}/${article.slug}`">
+                {{ article.title }}
+              </router-link>
+              <div class="article-views" v-if="article.view_count">
+                <span class="views-icon">👁️</span>
+                {{ article.view_count }}
+              </div>
             </li>
           </ul>
         </div>
@@ -252,11 +298,17 @@ export default {
       submittingComment: false,
       replyingToComment: null,
       toc: [],
-      relatedArticles: [],
+      authorArticles: [],
+      categoryArticles: [],
       commentPage: 1,
       commentPageSize: 10,
       commentTotal: 0,
-      commentTotalPages: 1
+      commentTotalPages: 1,
+      authorStats: {
+        articleCount: 0,
+        totalViews: 0,
+        totalComments: 0
+      }
     };
   },
   
@@ -557,46 +609,91 @@ export default {
     },
     
     fetchRelatedArticles() {
-      // 如果后端有API支持，可以调用API获取相关文章
+      if (!this.article) return;
       
-      // 替代方案：获取同一作者的文章或同一分类的文章
-      if (this.article) {
-        const authorName = this.article.author || '';
-        const categoryId = this.article.categories && this.article.categories.length > 0 
-          ? this.article.categories[0].id 
-          : null;
-          
-        // 这里仅模拟数据，实际应当调用API
-        // 相关文章可以是：
-        // 1. 同一作者的其他文章
-        // 2. 同一分类的其他文章
-        // 3. 同一标签的其他文章
-        
-        // 在实际项目中，添加相应的API:
-        // /api/articles/related?author=${authorName}&exclude=${this.articleId}
-        // 或
-        // /api/articles/related?category=${categoryId}&exclude=${this.articleId}
-        
-        this.relatedArticles = [
-          { 
-            id: 101, 
-            title: `${authorName}的其他文章1`, 
-            slug: 'related-article-1', 
-            author_username: authorName 
-          },
-          { 
-            id: 102, 
-            title: `${authorName}的其他文章2`, 
-            slug: 'related-article-2', 
-            author_username: authorName 
-          },
-          { 
-            id: 103, 
-            title: `相关分类文章`, 
-            slug: 'related-category-article', 
-            author_username: 'other-author' 
+      const authorName = this.article.author || '';
+      const currentArticleId = this.article.id;
+      
+      // 先清空现有的推荐
+      this.authorArticles = [];
+      this.categoryArticles = [];
+      
+      // 1. 获取同一作者的其他文章
+      if (authorName) {
+        axios.get(`/api/articles`, {
+          params: {
+            author: authorName,
+            exclude: currentArticleId,
+            limit: 5
           }
-        ];
+        })
+        .then(response => {
+          if (response.data.code === 0 && response.data.data && response.data.data.articles) {
+            this.authorArticles = response.data.data.articles;
+            
+            // 更新作者统计信息 - 注意文章总数应该至少是1(当前文章)加上其他文章数量
+            const totalArticles = 1 + this.authorArticles.length; // 当前文章 + 其他文章
+            
+            // 如果API返回了作者统计信息则使用，否则计算
+            if (response.data.data.author_stats) {
+              // 使用API返回的作者统计
+              const stats = response.data.data.author_stats;
+              this.authorStats = {
+                articleCount: stats.article_count || totalArticles,
+                totalViews: stats.total_views || 0,
+                totalComments: stats.total_comments || 0
+              };
+            } else {
+              // 手动计算统计信息
+              this.authorStats = {
+                articleCount: totalArticles,
+                totalViews: (this.article.view_count || 0) + 
+                            this.authorArticles.reduce((sum, article) => sum + (article.view_count || 0), 0),
+                totalComments: (this.article.comment_count || 0) + 
+                               this.authorArticles.reduce((sum, article) => sum + (article.comment_count || 0), 0)
+              };
+            }
+          }
+        })
+        .catch(error => {
+          console.error('获取作者其他文章失败:', error);
+          // 至少设置文章数为1（当前文章）
+          this.authorStats = {
+            articleCount: 1,
+            totalViews: this.article.view_count || 0,
+            totalComments: this.article.comment_count || 0
+          };
+        });
+      } else {
+        // 未知作者的情况
+        this.authorStats = {
+          articleCount: 1,
+          totalViews: this.article.view_count || 0,
+          totalComments: this.article.comment_count || 0
+        };
+      }
+      
+      // 2. 获取同一分类下的热门文章
+      if (this.article.categories && this.article.categories.length > 0) {
+        const categoryId = this.article.categories[0].id;
+        
+        axios.get(`/api/articles`, {
+          params: {
+            category: categoryId,
+            exclude: currentArticleId,
+            sort: 'view_count',
+            order: 'desc',
+            limit: 5
+          }
+        })
+        .then(response => {
+          if (response.data.code === 0 && response.data.data && response.data.data.articles) {
+            this.categoryArticles = response.data.data.articles;
+          }
+        })
+        .catch(error => {
+          console.error('获取分类热门文章失败:', error);
+        });
       }
     },
     
@@ -608,6 +705,13 @@ export default {
     cancelReply() {
       this.replyingToComment = null;
       this.newComment.content = '';
+    },
+    
+    getCategoryName() {
+      if (this.article && this.article.categories && this.article.categories.length > 0) {
+        return this.article.categories[0].name;
+      }
+      return '未分类';
     }
   },
   
@@ -627,7 +731,8 @@ export default {
 
 <style scoped>
 .article-detail-container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
 }
@@ -660,7 +765,8 @@ export default {
 .article-page {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 30px;
+  max-width: 100%;
 }
 
 @media (min-width: 992px) {
@@ -675,6 +781,7 @@ export default {
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  width: 100%;
 }
 
 .article-header {
@@ -682,7 +789,7 @@ export default {
 }
 
 .article-title {
-  font-size: 2.4rem;
+  font-size: 2.6rem;
   margin-bottom: 20px;
   color: #333;
   line-height: 1.3;
@@ -717,7 +824,8 @@ export default {
 }
 
 .article-content {
-  padding: 0 30px 30px;
+  padding: 10px 30px 30px;
+  width: 100%;
 }
 
 .article-body {
@@ -725,6 +833,9 @@ export default {
   font-size: 1.1rem;
   color: #333;
   margin-bottom: 30px;
+  width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .article-tags-categories {
@@ -890,8 +1001,60 @@ export default {
   margin-bottom: 20px;
 }
 
+.comments-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .comments-list {
-  margin-top: 30px;
+  margin-top: 15px;
+  margin-bottom: 25px;
+}
+
+.author-social {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.social-link {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f8f8f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.social-link:hover {
+  background-color: #3498db;
+  color: white;
+  transform: translateY(-3px);
+}
+
+.social-icon {
+  font-size: 1.3rem;
+}
+
+/* 调整作者卡片样式 */
+.author-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
 }
 
 .btn-retry, .btn-home {
@@ -937,38 +1100,6 @@ export default {
   padding-bottom: 10px;
 }
 
-.author-info {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.author-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background-color: #3498db;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-.author-name {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #333;
-}
-
-.author-bio {
-  font-size: 0.9rem;
-  color: #666;
-  line-height: 1.6;
-}
-
 .toc-list, .related-list {
   list-style: none;
   padding: 0;
@@ -1000,29 +1131,118 @@ export default {
   padding-left: 20px;
 }
 
-.related-list li {
-  margin-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 12px;
+.author-articles-card, .category-articles-card {
+  margin-bottom: 25px;
+  transition: all 0.3s ease;
 }
 
-.related-list li:last-child {
-  margin-bottom: 0;
-  border-bottom: none;
-  padding-bottom: 0;
+.author-articles-card h3, .category-articles-card h3 {
+  color: #2c3e50;
+  font-size: 1.1rem;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f0f0f0;
+  position: relative;
 }
 
-.related-list li a {
+.author-articles-card h3:after, .category-articles-card h3:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 60px;
+  height: 2px;
+  background-color: #3498db;
+}
+
+.related-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.related-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.related-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.related-list::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+.related-list::-webkit-scrollbar-thumb:hover {
+  background: #3498db;
+}
+
+.author-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #3498db;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.author-name {
+  font-size: 1.1rem;
+  font-weight: 500;
   color: #333;
-  text-decoration: none;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  display: block;
-  transition: color 0.2s;
 }
 
-.related-list li a:hover {
+.author-bio {
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.author-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 15px;
+  padding: 15px 0;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  font-weight: bold;
   color: #3498db;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 5px;
+}
+
+.article-views {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.views-icon {
+  color: #777;
 }
 
 @media (max-width: 768px) {
@@ -1031,13 +1251,22 @@ export default {
   }
   
   .article-header, .article-content {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 15px;
+    padding-right: 15px;
   }
   
   .anonymous-comment-form .form-row {
     flex-direction: column;
     gap: 10px;
+  }
+  
+  .article-detail-container {
+    padding: 10px;
+  }
+  
+  .sidebar-card {
+    margin-bottom: 15px;
+    padding: 15px;
   }
 }
 
@@ -1114,6 +1343,33 @@ export default {
 
 .cancel-reply:hover {
   background-color: #f9ebea;
+}
+
+.related-list li {
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 12px;
+  position: relative;
+}
+
+.related-list li:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.related-list li a {
+  color: #333;
+  text-decoration: none;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  display: block;
+  transition: color 0.2s;
+  padding-right: 30px; /* 为阅读量提供空间 */
+}
+
+.related-list li a:hover {
+  color: #3498db;
 }
 </style>
 
