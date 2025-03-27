@@ -782,21 +782,37 @@ body {
 
 /* 修复Outline问题 */
 :focus {
-  outline: none;
+  outline: none !important;
 }
 
 :focus-visible {
-  outline: 2px solid var(--primary-color); /* 使用主题色而非黑色 */
+  outline: 2px solid var(--primary-color) !important; /* 使用主题色而非黑色 */
 }
 
 /* 确保页面根元素不会被意外选中 */
 #app {
-  outline: none;
+  outline: none !important;
 }
 
 /* 给标题等元素添加统一的样式 */
-.logo-title {
-  outline: none;
-  user-select: none; /* 防止文本被意外选中 */
+.logo-title, .nav-brand {
+  outline: none !important;
+  user-select: none !important; /* 防止文本被意外选中 */
+}
+
+/* 修复Tinablog标题的边框问题 */
+.nav-brand:focus, 
+.nav-brand:focus-visible,
+.nav-links a:focus,
+.nav-links a:focus-visible,
+.login-btn:focus,
+.login-btn:focus-visible,
+.create-btn:focus,
+.create-btn:focus-visible,
+.user-menu:focus,
+.user-menu:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
 }
 </style>

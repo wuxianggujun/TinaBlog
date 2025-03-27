@@ -32,6 +32,8 @@ public:
     ADD_METHOD_TO(PostController::getCategories, "/api/categories", drogon::Get);
     // 获取标签列表
     ADD_METHOD_TO(PostController::getTags, "/api/tags", drogon::Get);
+    // 获取用户标签
+    ADD_METHOD_TO(PostController::getUserTags, "/api/tags/user", drogon::Get, "JwtAuthFilter");
     // 获取文章列表
     ADD_METHOD_TO(PostController::getArticles, "/api/articles", drogon::Get);
     // 获取文章详情
@@ -84,6 +86,12 @@ public:
      */
     void getTags(const drogon::HttpRequestPtr& req,
                  std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+
+    /**
+     * 获取用户相关标签
+     */
+    void getUserTags(const drogon::HttpRequestPtr& req,
+                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
 
     /**
      * 获取公开文章列表

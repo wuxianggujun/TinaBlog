@@ -82,6 +82,33 @@
             </li>
           </ul>
         </div>
+        
+        <!-- 用户标签组件 - 仅已登录用户显示 -->
+        <div v-if="isLoggedIn" class="widget tag-widget">
+          <h3>我的标签</h3>
+          <div v-if="tagsLoading" class="loading">
+            <p>加载中...</p>
+          </div>
+          <div v-else-if="tagsError" class="error">
+            <p>加载标签失败</p>
+            <button @click="fetchUserTags" class="btn">重试</button>
+          </div>
+          <div v-else-if="userTags.length === 0" class="empty-tags">
+            <p>暂无标签</p>
+            <p class="hint">发布文章时添加标签，它们将显示在这里</p>
+          </div>
+          <div v-else class="tag-cloud">
+            <router-link 
+              v-for="tag in userTags" 
+              :key="tag.id" 
+              :to="'/tag/' + tag.slug"
+              class="tag-item"
+              :style="{ fontSize: calculateTagSize(tag.count) }"
+            >
+              {{ tag.name }}
+            </router-link>
+          </div>
+        </div>
       </aside>
     </div>
   </div>
@@ -96,22 +123,33 @@ export default {
     return {
       posts: [],
       categories: [],
+      userTags: [],
       isLoading: true,
       categoriesLoading: true,
+      tagsLoading: false,
       error: false,
       categoriesError: false,
+      tagsError: false,
       errorMessage: '加载失败',
       currentPage: 1,
       pageSize: 10,
       totalPosts: 0,
-      totalPages: 0
+      totalPages: 0,
+      isLoggedIn: false
     }
   },
   created() {
+    this.checkLoginStatus();
     this.fetchArticles();
     this.fetchCategories();
   },
   methods: {
+    checkLoginStatus() {
+      this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+      if (this.isLoggedIn) {
+        this.fetchUserTags();
+      }
+    },
     formatDate(dateString) {
       if (!dateString) return '';
       
@@ -178,6 +216,57 @@ export default {
         .finally(() => {
           this.categoriesLoading = false;
         });
+    },
+    
+    fetchUserTags() {
+      if (!this.isLoggedIn) return;
+      
+      this.tagsLoading = true;
+      this.tagsError = false;
+      
+      // 获取token
+      const token = localStorage.getItem('token');
+      if (!token) {
+        this.tagsLoading = false;
+        return;
+      }
+      
+      axios.get('/api/tags/user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+        .then(response => {
+          if (response.data.code === 0 && response.data.data) {
+            this.userTags = response.data.data.tags || [];
+          } else {
+            this.tagsError = true;
+          }
+        })
+        .catch(error => {
+          this.tagsError = false; // 不显示错误，因为可能是未登录导致的
+          console.error('获取用户标签失败:', error);
+        })
+        .finally(() => {
+          this.tagsLoading = false;
+        });
+    },
+    
+    // 根据标签使用次数计算标签云中的字体大小
+    calculateTagSize(count) {
+      // 基础字体大小12px，最大18px
+      const minSize = 12;
+      const maxSize = 18;
+      const minCount = 1;
+      
+      // 获取所有标签中最高的count值
+      const maxCount = Math.max(...this.userTags.map(tag => tag.count), minCount);
+      
+      // 计算大小比例
+      let size = minSize + (count - minCount) * (maxSize - minSize) / (maxCount - minCount);
+      // 确保在范围内
+      size = Math.max(minSize, Math.min(maxSize, size));
+      return `${size}px`;
     },
     
     changePage(newPage) {
@@ -392,6 +481,41 @@ export default {
 
 .error button {
   margin-top: 1rem;
+}
+
+.tag-widget .tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tag-widget .tag-item {
+  display: inline-block;
+  background-color: #f0f0f0;
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  color: #666;
+  text-decoration: none;
+  transition: all 0.3s;
+  font-size: 0.9rem;
+}
+
+.tag-widget .tag-item:hover {
+  background-color: #e6e7ff;
+  color: #6366f1;
+}
+
+.empty-tags {
+  text-align: center;
+  padding: 1rem 0;
+  color: #888;
+}
+
+.empty-tags .hint {
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  font-style: italic;
 }
 
 @media (max-width: 1600px) {

@@ -10,6 +10,7 @@
 #include <chrono>
 #include <mutex>
 #include <atomic>
+#include <thread>
 
 namespace api {
 namespace v1 {
@@ -209,12 +210,33 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                               std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                               const std::string& slug) const {
     try {
+        // 防止多次响应的标志，在整个函数中共享
+        static std::mutex responseMutex;
+        auto responseGuard = std::make_shared<bool>(false);
+        
+        // 安全地发送响应的辅助函数
+        auto sendResponse = [responseGuard, callback](const drogon::HttpResponsePtr& resp) {
+            static std::mutex localMutex; // 使用局部静态互斥锁
+            std::lock_guard<std::mutex> lock(localMutex);
+            if (!*responseGuard) {
+                *responseGuard = true;
+                callback(resp);
+            }
+        };
+        
         if (slug.empty()) {
-            callback(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "文章slug不能为空"));
+            sendResponse(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "文章slug不能为空"));
             return;
         }
         
         auto& dbManager = DbManager::getInstance();
+        
+        // 设置超时处理，确保不会无限等待
+        auto timeoutTimer = std::make_shared<std::thread>([responseGuard, sendResponse]() {
+            std::this_thread::sleep_for(std::chrono::seconds(5)); // 5秒超时
+            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "获取文章超时，请稍后重试"));
+        });
+        timeoutTimer->detach(); // 分离线程，允许它在后台运行
         
         // 查询文章基本信息
         try {
@@ -225,9 +247,9 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                 "FROM articles a "
                 "LEFT JOIN users u ON a.user_uuid = u.uuid "
                 "WHERE a.slug = $1 AND a.is_published = true",
-                [this, callback=callback, &dbManager](const drogon::orm::Result& result) {
+                [this, sendResponse, responseGuard, &dbManager](const drogon::orm::Result& result) {
                     if (result.size() == 0) {
-                        callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该文章"));
+                        sendResponse(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该文章"));
                         return;
                     }
                     
@@ -270,7 +292,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                             
                             dbManager.executeQuery(
                                 authorStatsSql,
-                                [completed, articleData, authorInfoPtr, callback](const drogon::orm::Result& statsResult) {
+                                [completed, articleData, authorInfoPtr, sendResponse, responseGuard](const drogon::orm::Result& statsResult) {
                                     try {
                                         if (statsResult.size() > 0) {
                                             (*authorInfoPtr)["article_count"] = statsResult[0]["article_count"].as<int>();
@@ -289,30 +311,23 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         
                                         // 如果所有查询都完成，则返回结果
                                         if (*completed == 4) {
-                                            static std::mutex responseMutex;
-                                            std::lock_guard<std::mutex> lock(responseMutex);
-                                            
-                                            // 防止多次发送响应
-                                            static std::atomic<bool> responseSent(false);
-                                            if (!responseSent.exchange(true)) {
-                                                Json::Value responseData;
-                                                responseData["article"] = *articleData;
-                                                callback(utils::createSuccessResponse("获取文章详情成功", responseData));
-                                            }
+                                            Json::Value responseData;
+                                            responseData["article"] = *articleData;
+                                            sendResponse(utils::createSuccessResponse("获取文章详情成功", responseData));
                                         }
                                     } catch (const std::exception& e) {
                                         std::cerr << "处理作者统计信息时出错: " << e.what() << std::endl;
-                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                        sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [callback](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse, responseGuard](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取作者统计信息出错: " << e.base().what() << std::endl;
-                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                    sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 }
                             );
                         } catch (const std::exception& e) {
                             std::cerr << "执行作者统计查询时出错: " << e.what() << std::endl;
-                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                             return;
                         }
                         
@@ -327,7 +342,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                         try {
                             dbManager.executeQuery(
                                 authorArticlesSql,
-                                [completed, articleData, callback](const drogon::orm::Result& authorArticles) {
+                                [completed, articleData, sendResponse](const drogon::orm::Result& authorArticles) {
                                     try {
                                         Json::Value otherArticles(Json::arrayValue);
                                         
@@ -347,30 +362,23 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         
                                         // 如果所有查询都完成，则返回结果
                                         if (*completed == 4) {
-                                            static std::mutex responseMutex;
-                                            std::lock_guard<std::mutex> lock(responseMutex);
-                                            
-                                            // 防止多次发送响应
-                                            static std::atomic<bool> responseSent(false);
-                                            if (!responseSent.exchange(true)) {
-                                                Json::Value responseData;
-                                                responseData["article"] = *articleData;
-                                                callback(utils::createSuccessResponse("获取文章详情成功", responseData));
-                                            }
+                                            Json::Value responseData;
+                                            responseData["article"] = *articleData;
+                                            sendResponse(utils::createSuccessResponse("获取文章详情成功", responseData));
                                         }
                                     } catch (const std::exception& e) {
                                         std::cerr << "处理作者其他文章时出错: " << e.what() << std::endl;
-                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                        sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [callback](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取作者其他文章出错: " << e.base().what() << std::endl;
-                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                    sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 }
                             );
                         } catch (const std::exception& e) {
                             std::cerr << "执行作者其他文章查询时出错: " << e.what() << std::endl;
-                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                             return;
                         }
                         
@@ -381,7 +389,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                 "FROM categories c "
                                 "JOIN article_categories ac ON c.id = ac.category_id "
                                 "WHERE ac.article_id = $1",
-                                [this, completed, articleData, callback, &dbManager, articleId](const drogon::orm::Result& catResult) {
+                                [this, completed, articleData, sendResponse, &dbManager, articleId](const drogon::orm::Result& catResult) {
                                     try {
                                         Json::Value categories(Json::arrayValue);
                                         std::string categoryId = "0";
@@ -417,7 +425,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                                 
                                                 dbManager.executeQuery(
                                                     relatedArticlesSql,
-                                                    [completed, articleData, callback](const drogon::orm::Result& relatedArticles) {
+                                                    [completed, articleData, sendResponse](const drogon::orm::Result& relatedArticles) {
                                                         try {
                                                             Json::Value relatedArticlesArray(Json::arrayValue);
                                                             
@@ -437,41 +445,27 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                                             
                                                             // 如果所有查询都完成，则返回结果
                                                             if (*completed == 4) {
-                                                                static std::mutex responseMutex;
-                                                                std::lock_guard<std::mutex> lock(responseMutex);
-                                                                
-                                                                // 防止多次发送响应
-                                                                static std::atomic<bool> responseSent(false);
-                                                                if (!responseSent.exchange(true)) {
-                                                                    Json::Value responseData;
-                                                                    responseData["article"] = *articleData;
-                                                                    callback(utils::createSuccessResponse("获取文章详情成功", responseData));
-                                                                }
+                                                                Json::Value responseData;
+                                                                responseData["article"] = *articleData;
+                                                                sendResponse(utils::createSuccessResponse("获取文章详情成功", responseData));
                                                             }
                                                         } catch (const std::exception& e) {
                                                             std::cerr << "处理相关文章时出错: " << e.what() << std::endl;
-                                                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                                            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                                         }
                                                     },
-                                                    [callback](const drogon::orm::DrogonDbException& e) {
+                                                    [sendResponse](const drogon::orm::DrogonDbException& e) {
                                                         std::cerr << "获取相关文章出错: " << e.base().what() << std::endl;
-                                                        callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                                        sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                                     }
                                                 );
                                             } catch (const std::exception& e) {
                                                 std::cerr << "执行相关文章查询时出错: " << e.what() << std::endl;
                                                 (*completed)++;
                                                 if (*completed == 4) {
-                                                    static std::mutex responseMutex;
-                                                    std::lock_guard<std::mutex> lock(responseMutex);
-                                                    
-                                                    // 防止多次发送响应
-                                                    static std::atomic<bool> responseSent(false);
-                                                    if (!responseSent.exchange(true)) {
-                                                        Json::Value responseData;
-                                                        responseData["article"] = *articleData;
-                                                        callback(utils::createSuccessResponse("获取文章详情成功", responseData));
-                                                    }
+                                                    Json::Value responseData;
+                                                    responseData["article"] = *articleData;
+                                                    sendResponse(utils::createSuccessResponse("获取文章详情成功", responseData));
                                                 }
                                             }
                                         } else {
@@ -479,32 +473,25 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                             
                                             // 如果所有查询都完成，则返回结果
                                             if (*completed == 4) {
-                                                static std::mutex responseMutex;
-                                                std::lock_guard<std::mutex> lock(responseMutex);
-                                                
-                                                // 防止多次发送响应
-                                                static std::atomic<bool> responseSent(false);
-                                                if (!responseSent.exchange(true)) {
-                                                    Json::Value responseData;
-                                                    responseData["article"] = *articleData;
-                                                    callback(utils::createSuccessResponse("获取文章详情成功", responseData));
-                                                }
+                                                Json::Value responseData;
+                                                responseData["article"] = *articleData;
+                                                sendResponse(utils::createSuccessResponse("获取文章详情成功", responseData));
                                             }
                                         }
                                     } catch (const std::exception& e) {
                                         std::cerr << "处理文章分类时出错: " << e.what() << std::endl;
-                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                        sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [callback](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取文章分类出错: " << e.base().what() << std::endl;
-                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                    sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 },
                                 articleId
                             );
                         } catch (const std::exception& e) {
                             std::cerr << "执行文章分类查询时出错: " << e.what() << std::endl;
-                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                             return;
                         }
                         
@@ -515,7 +502,7 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                 "FROM tags t "
                                 "JOIN article_tags at ON t.id = at.tag_id "
                                 "WHERE at.article_id = $1",
-                                [completed, articleData, callback](const drogon::orm::Result& tagResult) {
+                                [completed, articleData, sendResponse](const drogon::orm::Result& tagResult) {
                                     try {
                                         Json::Value tags(Json::arrayValue);
                                         
@@ -534,51 +521,49 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
                                         
                                         // 如果所有查询都完成，则返回结果
                                         if (*completed == 4) {
-                                            static std::mutex responseMutex;
-                                            std::lock_guard<std::mutex> lock(responseMutex);
-                                            
-                                            // 防止多次发送响应
-                                            static std::atomic<bool> responseSent(false);
-                                            if (!responseSent.exchange(true)) {
-                                                Json::Value responseData;
-                                                responseData["article"] = *articleData;
-                                                callback(utils::createSuccessResponse("获取文章详情成功", responseData));
-                                            }
+                                            Json::Value responseData;
+                                            responseData["article"] = *articleData;
+                                            sendResponse(utils::createSuccessResponse("获取文章详情成功", responseData));
                                         }
                                     } catch (const std::exception& e) {
                                         std::cerr << "处理文章标签时出错: " << e.what() << std::endl;
-                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                        sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                                     }
                                 },
-                                [callback](const drogon::orm::DrogonDbException& e) {
+                                [sendResponse](const drogon::orm::DrogonDbException& e) {
                                     std::cerr << "获取文章标签出错: " << e.base().what() << std::endl;
-                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                    sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                                 },
                                 articleId
                             );
                         } catch (const std::exception& e) {
                             std::cerr << "执行文章标签查询时出错: " << e.what() << std::endl;
-                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                             return;
                         }
                     } catch (const std::exception& e) {
                         std::cerr << "处理文章基本信息时出错: " << e.what() << std::endl;
-                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                        sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
                     }
                 },
-                [callback=callback](const drogon::orm::DrogonDbException& e) {
+                [sendResponse](const drogon::orm::DrogonDbException& e) {
                     std::cerr << "获取文章详情出错: " << e.base().what() << std::endl;
-                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                    sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                 },
                 slug
             );
         } catch (const std::exception& e) {
             std::cerr << "执行文章基本查询时出错: " << e.what() << std::endl;
-            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+            sendResponse(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
         }
     } catch (const std::exception& e) {
         std::cerr << "获取文章详情异常: " << e.what() << std::endl;
-        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+        
+        // 创建一个局部版本的sendResponse以处理这种情况
+        auto errorResponse = utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what());
+        static std::mutex errorMutex;
+        std::lock_guard<std::mutex> errorLock(errorMutex);
+        callback(errorResponse);
     }
 }
 
@@ -1539,6 +1524,62 @@ void PostController::getPosts(const drogon::HttpRequestPtr& req,
         );
     } catch (const std::exception& e) {
         std::cerr << "获取文章列表异常: " << e.what() << std::endl;
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
+}
+
+/**
+ * 获取用户相关标签
+ */
+void PostController::getUserTags(const drogon::HttpRequestPtr& req,
+                          std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    try {
+        // 获取当前用户UUID
+        std::string userUuid = req->getAttributes()->get<std::string>("user_uuid");
+        if (userUuid.empty()) {
+            callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "用户未认证"));
+            return;
+        }
+        
+        auto& dbManager = DbManager::getInstance();
+        
+        // 查询与用户相关的标签及其使用次数
+        std::string sql = 
+            "SELECT t.id, t.name, t.slug, COUNT(at.article_id) as count "
+            "FROM tags t "
+            "JOIN article_tags at ON t.id = at.tag_id "
+            "JOIN articles a ON at.article_id = a.id "
+            "WHERE a.user_uuid = '" + userUuid + "' "
+            "GROUP BY t.id, t.name, t.slug "
+            "ORDER BY count DESC, t.name ASC "
+            "LIMIT 20"; // 限制返回数量，防止数据过多
+        
+        dbManager.executeQuery(
+            sql,
+            [callback=callback](const drogon::orm::Result& result) {
+                Json::Value tags(Json::arrayValue);
+                
+                for (const auto& row : result) {
+                    Json::Value tag;
+                    tag["id"] = row["id"].as<int>();
+                    tag["name"] = row["name"].as<std::string>();
+                    tag["slug"] = row["slug"].as<std::string>();
+                    tag["count"] = row["count"].as<int>();
+                    tags.append(tag);
+                }
+                
+                Json::Value responseData;
+                responseData["tags"] = tags;
+                
+                callback(utils::createSuccessResponse("获取用户标签成功", responseData));
+            },
+            [callback=callback](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "获取用户标签出错: " << e.base().what() << std::endl;
+                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+            }
+        );
+    } catch (const std::exception& e) {
+        std::cerr << "获取用户标签异常: " << e.what() << std::endl;
         callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
     }
 }
