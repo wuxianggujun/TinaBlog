@@ -16,120 +16,148 @@ void CommentController::getArticleComments(const drogon::HttpRequestPtr& req,
     try {
         auto& dbManager = DbManager::getInstance();
         
+        // 获取分页参数，默认每页10条，第1页
+        int page = 1;
+        int pageSize = 10;
+        
+        // 尝试从请求中获取分页参数
+        try {
+            auto params = req->getParameters();
+            if (params.find("page") != params.end()) {
+                page = std::stoi(params["page"]);
+                if (page < 1) page = 1;
+            }
+            if (params.find("pageSize") != params.end()) {
+                pageSize = std::stoi(params["pageSize"]);
+                if (pageSize < 1) pageSize = 10;
+                if (pageSize > 50) pageSize = 50; // 限制最大每页数量
+            }
+        } catch (const std::exception& e) {
+            // 参数解析失败时使用默认值
+            std::cerr << "解析分页参数失败: " << e.what() << std::endl;
+        }
+        
+        // 计算偏移量
+        int offset = (page - 1) * pageSize;
+        
         // 检查文章是否存在
         dbManager.executeQuery(
-            "SELECT id FROM articles WHERE id = $1 AND is_published = true",
+            "SELECT id FROM articles WHERE id = " + std::to_string(article_id) + " AND is_published = true",
             [=, &dbManager, callback=callback](const drogon::orm::Result& articleResult) {
                 if (articleResult.size() == 0) {
                     callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "文章不存在"));
                     return;
                 }
                 
-                // 查询文章评论，以树状结构返回
-                // 简化SQL查询，获取所有评论，不考虑登录状态，不需要is_approved过滤
-                std::string sql = 
-                    "WITH RECURSIVE comment_tree AS ("
-                    "  SELECT c.id, c.content, c.user_uuid, c.article_id, c.parent_id, "
-                    "         c.created_at, c.author_name, u.username, 0 AS level "
-                    "  FROM comments c "
-                    "  LEFT JOIN users u ON c.user_uuid = u.uuid "
-                    "  WHERE c.article_id = $1 AND c.parent_id IS NULL "
-                    "  UNION ALL "
-                    "  SELECT c.id, c.content, c.user_uuid, c.article_id, c.parent_id, "
-                    "         c.created_at, c.author_name, u.username, ct.level + 1 "
-                    "  FROM comments c "
-                    "  JOIN comment_tree ct ON c.parent_id = ct.id "
-                    "  LEFT JOIN users u ON c.user_uuid = u.uuid "
-                    ") "
-                    "SELECT * FROM comment_tree "
-                    "ORDER BY level, created_at DESC";
-                
-                // 调试日志：输出SQL
-                std::cout << "执行评论查询SQL: " << sql << std::endl;
-                std::cout << "文章ID: " << article_id << std::endl;
+                // 先查询总评论数
+                std::string countSql = "SELECT COUNT(*) FROM comments WHERE article_id = " + std::to_string(article_id);
                 
                 dbManager.executeQuery(
-                    sql,
-                    [callback=callback](const drogon::orm::Result& result) {
-                        Json::Value commentsArray(Json::arrayValue);
-                        std::map<int, Json::Value*> commentMap;
+                    countSql,
+                    [=, &dbManager, callback=callback, page, pageSize, offset](const drogon::orm::Result& countResult) {
+                        int total = countResult[0][0].as<int>();
+                        int totalPages = (total + pageSize - 1) / pageSize; // 向上取整
                         
-                        // 调试日志：结果行数
-                        std::cout << "查询到的评论数量: " << result.size() << std::endl;
+                        // 使用左连接查询评论及其引用的评论信息
+                        std::string sql = 
+                            "SELECT c.id, c.content, c.user_uuid, c.article_id, c.parent_id, "
+                            "c.created_at, c.author_name, u.username as author_username, "
+                            "p.content as parent_content, p.author_name as parent_author_name, "
+                            "pu.username as parent_username "
+                            "FROM comments c "
+                            "LEFT JOIN users u ON c.user_uuid = u.uuid "
+                            "LEFT JOIN comments p ON c.parent_id = p.id "
+                            "LEFT JOIN users pu ON p.user_uuid = pu.uuid "
+                            "WHERE c.article_id = " + std::to_string(article_id) + " "
+                            "ORDER BY c.created_at DESC "
+                            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
                         
-                        // 先添加所有评论到map中
-                        for (const auto& row : result) {
-                            Json::Value comment;
-                            int id = row["id"].as<int>();
-                            int parentId = row["parent_id"].isNull() ? 0 : row["parent_id"].as<int>();
-                            
-                            comment["id"] = id;
-                            comment["content"] = row["content"].as<std::string>();
-                            
-                            // 设置作者信息
-                            if (!row["user_uuid"].isNull()) {
-                                comment["author"] = row["username"].as<std::string>();
-                                comment["isAuthenticated"] = true;
-                            } else {
-                                comment["author"] = row["author_name"].as<std::string>();
-                                comment["isAuthenticated"] = false;
-                            }
-                            
-                            comment["parent_id"] = parentId;
-                            comment["created_at"] = row["created_at"].as<std::string>();
-                            comment["replies"] = Json::Value(Json::arrayValue);
-                            
-                            // 放入评论映射
-                            if (commentMap.find(id) == commentMap.end()) {
-                                commentsArray.append(comment);
-                                // 获取指向刚添加到数组的元素的指针
-                                commentMap[id] = &commentsArray[commentsArray.size() - 1];
-                            }
-                        }
+                        // 调试日志：输出SQL
+                        std::cout << "执行评论查询SQL: " << sql << std::endl;
+                        std::cout << "文章ID: " << article_id << ", 页码: " << page << ", 每页: " << pageSize << std::endl;
                         
-                        // 第二步：处理回复关系
-                        for (auto& item : commentMap) {
-                            int id = item.first;
-                            Json::Value* comment = item.second;
-                            
-                            // 获取父评论ID
-                            int parentId = (*comment)["parent_id"].asInt();
-                            if (parentId > 0) {
-                                // 这是一个回复评论，需要从主数组中移除
-                                if (commentMap.find(parentId) != commentMap.end()) {
-                                    // 将当前评论添加到父评论的replies中
-                                    Json::Value* parentComment = commentMap[parentId];
-                                    (*parentComment)["replies"].append(*comment);
+                        dbManager.executeQuery(
+                            sql,
+                            [callback=callback, total, totalPages, page, pageSize](const drogon::orm::Result& result) {
+                                Json::Value commentsArray(Json::arrayValue);
+                                
+                                // 调试日志：结果行数
+                                std::cout << "查询到的评论数量: " << result.size() << std::endl;
+                                
+                                // 处理评论列表，平级结构
+                                for (const auto& row : result) {
+                                    Json::Value comment;
+                                    comment["id"] = row["id"].as<int>();
+                                    comment["content"] = row["content"].as<std::string>();
+                                    
+                                    // 设置作者信息
+                                    if (!row["user_uuid"].isNull()) {
+                                        comment["author"] = row["author_username"].as<std::string>();
+                                        comment["isAuthenticated"] = true;
+                                    } else {
+                                        comment["author"] = row["author_name"].as<std::string>();
+                                        comment["isAuthenticated"] = false;
+                                    }
+                                    
+                                    // 添加父评论信息（用于显示引用）
+                                    if (!row["parent_id"].isNull()) {
+                                        int parentId = row["parent_id"].as<int>();
+                                        comment["parent_id"] = parentId;
+                                        
+                                        // 构建父评论引用信息
+                                        if (!row["parent_content"].isNull()) {
+                                            // 确定父评论的作者名
+                                            std::string parentAuthor;
+                                            if (!row["parent_username"].isNull()) {
+                                                parentAuthor = row["parent_username"].as<std::string>();
+                                            } else if (!row["parent_author_name"].isNull()) {
+                                                parentAuthor = row["parent_author_name"].as<std::string>();
+                                            } else {
+                                                parentAuthor = "匿名用户";
+                                            }
+                                            
+                                            comment["parent_author"] = parentAuthor;
+                                            
+                                            // 获取父评论内容（仅截取前50个字符作为引用）
+                                            std::string parentContent = row["parent_content"].as<std::string>();
+                                            if (parentContent.length() > 50) {
+                                                parentContent = parentContent.substr(0, 50) + "...";
+                                            }
+                                            comment["parent_content"] = parentContent;
+                                        }
+                                    } else {
+                                        comment["parent_id"] = 0;
+                                    }
+                                    
+                                    comment["created_at"] = row["created_at"].as<std::string>();
+                                    commentsArray.append(comment);
                                 }
+                                
+                                Json::Value responseData;
+                                responseData["comments"] = commentsArray;
+                                responseData["total"] = total;
+                                responseData["page"] = page;
+                                responseData["pageSize"] = pageSize;
+                                responseData["totalPages"] = totalPages;
+                                
+                                callback(utils::createSuccessResponse("获取评论成功", responseData));
+                            },
+                            [callback=callback](const drogon::orm::DrogonDbException& e) {
+                                std::cerr << "获取文章评论出错: " << e.base().what() << std::endl;
+                                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                             }
-                        }
-                        
-                        // 第三步：只保留根评论在主数组中
-                        Json::Value filteredArray(Json::arrayValue);
-                        for (unsigned i = 0; i < commentsArray.size(); i++) {
-                            if (commentsArray[i]["parent_id"].asInt() == 0) {
-                                filteredArray.append(commentsArray[i]);
-                            }
-                        }
-                        
-                        Json::Value responseData;
-                        responseData["comments"] = filteredArray;
-                        responseData["total"] = filteredArray.size();
-                        
-                        callback(utils::createSuccessResponse("获取评论成功", responseData));
+                        );
                     },
                     [callback=callback](const drogon::orm::DrogonDbException& e) {
-                        std::cerr << "获取文章评论出错: " << e.base().what() << std::endl;
+                        std::cerr << "获取评论总数出错: " << e.base().what() << std::endl;
                         callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-                    },
-                    article_id
+                    }
                 );
             },
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "检查文章存在性出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            article_id
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "获取文章评论异常: " << e.what() << std::endl;
@@ -174,8 +202,8 @@ void CommentController::addComment(const drogon::HttpRequestPtr& req,
         
         // 检查文章是否存在
         dbManager.executeQuery(
-            "SELECT id FROM articles WHERE id = $1 AND is_published = true",
-            [=, &dbManager, callback=callback, userUuid](const drogon::orm::Result& articleResult) {
+            "SELECT id FROM articles WHERE id = " + std::to_string(articleId) + " AND is_published = true",
+            [=, &dbManager, callback=callback](const drogon::orm::Result& articleResult) {
                 if (articleResult.size() == 0) {
                     callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "文章不存在"));
                     return;
@@ -208,8 +236,7 @@ void CommentController::addComment(const drogon::HttpRequestPtr& req,
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "检查文章存在性出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            articleId
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "添加评论异常: " << e.what() << std::endl;
@@ -254,7 +281,7 @@ void CommentController::addAnonymousComment(const drogon::HttpRequestPtr& req,
         
         // 检查文章是否存在
         dbManager.executeQuery(
-            "SELECT id FROM articles WHERE id = $1 AND is_published = true",
+            "SELECT id FROM articles WHERE id = " + std::to_string(articleId) + " AND is_published = true",
             [=, &dbManager, callback=callback](const drogon::orm::Result& articleResult) {
                 if (articleResult.size() == 0) {
                     callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "文章不存在"));
@@ -288,8 +315,7 @@ void CommentController::addAnonymousComment(const drogon::HttpRequestPtr& req,
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "检查文章存在性出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            articleId
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "添加匿名评论异常: " << e.what() << std::endl;
@@ -349,8 +375,7 @@ void CommentController::replyComment(const drogon::HttpRequestPtr& req,
                     [callback=callback](const drogon::orm::DrogonDbException& e) {
                         std::cerr << "检查文章存在性出错: " << e.base().what() << std::endl;
                         callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-                    },
-                    articleId
+                    }
                 );
             },
             [callback=callback](const drogon::orm::DrogonDbException& e) {

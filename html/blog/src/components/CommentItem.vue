@@ -1,13 +1,14 @@
 <template>
-  <div class="comment-item" :class="{ 'is-reply': comment.parent_id }">
+  <div class="comment-item">
     <div class="comment-info">
       <div class="comment-author">{{ comment.author }}</div>
       <div class="comment-date">{{ formatDate(comment.created_at) }}</div>
     </div>
     
-    <div class="comment-parent" v-if="comment.parent_author">
-      <span>回复</span>
-      <span class="parent-author">@{{ comment.parent_author }}:</span>
+    <!-- 引用区域 - 显示回复的评论内容 -->
+    <div v-if="hasParent" class="comment-quote">
+      <div class="quote-author">@{{ comment.parent_author }}</div>
+      <div class="quote-content">{{ comment.parent_content }}</div>
     </div>
     
     <div class="comment-content">{{ comment.content }}</div>
@@ -21,18 +22,6 @@
       >
         删除
       </button>
-    </div>
-    
-    <!-- 嵌套评论 -->
-    <div class="child-comments" v-if="comment.replies && comment.replies.length > 0">
-      <comment-item 
-        v-for="reply in comment.replies" 
-        :key="reply.id" 
-        :comment="reply"
-        :article-id="articleId"
-        @reply="$emit('reply', $event)"
-        @delete="$emit('delete', $event)"
-      />
     </div>
   </div>
 </template>
@@ -59,6 +48,13 @@ export default {
     isAdmin() {
       const role = localStorage.getItem('userRole');
       return role === 'admin';
+    },
+    
+    hasParent() {
+      return this.comment.parent_id && 
+             this.comment.parent_id > 0 && 
+             this.comment.parent_author && 
+             this.comment.parent_content;
     }
   },
   
@@ -94,11 +90,6 @@ export default {
   background-color: #fff;
 }
 
-.comment-item.is-reply {
-  margin-left: 30px;
-  border-left: 3px solid #3498db;
-}
-
 .comment-info {
   display: flex;
   justify-content: space-between;
@@ -115,24 +106,32 @@ export default {
   color: #777;
 }
 
-.comment-parent {
-  background-color: #f9f9f9;
-  padding: 5px 10px;
-  margin-bottom: 10px;
-  border-radius: 3px;
-  font-size: 0.9rem;
-  color: #666;
+/* 引用样式 */
+.comment-quote {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: #f8f8f8;
+  border-left: 3px solid #ddd;
+  border-radius: 0 3px 3px 0;
 }
 
-.parent-author {
+.quote-author {
   font-weight: bold;
   color: #3498db;
+  margin-bottom: 5px;
+}
+
+.quote-content {
+  color: #666;
+  font-size: 0.9rem;
+  white-space: pre-line;
 }
 
 .comment-content {
   line-height: 1.5;
-  margin-bottom: 10px;
+  margin: 12px 0;
   word-break: break-word;
+  white-space: pre-line;
 }
 
 .comment-actions {
@@ -164,9 +163,5 @@ export default {
 
 .delete-btn:hover {
   background-color: #fdedec;
-}
-
-.child-comments {
-  margin-top: 20px;
 }
 </style> 

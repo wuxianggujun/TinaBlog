@@ -69,11 +69,19 @@
           
           <!-- 评论区 -->
           <div class="article-comments">
-            <h3 class="comments-title">评论区 <span class="comments-count">({{ comments.length }})</span></h3>
+            <h3 class="comments-title">评论区 <span class="comments-count">({{ commentTotal }})</span></h3>
             
             <!-- 评论表单 -->
             <div class="comment-form">
               <h4>发表评论</h4>
+              
+              <!-- 回复提示 -->
+              <div v-if="replyingToComment" class="replying-hint">
+                <div>正在回复 <span class="hint-author">{{ replyingToComment.author }}</span> 的评论</div>
+                <div class="hint-content">{{ replyingToComment.content }}</div>
+                <button class="cancel-reply" @click="cancelReply">取消回复</button>
+              </div>
+              
               <div v-if="isLoggedIn">
                 <textarea 
                   v-model="newComment.content" 
@@ -144,6 +152,29 @@
                 @reply="replyToComment"
                 @delete="deleteComment"
               />
+              
+              <!-- 评论分页 -->
+              <div class="comments-pagination" v-if="commentTotalPages > 1">
+                <button 
+                  class="page-btn" 
+                  :disabled="commentPage === 1"
+                  @click="changePage(commentPage - 1)"
+                >
+                  上一页
+                </button>
+                
+                <div class="page-info">
+                  {{ commentPage }} / {{ commentTotalPages }} 页 (共 {{ commentTotal }} 条评论)
+                </div>
+                
+                <button 
+                  class="page-btn" 
+                  :disabled="commentPage === commentTotalPages"
+                  @click="changePage(commentPage + 1)"
+                >
+                  下一页
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -221,7 +252,11 @@ export default {
       submittingComment: false,
       replyingToComment: null,
       toc: [],
-      relatedArticles: []
+      relatedArticles: [],
+      commentPage: 1,
+      commentPageSize: 10,
+      commentTotal: 0,
+      commentTotalPages: 1
     };
   },
   
@@ -326,16 +361,23 @@ export default {
     fetchComments() {
       if (!this.articleId) return;
       
-      console.log('开始获取文章ID为', this.articleId, '的评论');
+      console.log('开始获取文章ID为', this.articleId, '的评论，页码:', this.commentPage);
       this.commentsLoading = true;
       this.commentsError = false;
       
-      axios.get(`/api/articles/${this.articleId}/comments`)
+      axios.get(`/api/articles/${this.articleId}/comments`, {
+        params: {
+          page: this.commentPage,
+          pageSize: this.commentPageSize
+        }
+      })
         .then(response => {
           console.log('获取评论成功:', response.data);
           if (response.data.code === 0 && response.data.data) {
             this.comments = response.data.data.comments || [];
-            console.log('更新评论列表，数量:', this.comments.length);
+            this.commentTotal = response.data.data.total || 0;
+            this.commentTotalPages = response.data.data.totalPages || 1;
+            console.log('更新评论列表，数量:', this.comments.length, '总数:', this.commentTotal);
           } else {
             this.commentsError = true;
             this.commentsErrorMessage = response.data.message || '获取评论失败';
@@ -371,7 +413,8 @@ export default {
         .then(response => {
           if (response.data.code === 0) {
             console.log('评论发表成功，ID:', response.data.data.id);
-            // 评论成功，只刷新评论列表
+            // 评论成功，回到第一页并刷新评论列表
+            this.commentPage = 1;
             this.fetchComments();
             // 清空评论框
             this.newComment.content = '';
@@ -415,7 +458,8 @@ export default {
         .then(response => {
           if (response.data.code === 0) {
             console.log('匿名评论发表成功，ID:', response.data.data.id);
-            // 评论成功，只刷新评论列表
+            // 评论成功，回到第一页并刷新评论列表
+            this.commentPage = 1;
             this.fetchComments();
             // 清空评论框
             this.newComment.content = '';
@@ -443,7 +487,10 @@ export default {
     
     replyToComment(comment) {
       this.replyingToComment = comment;
-      this.newComment.content = `@${comment.author} `;
+      
+      // 添加相关提示信息
+      const replyHint = `@${comment.author} `;
+      this.newComment.content = replyHint;
       
       // 滚动到评论框
       this.$nextTick(() => {
@@ -551,6 +598,16 @@ export default {
           }
         ];
       }
+    },
+    
+    changePage(newPage) {
+      this.commentPage = newPage;
+      this.fetchComments();
+    },
+    
+    cancelReply() {
+      this.replyingToComment = null;
+      this.newComment.content = '';
     }
   },
   
@@ -982,6 +1039,81 @@ export default {
     flex-direction: column;
     gap: 10px;
   }
+}
+
+.comments-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 30px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.page-btn {
+  padding: 6px 15px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.page-btn:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+
+.page-btn:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.replying-hint {
+  background-color: #f8f8f8;
+  border-left: 3px solid #3498db;
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 0 4px 4px 0;
+  position: relative;
+}
+
+.hint-author {
+  font-weight: bold;
+  color: #3498db;
+}
+
+.hint-content {
+  color: #666;
+  margin-top: 5px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.cancel-reply {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #e74c3c;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 3px;
+}
+
+.cancel-reply:hover {
+  background-color: #f9ebea;
 }
 </style>
 
