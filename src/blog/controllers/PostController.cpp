@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <mutex>
+#include <atomic>
 
 namespace api {
 namespace v1 {
@@ -91,7 +93,7 @@ void PostController::getArticles(const drogon::HttpRequestPtr& req,
         // 计算偏移量
         int offset = (page - 1) * pageSize;
         
-        // 查询文章及其作者、分类信息
+        // 查询文章及其作者、分类信息，使用字符串拼接而非参数占位符
         std::string sql = 
             "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
             "a.updated_at, a.is_published, u.username as author, "
@@ -100,7 +102,7 @@ void PostController::getArticles(const drogon::HttpRequestPtr& req,
             "LEFT JOIN users u ON a.user_uuid = u.uuid "
             "WHERE a.is_published = true "
             "ORDER BY a.created_at DESC "
-            "LIMIT ? OFFSET ?";
+            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
         
         dbManager.executeQuery(
             sql,
@@ -111,8 +113,7 @@ void PostController::getArticles(const drogon::HttpRequestPtr& req,
             [callback=callback](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "获取文章列表出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            pageSize, offset
+            }
         );
     } catch (const std::exception& e) {
         std::cerr << "获取文章列表异常: " << e.what() << std::endl;
@@ -216,118 +217,368 @@ void PostController::getArticle(const drogon::HttpRequestPtr& req,
         auto& dbManager = DbManager::getInstance();
         
         // 查询文章基本信息
-        dbManager.executeQuery(
-            "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
-            "a.updated_at, a.is_published, u.username as author "
-            "FROM articles a "
-            "LEFT JOIN users u ON a.user_uuid = u.uuid "
-            "WHERE a.slug = $1 AND a.is_published = true",
-            [this, callback=callback](const drogon::orm::Result& result) {
-                if (result.size() == 0) {
-                    callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该文章"));
-                    return;
-                }
-                
-                const auto& row = result[0];
-                Json::Value article;
-                int articleId = row["id"].as<int>();
-                
-                article["id"] = articleId;
-                article["title"] = row["title"].as<std::string>();
-                article["slug"] = row["slug"].as<std::string>();
-                article["summary"] = row["summary"].as<std::string>();
-                article["content"] = row["content"].as<std::string>();
-                article["created_at"] = row["created_at"].as<std::string>();
-                article["updated_at"] = row["updated_at"].as<std::string>();
-                article["is_published"] = row["is_published"].as<bool>();
-                article["author"] = row["author"].as<std::string>();
-                
-                // 创建共享指针用于跟踪完成状态
-                auto completed = std::make_shared<int>(0);
-                auto articleData = std::make_shared<Json::Value>(article);
-                
-                // 查询文章的分类
-                auto& dbManager = DbManager::getInstance();
-                dbManager.executeQuery(
-                    "SELECT c.id, c.name, c.slug "
-                    "FROM categories c "
-                    "JOIN article_categories ac ON c.id = ac.category_id "
-                    "WHERE ac.article_id = $1",
-                    [completed, articleData, callback](const drogon::orm::Result& catResult) {
-                        Json::Value categories(Json::arrayValue);
+        try {
+            dbManager.executeQuery(
+                "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
+                "a.updated_at, a.is_published, u.username as author, u.uuid as author_uuid, "
+                "u.display_name as author_display_name, u.bio as author_bio "
+                "FROM articles a "
+                "LEFT JOIN users u ON a.user_uuid = u.uuid "
+                "WHERE a.slug = $1 AND a.is_published = true",
+                [this, callback=callback, &dbManager](const drogon::orm::Result& result) {
+                    if (result.size() == 0) {
+                        callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "未找到该文章"));
+                        return;
+                    }
+                    
+                    try {
+                        const auto& row = result[0];
+                        Json::Value article;
+                        int articleId = row["id"].as<int>();
+                        std::string authorUuid = row["author_uuid"].as<std::string>();
                         
-                        for (const auto& catRow : catResult) {
-                            Json::Value category;
-                            category["id"] = catRow["id"].as<int>();
-                            category["name"] = catRow["name"].as<std::string>();
-                            category["slug"] = catRow["slug"].as<std::string>();
-                            categories.append(category);
+                        article["id"] = articleId;
+                        article["title"] = row["title"].as<std::string>();
+                        article["slug"] = row["slug"].as<std::string>();
+                        article["summary"] = row["summary"].as<std::string>();
+                        article["content"] = row["content"].as<std::string>();
+                        article["created_at"] = row["created_at"].as<std::string>();
+                        article["updated_at"] = row["updated_at"].as<std::string>();
+                        article["is_published"] = row["is_published"].as<bool>();
+                        article["author"] = row["author"].as<std::string>();
+                        
+                        // 创建共享指针用于跟踪完成状态
+                        auto completed = std::make_shared<int>(0);
+                        auto articleData = std::make_shared<Json::Value>(article);
+                        
+                        // 添加作者信息
+                        Json::Value authorInfo;
+                        authorInfo["username"] = row["author"].as<std::string>();
+                        authorInfo["display_name"] = row["author_display_name"].as<std::string>();
+                        authorInfo["bio"] = row["author_bio"].as<std::string>();
+                        
+                        // 获取作者文章数量、评论数量等统计信息
+                        std::string authorStatsSql = 
+                            "SELECT "
+                            "(SELECT COUNT(*) FROM articles WHERE user_uuid = '" + authorUuid + "' AND is_published = true) as article_count, "
+                            "(SELECT COALESCE(SUM(view_count), 0) FROM articles WHERE user_uuid = '" + authorUuid + "' AND is_published = true) as view_count, "
+                            "(SELECT COUNT(*) FROM comments c JOIN articles a ON c.article_id = a.id WHERE a.user_uuid = '" + authorUuid + "') as comment_count";
+                        
+                        try {
+                            // 创建一个副本用于lambda捕获
+                            auto authorInfoPtr = std::make_shared<Json::Value>(authorInfo);
+                            
+                            dbManager.executeQuery(
+                                authorStatsSql,
+                                [completed, articleData, authorInfoPtr, callback](const drogon::orm::Result& statsResult) {
+                                    try {
+                                        if (statsResult.size() > 0) {
+                                            (*authorInfoPtr)["article_count"] = statsResult[0]["article_count"].as<int>();
+                                            (*authorInfoPtr)["view_count"] = statsResult[0]["view_count"].as<int>();
+                                            (*authorInfoPtr)["comment_count"] = statsResult[0]["comment_count"].as<int>();
+                                        } else {
+                                            (*authorInfoPtr)["article_count"] = 0;
+                                            (*authorInfoPtr)["view_count"] = 0;
+                                            (*authorInfoPtr)["comment_count"] = 0;
+                                        }
+                                        
+                                        (*articleData)["author_info"] = *authorInfoPtr;
+                                        
+                                        // 增加完成计数
+                                        (*completed)++;
+                                        
+                                        // 如果所有查询都完成，则返回结果
+                                        if (*completed == 4) {
+                                            static std::mutex responseMutex;
+                                            std::lock_guard<std::mutex> lock(responseMutex);
+                                            
+                                            // 防止多次发送响应
+                                            static std::atomic<bool> responseSent(false);
+                                            if (!responseSent.exchange(true)) {
+                                                Json::Value responseData;
+                                                responseData["article"] = *articleData;
+                                                callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                                            }
+                                        }
+                                    } catch (const std::exception& e) {
+                                        std::cerr << "处理作者统计信息时出错: " << e.what() << std::endl;
+                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                    }
+                                },
+                                [callback](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "获取作者统计信息出错: " << e.base().what() << std::endl;
+                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                }
+                            );
+                        } catch (const std::exception& e) {
+                            std::cerr << "执行作者统计查询时出错: " << e.what() << std::endl;
+                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            return;
                         }
                         
-                        (*articleData)["categories"] = categories;
+                        // 查询作者其他文章（最新的3篇）
+                        std::string authorArticlesSql = 
+                            "SELECT id, title, slug, created_at "
+                            "FROM articles "
+                            "WHERE user_uuid = '" + authorUuid + "' AND id != " + std::to_string(articleId) + " AND is_published = true "
+                            "ORDER BY created_at DESC "
+                            "LIMIT 3";
                         
-                        // 增加完成计数
-                        (*completed)++;
-                        
-                        // 如果分类和标签都查询完毕，则返回结果
-                        if (*completed == 2) {
-                            Json::Value responseData;
-                            responseData["article"] = *articleData;
-                            callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                        try {
+                            dbManager.executeQuery(
+                                authorArticlesSql,
+                                [completed, articleData, callback](const drogon::orm::Result& authorArticles) {
+                                    try {
+                                        Json::Value otherArticles(Json::arrayValue);
+                                        
+                                        for (const auto& artRow : authorArticles) {
+                                            Json::Value otherArticle;
+                                            otherArticle["id"] = artRow["id"].as<int>();
+                                            otherArticle["title"] = artRow["title"].as<std::string>();
+                                            otherArticle["slug"] = artRow["slug"].as<std::string>();
+                                            otherArticle["created_at"] = artRow["created_at"].as<std::string>();
+                                            otherArticles.append(otherArticle);
+                                        }
+                                        
+                                        (*articleData)["other_author_articles"] = otherArticles;
+                                        
+                                        // 增加完成计数
+                                        (*completed)++;
+                                        
+                                        // 如果所有查询都完成，则返回结果
+                                        if (*completed == 4) {
+                                            static std::mutex responseMutex;
+                                            std::lock_guard<std::mutex> lock(responseMutex);
+                                            
+                                            // 防止多次发送响应
+                                            static std::atomic<bool> responseSent(false);
+                                            if (!responseSent.exchange(true)) {
+                                                Json::Value responseData;
+                                                responseData["article"] = *articleData;
+                                                callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                                            }
+                                        }
+                                    } catch (const std::exception& e) {
+                                        std::cerr << "处理作者其他文章时出错: " << e.what() << std::endl;
+                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                    }
+                                },
+                                [callback](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "获取作者其他文章出错: " << e.base().what() << std::endl;
+                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                }
+                            );
+                        } catch (const std::exception& e) {
+                            std::cerr << "执行作者其他文章查询时出错: " << e.what() << std::endl;
+                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            return;
                         }
-                    },
-                    [callback](const drogon::orm::DrogonDbException& e) {
-                        std::cerr << "获取文章分类出错: " << e.base().what() << std::endl;
-                        callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-                    },
-                    articleId
-                );
-                
-                // 查询文章的标签
-                dbManager.executeQuery(
-                    "SELECT t.id, t.name, t.slug "
-                    "FROM tags t "
-                    "JOIN article_tags at ON t.id = at.tag_id "
-                    "WHERE at.article_id = $1",
-                    [completed, articleData, callback](const drogon::orm::Result& tagResult) {
-                        Json::Value tags(Json::arrayValue);
                         
-                        for (const auto& tagRow : tagResult) {
-                            Json::Value tag;
-                            tag["id"] = tagRow["id"].as<int>();
-                            tag["name"] = tagRow["name"].as<std::string>();
-                            tag["slug"] = tagRow["slug"].as<std::string>();
-                            tags.append(tag);
+                        // 查询文章的分类
+                        try {
+                            dbManager.executeQuery(
+                                "SELECT c.id, c.name, c.slug "
+                                "FROM categories c "
+                                "JOIN article_categories ac ON c.id = ac.category_id "
+                                "WHERE ac.article_id = $1",
+                                [this, completed, articleData, callback, &dbManager, articleId](const drogon::orm::Result& catResult) {
+                                    try {
+                                        Json::Value categories(Json::arrayValue);
+                                        std::string categoryId = "0";
+                                        
+                                        for (const auto& catRow : catResult) {
+                                            Json::Value category;
+                                            category["id"] = catRow["id"].as<int>();
+                                            category["name"] = catRow["name"].as<std::string>();
+                                            category["slug"] = catRow["slug"].as<std::string>();
+                                            categories.append(category);
+                                            
+                                            // 使用第一个分类来查询相关文章
+                                            if (categoryId == "0") {
+                                                categoryId = std::to_string(catRow["id"].as<int>());
+                                            }
+                                        }
+                                        
+                                        (*articleData)["categories"] = categories;
+                                        
+                                        // 增加完成计数
+                                        (*completed)++;
+                                        
+                                        // 查询同一分类的其他热门文章
+                                        if (categoryId != "0") {
+                                            try {
+                                                std::string relatedArticlesSql = 
+                                                    "SELECT a.id, a.title, a.slug, a.created_at "
+                                                    "FROM articles a "
+                                                    "JOIN article_categories ac ON a.id = ac.article_id "
+                                                    "WHERE ac.category_id = " + categoryId + " AND a.id != " + std::to_string(articleId) + " AND a.is_published = true "
+                                                    "ORDER BY a.view_count DESC, a.created_at DESC "
+                                                    "LIMIT 3";
+                                                
+                                                dbManager.executeQuery(
+                                                    relatedArticlesSql,
+                                                    [completed, articleData, callback](const drogon::orm::Result& relatedArticles) {
+                                                        try {
+                                                            Json::Value relatedArticlesArray(Json::arrayValue);
+                                                            
+                                                            for (const auto& artRow : relatedArticles) {
+                                                                Json::Value relatedArticle;
+                                                                relatedArticle["id"] = artRow["id"].as<int>();
+                                                                relatedArticle["title"] = artRow["title"].as<std::string>();
+                                                                relatedArticle["slug"] = artRow["slug"].as<std::string>();
+                                                                relatedArticle["created_at"] = artRow["created_at"].as<std::string>();
+                                                                relatedArticlesArray.append(relatedArticle);
+                                                            }
+                                                            
+                                                            (*articleData)["related_articles"] = relatedArticlesArray;
+                                                            
+                                                            // 增加完成计数
+                                                            (*completed)++;
+                                                            
+                                                            // 如果所有查询都完成，则返回结果
+                                                            if (*completed == 4) {
+                                                                static std::mutex responseMutex;
+                                                                std::lock_guard<std::mutex> lock(responseMutex);
+                                                                
+                                                                // 防止多次发送响应
+                                                                static std::atomic<bool> responseSent(false);
+                                                                if (!responseSent.exchange(true)) {
+                                                                    Json::Value responseData;
+                                                                    responseData["article"] = *articleData;
+                                                                    callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                                                                }
+                                                            }
+                                                        } catch (const std::exception& e) {
+                                                            std::cerr << "处理相关文章时出错: " << e.what() << std::endl;
+                                                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                                        }
+                                                    },
+                                                    [callback](const drogon::orm::DrogonDbException& e) {
+                                                        std::cerr << "获取相关文章出错: " << e.base().what() << std::endl;
+                                                        callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                                    }
+                                                );
+                                            } catch (const std::exception& e) {
+                                                std::cerr << "执行相关文章查询时出错: " << e.what() << std::endl;
+                                                (*completed)++;
+                                                if (*completed == 4) {
+                                                    static std::mutex responseMutex;
+                                                    std::lock_guard<std::mutex> lock(responseMutex);
+                                                    
+                                                    // 防止多次发送响应
+                                                    static std::atomic<bool> responseSent(false);
+                                                    if (!responseSent.exchange(true)) {
+                                                        Json::Value responseData;
+                                                        responseData["article"] = *articleData;
+                                                        callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            (*completed)++; // 如果没有分类，也要增加计数
+                                            
+                                            // 如果所有查询都完成，则返回结果
+                                            if (*completed == 4) {
+                                                static std::mutex responseMutex;
+                                                std::lock_guard<std::mutex> lock(responseMutex);
+                                                
+                                                // 防止多次发送响应
+                                                static std::atomic<bool> responseSent(false);
+                                                if (!responseSent.exchange(true)) {
+                                                    Json::Value responseData;
+                                                    responseData["article"] = *articleData;
+                                                    callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                                                }
+                                            }
+                                        }
+                                    } catch (const std::exception& e) {
+                                        std::cerr << "处理文章分类时出错: " << e.what() << std::endl;
+                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                    }
+                                },
+                                [callback](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "获取文章分类出错: " << e.base().what() << std::endl;
+                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                },
+                                articleId
+                            );
+                        } catch (const std::exception& e) {
+                            std::cerr << "执行文章分类查询时出错: " << e.what() << std::endl;
+                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            return;
                         }
                         
-                        (*articleData)["tags"] = tags;
-                        
-                        // 增加完成计数
-                        (*completed)++;
-                        
-                        // 如果分类和标签都查询完毕，则返回结果
-                        if (*completed == 2) {
-                            Json::Value responseData;
-                            responseData["article"] = *articleData;
-                            callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                        // 查询文章的标签
+                        try {
+                            dbManager.executeQuery(
+                                "SELECT t.id, t.name, t.slug "
+                                "FROM tags t "
+                                "JOIN article_tags at ON t.id = at.tag_id "
+                                "WHERE at.article_id = $1",
+                                [completed, articleData, callback](const drogon::orm::Result& tagResult) {
+                                    try {
+                                        Json::Value tags(Json::arrayValue);
+                                        
+                                        for (const auto& tagRow : tagResult) {
+                                            Json::Value tag;
+                                            tag["id"] = tagRow["id"].as<int>();
+                                            tag["name"] = tagRow["name"].as<std::string>();
+                                            tag["slug"] = tagRow["slug"].as<std::string>();
+                                            tags.append(tag);
+                                        }
+                                        
+                                        (*articleData)["tags"] = tags;
+                                        
+                                        // 增加完成计数
+                                        (*completed)++;
+                                        
+                                        // 如果所有查询都完成，则返回结果
+                                        if (*completed == 4) {
+                                            static std::mutex responseMutex;
+                                            std::lock_guard<std::mutex> lock(responseMutex);
+                                            
+                                            // 防止多次发送响应
+                                            static std::atomic<bool> responseSent(false);
+                                            if (!responseSent.exchange(true)) {
+                                                Json::Value responseData;
+                                                responseData["article"] = *articleData;
+                                                callback(utils::createSuccessResponse("获取文章详情成功", responseData));
+                                            }
+                                        }
+                                    } catch (const std::exception& e) {
+                                        std::cerr << "处理文章标签时出错: " << e.what() << std::endl;
+                                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                                    }
+                                },
+                                [callback](const drogon::orm::DrogonDbException& e) {
+                                    std::cerr << "获取文章标签出错: " << e.base().what() << std::endl;
+                                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                                },
+                                articleId
+                            );
+                        } catch (const std::exception& e) {
+                            std::cerr << "执行文章标签查询时出错: " << e.what() << std::endl;
+                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                            return;
                         }
-                    },
-                    [callback](const drogon::orm::DrogonDbException& e) {
-                        std::cerr << "获取文章标签出错: " << e.base().what() << std::endl;
-                        callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-                    },
-                    articleId
-                );
-            },
-            [callback=callback](const drogon::orm::DrogonDbException& e) {
-                std::cerr << "获取文章详情出错: " << e.base().what() << std::endl;
-                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
-            },
-            slug
-        );
+                    } catch (const std::exception& e) {
+                        std::cerr << "处理文章基本信息时出错: " << e.what() << std::endl;
+                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+                    }
+                },
+                [callback=callback](const drogon::orm::DrogonDbException& e) {
+                    std::cerr << "获取文章详情出错: " << e.base().what() << std::endl;
+                    callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                },
+                slug
+            );
+        } catch (const std::exception& e) {
+            std::cerr << "执行文章基本查询时出错: " << e.what() << std::endl;
+            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
+        }
     } catch (const std::exception& e) {
         std::cerr << "获取文章详情异常: " << e.what() << std::endl;
-        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, e.what()));
     }
 }
 
@@ -1234,7 +1485,7 @@ void PostController::getPosts(const drogon::HttpRequestPtr& req,
             "FROM articles a "
             "WHERE a.user_uuid = $1 "
             "ORDER BY a.created_at DESC "
-            "LIMIT $2 OFFSET $3";
+            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
         
         dbManager.executeQuery(
             sql,
@@ -1278,13 +1529,13 @@ void PostController::getPosts(const drogon::HttpRequestPtr& req,
                 responseData["pagination"]["pageSize"] = pageSize;
                 responseData["pagination"]["totalPages"] = totalPages;
                 
-                callback(utils::createSuccessResponse("获取文章列表成功", responseData));
+                callback(utils::createSuccessResponse("获取用户文章列表成功", responseData));
             },
             [callback=callback](const drogon::orm::DrogonDbException& e) {
-                std::cerr << "获取文章列表出错: " << e.base().what() << std::endl;
+                std::cerr << "获取用户文章列表出错: " << e.base().what() << std::endl;
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
             },
-            userUuid, pageSize, offset
+            userUuid
         );
     } catch (const std::exception& e) {
         std::cerr << "获取文章列表异常: " << e.what() << std::endl;

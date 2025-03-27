@@ -772,3 +772,31 @@ body {
   background-color: #059669;
 }
 </style>
+
+<style scoped>
+/* 检查是否存在可能添加黑色边框的样式 */
+.header {
+  /*... existing styles ... */
+  outline: none; /* 防止选中时出现黑色边框 */
+}
+
+/* 修复Outline问题 */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-color); /* 使用主题色而非黑色 */
+}
+
+/* 确保页面根元素不会被意外选中 */
+#app {
+  outline: none;
+}
+
+/* 给标题等元素添加统一的样式 */
+.logo-title {
+  outline: none;
+  user-select: none; /* 防止文本被意外选中 */
+}
+</style>

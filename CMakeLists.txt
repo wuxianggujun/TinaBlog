@@ -112,12 +112,13 @@ install(TARGETS TinaBlog DESTINATION bin)
 # 设置前端构建目录
 set(FRONTEND_BUILD_DIR ${CMAKE_BINARY_DIR}/html)
 
-# 确保每次构建都执行拷贝，不依赖于文件存在性
+# 确保每次构建都执行删除旧文件并重新复制
 add_custom_target(copy_frontend ALL
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${FRONTEND_BUILD_DIR}/blog
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/html/blog/dist ${FRONTEND_BUILD_DIR}/blog
-    COMMENT "复制前端文件..."
-    VERBATIM
+        COMMAND ${CMAKE_COMMAND} -E remove_directory ${FRONTEND_BUILD_DIR}/blog  # 删除旧目录
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${FRONTEND_BUILD_DIR}/blog   # 重新创建目录
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/html/blog/dist ${FRONTEND_BUILD_DIR}/blog  # 复制新文件
+        COMMENT "删除旧文件并复制前端文件..."
+        VERBATIM
 )
 
 # 确保在主应用构建前完成前端文件复制
