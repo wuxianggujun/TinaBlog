@@ -11,7 +11,8 @@ export default {
       username: localStorage.getItem('username') || '',
       showDropdown: false,
       loginValidationInterval: null,
-      forceUpdateFlag: 0  // 新增强制更新标志
+      forceUpdateFlag: 0,  // 新增强制更新标志
+      isArticleDetailPage: false  // 新增文章详情页面标志
     }
   },
   computed: {
@@ -29,6 +30,11 @@ export default {
       console.debug('[App] 登录状态变化:', newValue);
       // 强制更新UI
       this.$forceUpdate();
+    },
+    // 监听路由变化，更新文章详情页状态
+    '$route'(to) {
+      console.debug('[App] 路由变化:', to.path);
+      this.checkIsArticleDetailPage();
     }
   },
   created() {
@@ -38,6 +44,9 @@ export default {
     // 只设置最基本的数据
     this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     this.username = localStorage.getItem('username') || '';
+    
+    // 检查是否是文章详情页
+    this.checkIsArticleDetailPage();
   },
   mounted() {
     console.debug('[App] mounted生命周期钩子');
@@ -422,6 +431,10 @@ export default {
       
       // 更新强制刷新标志
       this.forceUpdateFlag++;
+    },
+    checkIsArticleDetailPage() {
+      // 同时检测文章详情页和我的文章页面
+      this.isArticleDetailPage = this.$route.path.includes('/article') || this.$route.path === '/my-articles';
     }
   }
 }
@@ -434,7 +447,8 @@ export default {
         <!-- 左侧导航 -->
         <div class="nav-left">
           <router-link to="/" class="nav-brand">Tina Blog</router-link>
-          <div class="nav-links">
+          <!-- 在文章详情页面隐藏导航链接 -->
+          <div class="nav-links" v-if="!isArticleDetailPage">
             <router-link to="/">首页</router-link>
             <router-link to="/categories">分类</router-link>
             <router-link to="/archives">归档</router-link>
@@ -446,8 +460,8 @@ export default {
           <!-- 登录按钮 - 未登录时显示 -->
           <router-link v-if="!isLoggedIn" to="/login" class="login-btn">登录</router-link>
           
-          <!-- 创作按钮 - 已登录且不在创建页面时显示 -->
-          <router-link v-if="isLoggedIn && $route.path !== '/create'" to="/create" class="create-btn">
+          <!-- 创作按钮 - 已登录且不在创建页面且不在文章详情页时显示 -->
+          <router-link v-if="isLoggedIn && $route.path !== '/create' && !isArticleDetailPage" to="/create" class="create-btn">
             <svg viewBox="0 0 24 24" width="16" height="16" style="margin-right: 5px;">
               <path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z" fill="currentColor"/>
             </svg>
