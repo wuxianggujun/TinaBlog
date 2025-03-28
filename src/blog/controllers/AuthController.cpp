@@ -818,6 +818,19 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
             return;
         }
         
+        // 获取boundary
+        std::string boundary;
+        size_t boundaryPos = contentType.find("boundary=");
+        if (boundaryPos != std::string::npos) {
+            boundary = contentType.substr(boundaryPos + 9); // 9 is the length of "boundary="
+        } else {
+            LOG_ERROR << "未找到boundary参数";
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的multipart请求"));
+            return;
+        }
+        
+        LOG_INFO << "解析到boundary: " << boundary;
+        
         // 检查请求体是否为空
         if (req->bodyLength() == 0) {
             (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "请求体为空"));
@@ -826,7 +839,85 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
         
         LOG_INFO << "请求体长度: " << req->bodyLength() << " 字节";
         
-        // 为文件创建一个临时文件
+        // 解析multipart请求，提取文件内容
+        std::string reqBody(req->bodyData(), req->bodyLength());
+        
+        // 在multipart请求中寻找source字段和文件数据
+        std::string startDelimiter = "--" + boundary + "\r\n";
+        std::string middleDelimiter = "\r\n--" + boundary + "\r\n";
+        std::string endDelimiter = "\r\n--" + boundary + "--";
+        
+        std::string fileDataStr;
+        size_t pos = 0;
+        bool fileFound = false;
+        
+        // 遍历所有部分
+        while (pos < reqBody.length()) {
+            size_t partStart = pos;
+            size_t partEnd;
+            
+            // 查找下一个分隔符
+            if (pos == 0) {
+                // 第一个部分以startDelimiter开始
+                if (reqBody.substr(pos, startDelimiter.length()) != startDelimiter) {
+                    LOG_ERROR << "请求体格式错误: 缺少开始分隔符";
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "请求体格式错误"));
+                    return;
+                }
+                pos += startDelimiter.length();
+                partStart = pos;
+                partEnd = reqBody.find(middleDelimiter, pos);
+            } else {
+                // 后续部分
+                partEnd = reqBody.find(middleDelimiter, pos);
+            }
+            
+            // 如果找不到中间分隔符，可能是最后一个部分
+            if (partEnd == std::string::npos) {
+                partEnd = reqBody.find(endDelimiter, pos);
+                if (partEnd == std::string::npos) {
+                    LOG_ERROR << "请求体格式错误: 缺少结束分隔符";
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "请求体格式错误"));
+                    return;
+                }
+            }
+            
+            // 解析当前部分
+            std::string part = reqBody.substr(partStart, partEnd - partStart);
+            
+            // 检查是否包含source字段
+            if (part.find("name=\"source\"") != std::string::npos || part.find("name='source'") != std::string::npos) {
+                LOG_INFO << "找到source字段";
+                
+                // 提取文件内容 - 在两个\r\n\r\n之间的是头部信息，之后的是文件内容
+                size_t headerEnd = part.find("\r\n\r\n");
+                if (headerEnd != std::string::npos) {
+                    fileDataStr = part.substr(headerEnd + 4); // +4表示跳过"\r\n\r\n"
+                    fileFound = true;
+                    LOG_INFO << "提取到文件数据，大小: " << fileDataStr.size() << " 字节";
+                    break;
+                } else {
+                    LOG_ERROR << "未找到文件头结束标记";
+                }
+            }
+            
+            // 移动到下一个部分
+            pos = partEnd + middleDelimiter.length();
+            
+            // 如果到达了结束分隔符，退出循环
+            if (partEnd + endDelimiter.length() <= reqBody.length() && 
+                reqBody.substr(partEnd, endDelimiter.length()) == endDelimiter) {
+                break;
+            }
+        }
+        
+        if (!fileFound || fileDataStr.empty()) {
+            LOG_ERROR << "未找到有效的文件数据";
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_PARAMETER, "未找到有效的文件数据"));
+            return;
+        }
+        
+        // 将文件数据写入临时文件
         std::string tempDir;
         
         // 根据操作系统确定临时目录
@@ -848,8 +939,8 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
             return;
         }
         
-        // 写入请求体数据到临时文件
-        outFile.write(req->bodyData(), req->bodyLength());
+        // 写入文件数据
+        outFile.write(fileDataStr.data(), fileDataStr.size());
         outFile.close();
         
         // 验证文件大小（限制为2MB）
@@ -896,105 +987,134 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
         // 删除临时文件
         std::remove(tempFileName.c_str());
         
-        // 手动构建multipart/form-data格式
-        std::string boundary = "----WebKitFormBoundary" + std::to_string(std::time(nullptr));
-        std::string contentType2 = "multipart/form-data; boundary=" + boundary;
+        // 使用libcurl进行上传
+        CURL *curl;
+        CURLcode res;
+        std::string responseString;
         
-        std::string fileContent(fileData.begin(), fileData.end());
+        // 初始化CURL
+        curl = curl_easy_init();
+        if (!curl) {
+            LOG_ERROR << "初始化CURL失败";
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "初始化上传服务失败"));
+            return;
+        }
         
-        // 构建multipart请求体
-        std::ostringstream requestBody;
-        requestBody << "--" << boundary << "\r\n";
-        requestBody << "Content-Disposition: form-data; name=\"source\"; filename=\"avatar.jpg\"\r\n";
-        requestBody << "Content-Type: image/jpeg\r\n\r\n";
-        requestBody << fileContent << "\r\n";
-        requestBody << "--" << boundary << "--\r\n";
+        LOG_INFO << "初始化CURL成功";
         
-        // 创建请求
-        auto multipartReq = drogon::HttpRequest::newHttpRequest();
-        multipartReq->setMethod(drogon::Post);
-        multipartReq->setPath("/api/1/upload");
-        multipartReq->addHeader("Content-Type", contentType2);
-        multipartReq->addHeader("X-API-Key", IMAGE_HUB_API_KEY);
-        multipartReq->addHeader("Origin", "https://www.imagehub.cc");  // 添加Origin头，避免CORS问题
-        multipartReq->setBody(requestBody.str());
+        // 设置CURL参数
+        curl_easy_setopt(curl, CURLOPT_URL, "https://www.imagehub.cc/api/1/upload");
+        
+        // 设置写入回调函数
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseString);
+        
+        // 创建HTTP头
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Accept: application/json");
+        headers = curl_slist_append(headers, ("X-API-Key: " + IMAGE_HUB_API_KEY).c_str());
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        
+        // 创建multipart/form-data表单
+        curl_mime *mime = curl_mime_init(curl);
+        curl_mimepart *part = curl_mime_addpart(mime);
+        
+        // 添加图片文件部分
+        curl_mime_name(part, "source");
+        curl_mime_filename(part, "avatar.jpg");
+        curl_mime_type(part, "image/jpeg");
+        curl_mime_data(part, fileData.data(), fileData.size());
+        
+        // 设置form数据
+        curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
         
         LOG_INFO << "开始上传图片到图床...";
         
-        // 发送异步请求
-        client->sendRequest(multipartReq, [callbackPtr, userUuid](drogon::ReqResult result, const drogon::HttpResponsePtr& response) {
-            if (result != drogon::ReqResult::Ok || !response) {
-                LOG_ERROR << "上传图片到图床失败: " << static_cast<int>(result);
-                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "上传图片到图床失败"));
-                return;
+        // 执行请求
+        res = curl_easy_perform(curl);
+        
+        // 检查请求结果
+        if (res != CURLE_OK) {
+            LOG_ERROR << "上传图片到图床失败: " << curl_easy_strerror(res);
+            curl_mime_free(mime);
+            curl_slist_free_all(headers);
+            curl_easy_cleanup(curl);
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "上传图片到图床失败"));
+            return;
+        }
+        
+        LOG_INFO << "图床响应: " << responseString;
+        
+        // 解析响应
+        Json::Value respJson;
+        Json::Reader reader;
+        if (!reader.parse(responseString, respJson) || !respJson.isObject()) {
+            LOG_ERROR << "解析图床API响应失败: " << responseString;
+            curl_mime_free(mime);
+            curl_slist_free_all(headers);
+            curl_easy_cleanup(curl);
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "解析图床响应失败"));
+            return;
+        }
+        
+        // 清理CURL资源
+        curl_mime_free(mime);
+        curl_slist_free_all(headers);
+        curl_easy_cleanup(curl);
+        
+        // 检查上传是否成功
+        if (respJson["status_code"].asInt() != 200) {
+            std::string errorMsg = "图床上传失败: ";
+            if (respJson["status_txt"].isString()) {
+                errorMsg += respJson["status_txt"].asString();
             }
-            
-            // 解析响应，将string_view转换为string
-            std::string responseBody(response->getBody().data(), response->getBody().length());
-            LOG_INFO << "图床响应: " << responseBody;
-            
-            Json::Value respJson;
-            Json::Reader reader;
-            if (!reader.parse(responseBody, respJson) || !respJson.isObject()) {
-                LOG_ERROR << "解析图床API响应失败: " << responseBody;
-                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "解析图床响应失败"));
-                return;
-            }
-            
-            // 检查上传是否成功
-            if (respJson["status_code"].asInt() != 200) {
-                std::string errorMsg = "图床上传失败: ";
-                if (respJson["status_txt"].isString()) {
-                    errorMsg += respJson["status_txt"].asString();
-                }
-                LOG_ERROR << errorMsg;
-                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, errorMsg));
-                return;
-            }
-            
-            // 获取图片URL
-            if (!respJson["image"].isObject() || !respJson["image"]["url"].isString()) {
-                LOG_ERROR << "图床响应格式错误";
-                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "图床响应格式错误"));
-                return;
-            }
-            
-            std::string imageUrl = respJson["image"]["url"].asString();
-            LOG_INFO << "图片上传成功，URL: " << imageUrl;
-            
-            // 将图片URL保存到用户资料中
-            auto& dbManager = DbManager::getInstance();
-            dbManager.executeQuery(
-                "UPDATE users SET avatar = $1, updated_at = NOW() WHERE uuid = $2 RETURNING username, display_name, email, bio, avatar",
-                [callbackPtr, imageUrl](const drogon::orm::Result& result) {
-                    if (result.size() > 0) {
-                        Json::Value userData;
-                        userData["username"] = result[0]["username"].as<std::string>();
-                        userData["display_name"] = result[0]["display_name"].as<std::string>();
-                        userData["email"] = result[0]["email"].as<std::string>();
-                        userData["avatar"] = imageUrl;
-                        
-                        if (!result[0]["bio"].isNull()) {
-                            userData["bio"] = result[0]["bio"].as<std::string>();
-                        }
-                        
-                        // 返回成功响应，包含图片URL和用户数据
-                        Json::Value responseData;
-                        responseData["image_url"] = imageUrl;
-                        responseData["user_info"] = userData;
-                        
-                        (*callbackPtr)(utils::createSuccessResponse("头像上传并更新成功", responseData));
-                    } else {
-                        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+            LOG_ERROR << errorMsg;
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, errorMsg));
+            return;
+        }
+        
+        // 获取图片URL
+        if (!respJson["image"].isObject() || !respJson["image"]["url"].isString()) {
+            LOG_ERROR << "图床响应格式错误";
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "图床响应格式错误"));
+            return;
+        }
+        
+        std::string imageUrl = respJson["image"]["url"].asString();
+        LOG_INFO << "图片上传成功，URL: " << imageUrl;
+        
+        // 将图片URL保存到用户资料中
+        auto& dbManager = DbManager::getInstance();
+        dbManager.executeQuery(
+            "UPDATE users SET avatar = $1, updated_at = NOW() WHERE uuid = $2 RETURNING username, display_name, email, bio, avatar",
+            [callbackPtr, imageUrl](const drogon::orm::Result& result) {
+                if (result.size() > 0) {
+                    Json::Value userData;
+                    userData["username"] = result[0]["username"].as<std::string>();
+                    userData["display_name"] = result[0]["display_name"].as<std::string>();
+                    userData["email"] = result[0]["email"].as<std::string>();
+                    userData["avatar"] = imageUrl;
+                    
+                    if (!result[0]["bio"].isNull()) {
+                        userData["bio"] = result[0]["bio"].as<std::string>();
                     }
-                },
-                [callbackPtr](const drogon::orm::DrogonDbException& e) {
-                    LOG_ERROR << "更新用户头像失败: " << e.base().what();
-                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新用户头像失败"));
-                },
-                imageUrl, userUuid
-            );
-        });
+                    
+                    // 返回成功响应，包含图片URL和用户数据
+                    Json::Value responseData;
+                    responseData["image_url"] = imageUrl;
+                    responseData["user_info"] = userData;
+                    
+                    (*callbackPtr)(utils::createSuccessResponse("头像上传并更新成功", responseData));
+                } else {
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+                }
+            },
+            [callbackPtr](const drogon::orm::DrogonDbException& e) {
+                LOG_ERROR << "更新用户头像失败: " << e.base().what();
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新用户头像失败"));
+            },
+            imageUrl, userUuid
+        );
     } catch (const std::exception& e) {
         LOG_ERROR << "头像上传异常: " << e.what();
         (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));

@@ -358,7 +358,7 @@ export default {
       
       // 创建FormData对象
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('source', file);
       
       // 使用后端代理上传头像到图床
       axios.post('/api/auth/upload-image', formData, {
