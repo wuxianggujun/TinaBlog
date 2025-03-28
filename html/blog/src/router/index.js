@@ -50,14 +50,13 @@ const routes = [
   },
   // 我的文章页面路由
   {
-    path: '/profile/articles',
+    path: '/my-articles',
     name: 'my-articles',
-    component: () => import('../views/ProfileView.vue'),
+    component: () => import('../views/MyArticlesView.vue'),
     meta: { 
       requiresAuth: true,
       title: '我的文章 - Tina博客'
-    },
-    props: { activeTab: 'articles' }
+    }
   },
   // 修改密码页面路由
   {

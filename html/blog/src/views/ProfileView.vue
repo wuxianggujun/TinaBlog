@@ -20,10 +20,10 @@
           账号安全
         </button>
         <button 
-          @click="activeTab = 'articles'" 
-          :class="['tab-btn', { active: activeTab === 'articles' }]"
+          @click="activeTab = 'social'" 
+          :class="['tab-btn', { active: activeTab === 'social' }]"
         >
-          我的文章
+          私密信息
         </button>
       </div>
       
@@ -176,59 +176,89 @@
         </div>
       </div>
       
-      <!-- 我的文章标签页 -->
-      <div v-if="activeTab === 'articles'" class="tab-content">
-        <div v-if="loadingArticles" class="loading-articles">
-          正在加载您的文章...
-        </div>
-        <div v-else-if="articlesError" class="error-message">
-          加载文章失败: {{ articlesErrorMessage }}
-        </div>
-        <div v-else-if="userArticles.length === 0" class="empty-articles">
-          <div class="empty-articles-content">
-            <p>您还没有发布任何文章</p>
-            <router-link to="/create" class="btn btn-primary">开始创作</router-link>
-          </div>
-        </div>
-        <div v-else class="article-list">
-          <div v-for="article in userArticles" :key="article.id" class="article-item">
-            <div class="article-info">
-              <h3 class="article-title">
-                <router-link :to="`/article/${userInfo.username}/${article.slug}`">
-                  {{ article.title }}
-                </router-link>
-              </h3>
-              <div class="article-meta">
-                <span class="article-date">{{ formatDate(article.created_at) }}</span>
-                <span class="article-status" :class="article.is_published ? 'published' : 'draft'">
-                  {{ article.is_published ? '已发布' : '草稿' }}
-                </span>
-              </div>
-            </div>
-            <div class="article-actions">
-              <router-link :to="`/edit/${article.id}`" class="btn btn-small">编辑</router-link>
-              <button @click="confirmDeleteArticle(article)" class="btn btn-small btn-danger">删除</button>
-            </div>
+      <!-- 私密信息标签页 -->
+      <div v-if="activeTab === 'social'" class="tab-content">
+        <form @submit.prevent="updateSocialLinks" class="profile-form">
+          <div class="form-group">
+            <label for="github">GitHub 链接</label>
+            <input 
+              type="url" 
+              id="github" 
+              v-model="socialLinks.github" 
+              class="form-input"
+              placeholder="https://github.com/您的用户名"
+            >
           </div>
           
-          <!-- 分页控件 -->
-          <div v-if="totalArticlePages > 1" class="pagination">
-            <button 
-              @click="changePage(currentArticlePage - 1)" 
-              :disabled="currentArticlePage === 1"
-              class="btn pagination-btn"
+          <div class="form-group">
+            <label for="website">个人网站</label>
+            <input 
+              type="url" 
+              id="website" 
+              v-model="socialLinks.website" 
+              class="form-input"
+              placeholder="https://您的网站.com"
             >
-              上一页
-            </button>
-            <span class="page-info">{{ currentArticlePage }} / {{ totalArticlePages }}</span>
-            <button 
-              @click="changePage(currentArticlePage + 1)" 
-              :disabled="currentArticlePage === totalArticlePages"
-              class="btn pagination-btn"
+          </div>
+          
+          <div class="form-group">
+            <label for="twitter">Twitter/X 链接</label>
+            <input 
+              type="url" 
+              id="twitter" 
+              v-model="socialLinks.twitter" 
+              class="form-input"
+              placeholder="https://twitter.com/您的用户名"
             >
-              下一页
+          </div>
+          
+          <div class="form-group">
+            <label for="weibo">微博链接</label>
+            <input 
+              type="url" 
+              id="weibo" 
+              v-model="socialLinks.weibo" 
+              class="form-input"
+              placeholder="https://weibo.com/您的用户名"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="linkedin">LinkedIn 链接</label>
+            <input 
+              type="url" 
+              id="linkedin" 
+              v-model="socialLinks.linkedin" 
+              class="form-input"
+              placeholder="https://www.linkedin.com/in/您的用户名"
+            >
+          </div>
+          
+          <div class="form-group">
+            <label for="contact_email">联系邮箱</label>
+            <input 
+              type="email" 
+              id="contact_email" 
+              v-model="socialLinks.contactEmail" 
+              class="form-input"
+              placeholder="public@example.com"
+            >
+            <small class="form-hint">此邮箱将公开显示在您的个人主页上</small>
+          </div>
+          
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" :disabled="isSavingSocial">
+              {{ isSavingSocial ? '保存中...' : '保存修改' }}
             </button>
           </div>
+        </form>
+        
+        <!-- 成功或错误提示 -->
+        <div v-if="socialUpdateSuccess" class="alert alert-success">
+          社交链接更新成功！
+        </div>
+        <div v-if="socialUpdateError" class="alert alert-error">
+          {{ socialUpdateErrorMessage }}
         </div>
       </div>
     </div>
@@ -317,7 +347,21 @@ export default {
       // 删除文章相关
       showDeleteConfirm: false,
       articleToDelete: null,
-      isDeleting: false
+      isDeleting: false,
+      
+      // 社交链接相关
+      socialLinks: {
+        github: '',
+        website: '',
+        twitter: '',
+        weibo: '',
+        linkedin: '',
+        contactEmail: ''
+      },
+      isSavingSocial: false,
+      socialUpdateSuccess: false,
+      socialUpdateError: false,
+      socialUpdateErrorMessage: ''
     };
   },
   created() {
@@ -591,6 +635,44 @@ export default {
     cancelDelete() {
       this.showDeleteConfirm = false;
       this.articleToDelete = null;
+    },
+    
+    updateSocialLinks() {
+      this.isSavingSocial = true;
+      this.socialUpdateSuccess = false;
+      this.socialUpdateError = false;
+      
+      const updateData = {
+        github: this.socialLinks.github,
+        website: this.socialLinks.website,
+        twitter: this.socialLinks.twitter,
+        weibo: this.socialLinks.weibo,
+        linkedin: this.socialLinks.linkedin,
+        contactEmail: this.socialLinks.contactEmail
+      };
+      
+      axios.put('/api/auth/social-links', updateData)
+        .then(response => {
+          if (response.data.code === 0) {
+            this.socialUpdateSuccess = true;
+            
+            // 3秒后隐藏成功提示
+            setTimeout(() => {
+              this.socialUpdateSuccess = false;
+            }, 3000);
+          } else {
+            this.socialUpdateError = true;
+            this.socialUpdateErrorMessage = response.data.message || '更新社交链接失败';
+          }
+        })
+        .catch(error => {
+          this.socialUpdateError = true;
+          this.socialUpdateErrorMessage = error.response?.data?.message || '网络错误，请稍后重试';
+          console.error('更新社交链接失败:', error);
+        })
+        .finally(() => {
+          this.isSavingSocial = false;
+        });
     }
   }
 }

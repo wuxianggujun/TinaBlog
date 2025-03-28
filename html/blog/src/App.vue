@@ -470,7 +470,7 @@ export default {
             </div>
             <div v-show="showDropdown" class="dropdown-menu">
               <router-link to="/profile" class="dropdown-item">个人信息</router-link>
-              <router-link to="/profile/articles" class="dropdown-item">我的文章</router-link>
+              <router-link to="/my-articles" class="dropdown-item">我的文章</router-link>
               <router-link to="/profile/password" class="dropdown-item">修改密码</router-link>
               <div class="dropdown-divider"></div>
               <div class="dropdown-item logout" @click="handleLogout">退出登录</div>
