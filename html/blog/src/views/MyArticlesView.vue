@@ -71,20 +71,10 @@
         </div>
         
         <div class="topbar-right">
-          <div class="user-info">
-            <template v-if="userInfo">
-              <img 
-                v-if="userInfo.avatar" 
-                :src="userInfo.avatar" 
-                :alt="userInfo.display_name || userInfo.username"
-                class="user-avatar"
-              >
-              <div v-else class="user-avatar-placeholder">
-                {{ getInitials(userInfo.display_name || userInfo.username) }}
-              </div>
-              <div class="user-name">{{ userInfo.display_name || userInfo.username }}</div>
-            </template>
-          </div>
+          <button v-if="activeMenu === 'articles'" class="new-post-btn" @click="$router.push('/create')">
+            <span class="btn-icon">+</span>
+            <span class="btn-text">新建文章</span>
+          </button>
           
           <button class="exit-btn" @click="$router.push('/')">
             <span class="btn-icon">🏠</span>
@@ -399,30 +389,21 @@ export default {
   gap: 20px;
 }
 
-.user-info {
+.new-post-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.user-avatar, .user-avatar-placeholder {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.user-avatar-placeholder {
-  background-color: #3498db;
+  gap: 6px;
+  padding: 8px 16px;
+  background-color: #2ecc71;
   color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.user-name {
-  font-weight: 500;
+.new-post-btn:hover {
+  background-color: #27ae60;
 }
 
 .exit-btn {

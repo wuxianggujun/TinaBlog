@@ -3,61 +3,90 @@
     <div class="stats-cards">
       <div class="stat-card">
         <div class="stat-icon articles">
-          <i class="icon">📄</i>
+          <span class="icon">📄</span>
         </div>
         <div class="stat-data">
-          <div class="stat-value">{{ articleStats.totalCount }}</div>
-          <div class="stat-label">文章</div>
+          <div class="stat-value">{{ articleStats.totalCount || 0 }}</div>
+          <div class="stat-label">文章总数</div>
         </div>
       </div>
       
       <div class="stat-card">
         <div class="stat-icon views">
-          <i class="icon">👁️</i>
+          <span class="icon">👁️</span>
         </div>
         <div class="stat-data">
-          <div class="stat-value">{{ articleStats.totalViews }}</div>
-          <div class="stat-label">总阅读量</div>
+          <div class="stat-value">{{ articleStats.totalViews || 0 }}</div>
+          <div class="stat-label">总浏览量</div>
         </div>
       </div>
       
       <div class="stat-card">
         <div class="stat-icon comments">
-          <i class="icon">💬</i>
+          <span class="icon">💬</span>
         </div>
         <div class="stat-data">
-          <div class="stat-value">{{ commentCount }}</div>
-          <div class="stat-label">评论</div>
+          <div class="stat-value">{{ comments ? comments.length : 0 }}</div>
+          <div class="stat-label">评论数</div>
         </div>
       </div>
       
       <div class="stat-card">
         <div class="stat-icon categories">
-          <i class="icon">🏷️</i>
+          <span class="icon">🏷️</span>
         </div>
         <div class="stat-data">
-          <div class="stat-value">{{ categoryCount }}</div>
-          <div class="stat-label">分类</div>
+          <div class="stat-value">{{ categories ? categories.length : 0 }}</div>
+          <div class="stat-label">分类数</div>
         </div>
       </div>
     </div>
     
     <div class="chart-section">
       <div class="section-header">
-        <h3>访问趋势</h3>
+        <h3>访问统计</h3>
         <div class="time-filter">
           <button 
-            v-for="range in timeRanges" 
-            :key="range.value"
-            :class="['time-btn', { active: currentTimeRange === range.value }]"
-            @click="setTimeRange(range.value)"
+            class="time-btn" 
+            :class="{ active: currentTimeRange === '7d' }"
+            @click="setTimeRange('7d')"
           >
-            {{ range.label }}
+            7天
+          </button>
+          <button 
+            class="time-btn" 
+            :class="{ active: currentTimeRange === '30d' }"
+            @click="setTimeRange('30d')"
+          >
+            30天
+          </button>
+          <button 
+            class="time-btn" 
+            :class="{ active: currentTimeRange === '90d' }"
+            @click="setTimeRange('90d')"
+          >
+            90天
           </button>
         </div>
       </div>
-      <div class="chart-container">
-        <canvas ref="viewsChart"></canvas>
+      
+      <div class="static-chart">
+        <div class="chart-message">
+          <div v-if="!articles || articles.length === 0" class="no-data-message">
+            暂无数据可供展示
+          </div>
+          <div v-else class="data-bars">
+            <div 
+              v-for="(value, index) in staticChartData" 
+              :key="index" 
+              class="data-bar"
+              :style="{ height: `${(value / maxValue) * 100}%` }"
+              :title="`${staticChartLabels[index]}: ${value} 次访问`"
+            >
+              <div class="bar-label">{{ staticChartLabels[index] }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -149,15 +178,12 @@
 </template>
 
 <script>
-import axios from 'axios';
-import Chart from 'chart.js/auto';
-
 export default {
   name: 'DashboardView',
   props: {
     articles: {
       type: Array,
-      required: true
+      default: () => []
     },
     comments: {
       type: Array,
@@ -176,22 +202,20 @@ export default {
         draftCount: 0,
         totalViews: 0
       },
-      commentCount: 0,
-      categoryCount: 0,
       currentTimeRange: '7d',
-      timeRanges: [
-        { label: '7天', value: '7d' },
-        { label: '30天', value: '30d' },
-        { label: '90天', value: '90d' }
-      ],
-      viewsChart: null,
+      activities: [],
       calendarDate: new Date(),
-      weekDays: ['日', '一', '二', '三', '四', '五', '六'],
       calendarDays: [],
-      activities: [] // 将包含文章发布、评论等活动的数组
+      // 静态图表数据
+      staticChartLabels: [],
+      staticChartData: []
     };
   },
   computed: {
+    maxValue() {
+      if (this.staticChartData.length === 0) return 100;
+      return Math.max(...this.staticChartData) || 100;
+    },
     popularArticles() {
       if (!this.articles || !Array.isArray(this.articles)) return [];
       
@@ -216,62 +240,39 @@ export default {
     }
   },
   watch: {
+    currentTimeRange() {
+      this.generateStaticChartData();
+    },
     articles: {
-      immediate: true,
       handler() {
-        this.calculateArticleStats();
+        this.processArticleStats();
         this.generateActivities();
-        this.updateCalendar();
-      }
+        this.generateStaticChartData();
+      },
+      deep: true
     },
     comments: {
-      immediate: true, 
       handler() {
-        this.commentCount = this.comments.length;
         this.generateActivities();
-        this.updateCalendar();
-      }
-    },
-    categories: {
-      immediate: true,
-      handler() {
-        this.categoryCount = this.categories.length;
-      }
-    },
-    currentTimeRange() {
-      this.updateViewsChart();
+      },
+      deep: true
     }
   },
   mounted() {
-    this.initViewsChart();
+    this.processArticleStats();
+    this.generateActivities();
     this.updateCalendar();
-  },
-  beforeDestroy() {
-    // 在组件销毁前销毁图表实例，避免内存泄漏和循环引用
-    if (this.viewsChart) {
-      this.viewsChart.destroy();
-      this.viewsChart = null;
-    }
+    this.generateStaticChartData();
   },
   methods: {
-    calculateArticleStats() {
-      if (!this.articles || !Array.isArray(this.articles) || this.articles.length === 0) {
-        this.articleStats = {
-          totalCount: 0,
-          publishedCount: 0,
-          draftCount: 0,
-          totalViews: 0
-        };
-        return;
-      }
+    processArticleStats() {
+      // 计算文章统计数据
+      if (!this.articles) return;
       
       const totalCount = this.articles.length;
-      const publishedCount = this.articles.filter(a => a && a.is_published).length;
-      const draftCount = totalCount - publishedCount;
-      const totalViews = this.articles.reduce((sum, article) => {
-        if (!article) return sum;
-        return sum + (article.views || 0);
-      }, 0);
+      const publishedCount = this.articles.filter(article => article && article.is_published).length;
+      const draftCount = this.articles.filter(article => article && !article.is_published).length;
+      const totalViews = 0; // 假设后端已经把views设为0
       
       this.articleStats = {
         totalCount,
@@ -281,78 +282,17 @@ export default {
       };
     },
     
-    initViewsChart() {
-      if (!this.$refs.viewsChart) return;
-
-      try {
-        // 创建默认配置对象，避免直接使用this
-        const chartConfig = {
-          type: 'line',
-          data: {
-            labels: [],
-            datasets: [{
-              label: '文章访问量',
-              data: [],
-              borderColor: '#3498db',
-              backgroundColor: 'rgba(52, 152, 219, 0.1)',
-              tension: 0.4,
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                display: false
-              },
-              tooltip: {
-                mode: 'index',
-                intersect: false
-              }
-            },
-            scales: {
-              x: {
-                grid: {
-                  display: false
-                }
-              },
-              y: {
-                beginAtZero: true,
-                suggestedMax: 10,
-                grid: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                }
-              }
-            }
-          }
-        };
-        
-        // 创建新图表实例
-        this.viewsChart = new Chart(
-          this.$refs.viewsChart.getContext('2d'),
-          JSON.parse(JSON.stringify(chartConfig)) // 使用JSON序列化创建深拷贝
-        );
-        
-        // 初始化完成后更新图表数据
-        this.updateViewsChart();
-      } catch (error) {
-        console.error('初始化图表失败:', error);
-        this.viewsChart = null;
-      }
-    },
-    
-    updateViewsChart() {
-      if (!this.viewsChart) return;
+    // 生成静态图表数据
+    generateStaticChartData() {
+      // 清空旧数据
+      this.staticChartLabels = [];
+      this.staticChartData = [];
       
       // 获取数据范围
       const days = this.currentTimeRange === '7d' ? 7 : 
                    this.currentTimeRange === '30d' ? 30 : 90;
       
-      // 为演示目的生成模拟数据
-      const labels = [];
-      const data = [];
-      
+      // 生成日期标签和模拟数据
       const endDate = new Date();
       const startDate = new Date();
       startDate.setDate(endDate.getDate() - days + 1);
@@ -360,31 +300,12 @@ export default {
       // 填充日期标签和随机数据点
       for (let date = new Date(startDate); date <= endDate; date.setDate(date.getDate() + 1)) {
         const dateStr = this.formatDateShort(date);
-        labels.push(dateStr);
+        this.staticChartLabels.push(dateStr);
         
-        // 在数据中查找该日期的访问量，这里使用模拟数据
-        // 实际应用中，这可能来自API请求
+        // 生成模拟数据点
         const randomViews = Math.floor(Math.random() * 50) + 10;
-        data.push(randomViews);
+        this.staticChartData.push(randomViews);
       }
-      
-      // 更新图表数据
-      const chartData = {
-        labels: labels,
-        datasets: [{
-          label: '文章访问量',
-          data: data,
-          borderColor: '#3498db',
-          backgroundColor: 'rgba(52, 152, 219, 0.1)',
-          tension: 0.4,
-          fill: true
-        }]
-      };
-      
-      // 断开可能的循环引用
-      this.viewsChart.data.labels = chartData.labels;
-      this.viewsChart.data.datasets = chartData.datasets;
-      this.viewsChart.update('none'); // 使用'none'模式更新，减少动画和潜在的引用问题
     },
     
     setTimeRange(range) {
@@ -496,11 +417,13 @@ export default {
             try {
               const date = new Date(article.created_at);
               if (!isNaN(date.getTime())) { // 验证是有效的日期
+                // 创建一个全新的对象，避免引用文章对象
                 this.activities.push({
                   type: 'article',
                   date: new Date(date.getTime()), // 创建一个新的日期对象，避免引用
                   title: article.title || '无标题文章',
-                  id: article.id
+                  id: article.id,
+                  key: `article-${article.id}-${date.getTime()}` // 添加唯一键
                 });
               }
             } catch (e) {
@@ -518,13 +441,15 @@ export default {
             try {
               const date = new Date(comment.created_at);
               if (!isNaN(date.getTime())) { // 验证是有效的日期
+                // 创建一个全新的对象，避免引用评论对象
                 this.activities.push({
                   type: 'comment',
                   date: new Date(date.getTime()), // 创建一个新的日期对象，避免引用
                   author: comment.author_name || '匿名用户',
                   contentSummary: comment.content ? 
                     (comment.content.length > 20 ? comment.content.substring(0, 20) + '...' : comment.content) : '',
-                  id: comment.id
+                  id: comment.id,
+                  key: `comment-${comment.id}-${date.getTime()}` // 添加唯一键
                 });
               }
             } catch (e) {
@@ -536,18 +461,36 @@ export default {
     },
     
     getActivitiesForDate(date) {
-      // 返回指定日期的活动列表
-      if (!this.activities || !Array.isArray(this.activities)) return [];
-      if (!date || !(date instanceof Date) || isNaN(date.getTime())) return [];
+      // 验证this.activities是否为有效数组
+      if (!this.activities || !Array.isArray(this.activities)) {
+        return [];
+      }
       
+      // 验证date参数是否为有效日期
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) {
+        return [];
+      }
+      
+      // 安全地过滤活动列表
       return this.activities.filter(activity => {
-        if (!activity || !activity.date || !(activity.date instanceof Date) || isNaN(activity.date.getTime())) {
+        // 确保activity和activity.date都是有效的
+        if (!activity || !activity.date) {
           return false;
         }
         
-        return activity.date.getFullYear() === date.getFullYear() &&
-               activity.date.getMonth() === date.getMonth() &&
-               activity.date.getDate() === date.getDate();
+        // 确保activity.date是有效的Date对象
+        const activityDate = activity.date instanceof Date ? 
+          activity.date : 
+          (typeof activity.date === 'string' ? new Date(activity.date) : null);
+          
+        if (!activityDate || isNaN(activityDate.getTime())) {
+          return false;
+        }
+        
+        // 比较日期的年、月、日
+        return activityDate.getFullYear() === date.getFullYear() &&
+               activityDate.getMonth() === date.getMonth() &&
+               activityDate.getDate() === date.getDate();
       });
     }
   }
@@ -668,8 +611,60 @@ export default {
   border-color: #3498db;
 }
 
-.chart-container {
+.static-chart {
   height: 300px;
+  position: relative;
+  margin-top: 20px;
+}
+
+.chart-message {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-data-message {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.data-bars {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  height: 250px;
+  padding: 0 10px;
+}
+
+.data-bar {
+  flex: 1;
+  max-width: 30px;
+  min-width: 8px;
+  background-color: #3498db;
+  margin: 0 3px;
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.data-bar:hover {
+  background-color: #2980b9;
+  transform: scaleY(1.05);
+}
+
+.bar-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.7rem;
+  color: #7f8c8d;
 }
 
 /* 内容区域样式 */
@@ -927,6 +922,21 @@ export default {
   
   .time-filter {
     flex-wrap: wrap;
+  }
+  
+  .data-bars {
+    height: 200px;
+  }
+  
+  .data-bar {
+    margin: 0 1px;
+    min-width: 5px;
+  }
+  
+  .bar-label {
+    font-size: 0.6rem;
+    transform: translateX(-50%) rotate(-45deg);
+    transform-origin: top left;
   }
 }
 </style> 

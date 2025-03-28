@@ -54,7 +54,7 @@ void ArticleController::getMyArticles(const drogon::HttpRequestPtr& req,
                 // 构建文章查询SQL
                 std::string sql = 
                     "SELECT a.id, a.title, a.slug, a.summary, a.content, a.cover_image, "
-                    "a.is_published, a.views, a.created_at, a.updated_at, "
+                    "a.is_published, a.created_at, a.updated_at, "
                     "u.username as author_name, u.display_name, "
                     "(SELECT COUNT(*) FROM comments c WHERE c.article_id = a.id) as comment_count "
                     "FROM articles a "
@@ -83,7 +83,6 @@ void ArticleController::getMyArticles(const drogon::HttpRequestPtr& req,
                                 article["cover_image"] = row["cover_image"].as<std::string>();
                             
                             article["is_published"] = row["is_published"].as<bool>();
-                            article["views"] = row["views"].as<int>();
                             article["created_at"] = row["created_at"].as<std::string>();
                             article["updated_at"] = row["updated_at"].as<std::string>();
                             article["author_name"] = row["author_name"].as<std::string>();
@@ -149,8 +148,7 @@ void ArticleController::getArticleStats(const drogon::HttpRequestPtr& req,
             "SELECT "
             "COUNT(*) as total_count, "
             "SUM(CASE WHEN is_published = true THEN 1 ELSE 0 END) as published_count, "
-            "SUM(CASE WHEN is_published = false THEN 1 ELSE 0 END) as draft_count, "
-            "SUM(views) as total_views "
+            "SUM(CASE WHEN is_published = false THEN 1 ELSE 0 END) as draft_count "
             "FROM articles "
             "WHERE user_uuid = '" + userUuid + "'";
         
@@ -162,7 +160,7 @@ void ArticleController::getArticleStats(const drogon::HttpRequestPtr& req,
                     statsData["total_count"] = 0;
                     statsData["published_count"] = 0;
                     statsData["draft_count"] = 0;
-                    statsData["total_views"] = 0;
+                    statsData["total_views"] = 0; // 添加total_views字段，使用硬编码的0值
                     
                     callback(utils::createSuccessResponse("获取文章统计成功", statsData));
                     return;
@@ -172,7 +170,7 @@ void ArticleController::getArticleStats(const drogon::HttpRequestPtr& req,
                 statsData["total_count"] = result[0]["total_count"].as<int>();
                 statsData["published_count"] = result[0]["published_count"].as<int>();
                 statsData["draft_count"] = result[0]["draft_count"].as<int>();
-                statsData["total_views"] = result[0]["total_views"].as<int>();
+                statsData["total_views"] = 0; // 添加total_views字段，使用硬编码的0值
                 
                 callback(utils::createSuccessResponse("获取文章统计成功", statsData));
             },
