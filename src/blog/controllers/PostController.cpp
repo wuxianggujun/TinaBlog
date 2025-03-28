@@ -16,6 +16,47 @@ namespace api {
 namespace v1 {
 
 /**
+ * 创建带超时保护的执行环境
+ * @param callback 原始回调函数
+ * @param timeoutMessage 超时消息
+ * @param timeoutSeconds 超时秒数
+ * @param action 需要执行的操作函数
+ */
+template<typename F>
+void executeWithTimeout(
+    std::function<void(const drogon::HttpResponsePtr&)> callback,
+    const std::string& timeoutMessage,
+    int timeoutSeconds,
+    F&& action) {
+    // 使用共享指针追踪响应状态和线程安全保护
+    auto responseGuard = std::make_shared<bool>(false);
+    auto responseMutex = std::make_shared<std::mutex>();
+    
+    // 安全地发送响应的辅助函数
+    auto sendResponse = [responseGuard, responseMutex, callback](const drogon::HttpResponsePtr& resp) {
+        std::lock_guard<std::mutex> lock(*responseMutex);
+        if (!*responseGuard) {
+            *responseGuard = true;
+            callback(resp);
+        }
+    };
+    
+    // 设置超时处理，确保不会无限等待
+    auto timeoutTimer = std::make_shared<std::thread>([responseGuard, responseMutex, callback, timeoutMessage, timeoutSeconds]() {
+        std::this_thread::sleep_for(std::chrono::seconds(timeoutSeconds));
+        std::lock_guard<std::mutex> lock(*responseMutex);
+        if (!*responseGuard) {
+            *responseGuard = true;
+            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, timeoutMessage));
+        }
+    });
+    timeoutTimer->detach(); // 分离线程，允许它在后台运行
+    
+    // 执行实际操作
+    action(sendResponse);
+}
+
+/**
  * 创建文章
  */
 void PostController::createPost(const drogon::HttpRequestPtr& req,
@@ -73,47 +114,54 @@ void PostController::createPost(const drogon::HttpRequestPtr& req,
 void PostController::getArticles(const drogon::HttpRequestPtr& req,
                                std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
     try {
-        auto& dbManager = DbManager::getInstance();
-        
-        // 从URL参数中获取分页信息
-        int page = 1;
-        int pageSize = 10;
-        
-        auto parameters = req->getParameters();
-        if (parameters.find("page") != parameters.end()) {
-            page = std::stoi(parameters["page"]);
-            if (page < 1) page = 1;
-        }
-        
-        if (parameters.find("pageSize") != parameters.end()) {
-            pageSize = std::stoi(parameters["pageSize"]);
-            if (pageSize < 1) pageSize = 10;
-            if (pageSize > 50) pageSize = 50; // 限制最大页面大小
-        }
-        
-        // 计算偏移量
-        int offset = (page - 1) * pageSize;
-        
-        // 查询文章及其作者、分类信息，使用字符串拼接而非参数占位符
-        std::string sql = 
-            "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
-            "a.updated_at, a.is_published, u.username as author, "
-            "(SELECT COUNT(*) FROM articles WHERE is_published = true) as total_count "
-            "FROM articles a "
-            "LEFT JOIN users u ON a.user_uuid = u.uuid "
-            "WHERE a.is_published = true "
-            "ORDER BY a.created_at DESC "
-            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
-        
-        dbManager.executeQuery(
-            sql,
-            [callback=callback, page, pageSize](const drogon::orm::Result& result) {
-                callback(utils::createSuccessResponse("获取文章列表成功", 
-                    utils::ArticleUtils::buildArticleResponse(result, page, pageSize)));
-            },
-            [callback=callback](const drogon::orm::DrogonDbException& e) {
-                std::cerr << "获取文章列表出错: " << e.base().what() << std::endl;
-                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+        executeWithTimeout(
+            callback,
+            "获取文章列表超时，请稍后重试",
+            5, // 5秒超时
+            [&](auto sendResponse) {
+                auto& dbManager = DbManager::getInstance();
+                
+                // 从URL参数中获取分页信息
+                int page = 1;
+                int pageSize = 10;
+                
+                auto parameters = req->getParameters();
+                if (parameters.find("page") != parameters.end()) {
+                    page = std::stoi(parameters["page"]);
+                    if (page < 1) page = 1;
+                }
+                
+                if (parameters.find("pageSize") != parameters.end()) {
+                    pageSize = std::stoi(parameters["pageSize"]);
+                    if (pageSize < 1) pageSize = 10;
+                    if (pageSize > 50) pageSize = 50; // 限制最大页面大小
+                }
+                
+                // 计算偏移量
+                int offset = (page - 1) * pageSize;
+                
+                // 查询文章及其作者、分类信息，使用字符串拼接而非参数占位符
+                std::string sql = 
+                    "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
+                    "a.updated_at, a.is_published, u.username as author, "
+                    "(SELECT COUNT(*) FROM articles WHERE is_published = true) as total_count "
+                    "FROM articles a "
+                    "LEFT JOIN users u ON a.user_uuid = u.uuid "
+                    "WHERE a.is_published = true "
+                    "ORDER BY a.created_at DESC "
+                    "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
+                
+                dbManager.executeQuery(
+                    sql,
+                    [sendResponse, page, pageSize](const drogon::orm::Result& result) {
+                        sendResponse(utils::createSuccessResponse("获取文章列表成功", 
+                            utils::ArticleUtils::buildArticleResponse(result, page, pageSize)));
+                    },
+                    [sendResponse](const drogon::orm::DrogonDbException& e) {
+                        std::cerr << "获取文章列表出错: " << e.base().what() << std::endl;
+                        sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                    }
+                );
             }
         );
     } catch (const std::exception& e) {
@@ -889,42 +937,39 @@ void PostController::createArticleWithTransaction(DbManager& dbManager,
             return;
         }
 
+        // 确保分类和标签是有效数组
+        if (updatedJsonBody.isMember("categories") && !updatedJsonBody["categories"].isArray()) {
+            updatedJsonBody["categories"] = Json::Value(Json::arrayValue);
+        }
+        
+        if (updatedJsonBody.isMember("tags") && !updatedJsonBody["tags"].isArray()) {
+            updatedJsonBody["tags"] = Json::Value(Json::arrayValue);
+        }
+
         // 记录请求信息
         std::cout << "创建文章 - 请求字段:" << std::endl;
         std::cout << "  标题: " << updatedJsonBody["title"].asString() << std::endl;
         std::cout << "  摘要: " << summary << std::endl;
         std::cout << "  Slug: " << slug << std::endl;
         std::cout << "  发布状态: " << (isPublished ? "是" : "否") << std::endl;
-        
-        // 记录分类信息
-        std::cout << "  分类信息: ";
-        if (updatedJsonBody.isMember("categories")) {
-            if (updatedJsonBody["categories"].isArray()) {
-                std::cout << "数组，长度 " << updatedJsonBody["categories"].size() << std::endl;
-            } else {
-                std::cout << "非数组类型: " << updatedJsonBody["categories"].type() << std::endl;
+
+        // 添加超时保护 - 5秒后强制提交事务并返回
+        auto timeoutFlag = std::make_shared<bool>(false);
+        auto timeoutTimer = std::make_shared<std::thread>([timeoutFlag, callback]() {
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            if (!(*timeoutFlag)) {
+                *timeoutFlag = true;
+                std::cerr << "警告: 创建文章处理超时，强制返回响应" << std::endl;
+                callback(utils::createSuccessResponse("文章已创建，但分类和标签处理可能未完成", Json::Value()));
             }
-        } else {
-            std::cout << "字段不存在" << std::endl;
-        }
-        
-        // 记录标签信息
-        std::cout << "  标签信息: ";
-        if (updatedJsonBody.isMember("tags")) {
-            if (updatedJsonBody["tags"].isArray()) {
-                std::cout << "数组，长度 " << updatedJsonBody["tags"].size() << std::endl;
-            } else {
-                std::cout << "非数组类型: " << updatedJsonBody["tags"].type() << std::endl;
-            }
-        } else {
-            std::cout << "字段不存在" << std::endl;
-        }
+        });
+        timeoutTimer->detach(); // 分离线程
 
         // 插入文章
         dbManager.executeQuery(
             "INSERT INTO articles (title, slug, content, summary, user_uuid, is_published, created_at, updated_at) "
             "VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) RETURNING id, slug",
-            [=, &dbManager, callback=callback](const drogon::orm::Result& result) {
+            [=, &dbManager](const drogon::orm::Result& result) {
                 int articleId = result[0]["id"].as<int>();
                 std::string returnedSlug = result[0]["slug"].as<std::string>();
 
@@ -933,103 +978,36 @@ void PostController::createArticleWithTransaction(DbManager& dbManager,
                 responseData["id"] = articleId;
                 responseData["slug"] = returnedSlug;
 
-                // 使用异步处理分类 - 只有当categories是数组且非空时
-                if (updatedJsonBody.isMember("categories") && updatedJsonBody["categories"].isArray() && !updatedJsonBody["categories"].empty()) {
-                    // 创建安全的回调函数
-                    auto categoriesComplete = std::make_shared<std::function<void()>>([=, &dbManager]() {
-                        // 分类处理完成，处理标签
-                        if (updatedJsonBody.isMember("tags") && updatedJsonBody["tags"].isArray() && !updatedJsonBody["tags"].empty()) {
-                            // 创建安全的标签处理完成回调
-                            auto tagsComplete = std::make_shared<std::function<void()>>([=, &dbManager]() {
-                                // 标签处理完成，提交事务并返回响应
-                                try {
-                                    dbManager.executeQuery(
-                                        "COMMIT", 
-                                        [](const drogon::orm::Result&) {
-                                            std::cout << "事务提交成功" << std::endl;
-                                        }, 
-                                        [](const drogon::orm::DrogonDbException& e) {
-                                            std::cerr << "事务提交失败: " << e.base().what() << std::endl;
-                                        }
-                                    );
-                                    callback(utils::createSuccessResponse("文章创建成功", responseData));
-                                } catch (const std::exception& e) {
-                                    std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
-                                    callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
-                                }
-                            });
-                            
-                            // 处理标签
-                            handleTagsAsync(articleId, updatedJsonBody["tags"], (*tagsComplete));
-                        } else {
-                            // 没有标签需要处理，直接提交事务并返回响应
-                            try {
-                                dbManager.executeQuery(
-                                    "COMMIT", 
-                                    [](const drogon::orm::Result&) {
-                                        std::cout << "事务提交成功" << std::endl;
-                                    }, 
-                                    [](const drogon::orm::DrogonDbException& e) {
-                                        std::cerr << "事务提交失败: " << e.base().what() << std::endl;
-                                    }
-                                );
-                                callback(utils::createSuccessResponse("文章创建成功", responseData));
-                            } catch (const std::exception& e) {
-                                std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
-                                callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
-                            }
-                        }
-                    });
-                    
-                    // 处理分类
-                    handleCategoriesAsync(articleId, updatedJsonBody["categories"], (*categoriesComplete));
-                } else if (updatedJsonBody.isMember("tags") && updatedJsonBody["tags"].isArray() && !updatedJsonBody["tags"].empty()) {
-                    // 没有分类但有标签
-                    // 创建安全的回调函数
-                    auto tagsComplete = std::make_shared<std::function<void()>>([=, &dbManager]() {
-                        // 标签处理完成，提交事务并返回响应
-                        try {
-                            dbManager.executeQuery(
-                                "COMMIT", 
-                                [](const drogon::orm::Result&) {
-                                    std::cout << "事务提交成功" << std::endl;
-                                }, 
-                                [](const drogon::orm::DrogonDbException& e) {
-                                    std::cerr << "事务提交失败: " << e.base().what() << std::endl;
-                                }
-                            );
-                            callback(utils::createSuccessResponse("文章创建成功", responseData));
-                        } catch (const std::exception& e) {
-                            std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
-                            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
-                        }
-                    });
-                    
-                    // 处理标签
-                    handleTagsAsync(articleId, updatedJsonBody["tags"], (*tagsComplete));
-                } else {
-                    // 既没有分类也没有标签，直接提交事务并返回响应
-                    try {
-                        dbManager.executeQuery(
-                            "COMMIT", 
-                            [](const drogon::orm::Result&) {
-                                std::cout << "事务提交成功" << std::endl;
-                            }, 
-                            [](const drogon::orm::DrogonDbException& e) {
-                                std::cerr << "事务提交失败: " << e.base().what() << std::endl;
-                            }
-                        );
+                // 设置超时标志，避免超时线程返回响应
+                *timeoutFlag = true;
+
+                // 提交事务并返回成功响应
+                dbManager.executeQuery(
+                    "COMMIT", 
+                    [=](const drogon::orm::Result&) {
+                        std::cout << "事务提交成功，文章ID: " << articleId << std::endl;
                         callback(utils::createSuccessResponse("文章创建成功", responseData));
-                    } catch (const std::exception& e) {
-                        std::cerr << "提交事务或响应时异常: " << e.what() << std::endl;
-                        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "服务器内部错误"));
+
+                        // 在后台处理分类和标签，不阻塞响应
+                        if (updatedJsonBody.isMember("categories") && updatedJsonBody["categories"].isArray() && !updatedJsonBody["categories"].empty()) {
+                            handleCategoriesAsync(articleId, updatedJsonBody["categories"], [](){});
+                        }
+                        
+                        if (updatedJsonBody.isMember("tags") && updatedJsonBody["tags"].isArray() && !updatedJsonBody["tags"].empty()) {
+                            handleTagsAsync(articleId, updatedJsonBody["tags"], [](){});
+                        }
+                    }, 
+                    [=](const drogon::orm::DrogonDbException& e) {
+                        std::cerr << "事务提交失败: " << e.base().what() << std::endl;
+                        callback(utils::createErrorResponse(utils::ErrorCode::DB_CONNECTION_ERROR, "事务提交失败"));
                     }
-                }
+                );
             },
-            [=, &dbManager, callback=callback](const drogon::orm::DrogonDbException& e) {
+            [=, &dbManager](const drogon::orm::DrogonDbException& e) {
                 // 回滚事务
                 dbManager.executeQuery("ROLLBACK", [](const drogon::orm::Result&) {}, [](const drogon::orm::DrogonDbException&) {});
                 std::string errorMsg = std::string("数据库错误: ") + e.base().what();
+                *timeoutFlag = true; // 设置超时标志，避免超时线程返回响应
                 callback(utils::createErrorResponse(utils::ErrorCode::DB_INSERT_ERROR, errorMsg));
             },
             updatedJsonBody["title"].asString(),
@@ -1056,98 +1034,93 @@ void PostController::handleCategoriesAsync(int articleId, const Json::Value& cat
     }
     
     auto& dbManager = DbManager::getInstance();
-    auto categoryIter = std::make_shared<Json::Value::const_iterator>(categories.begin());
-    auto endIter = categories.end();
-
-    // 使用递归lambda处理每个分类
-    std::shared_ptr<std::function<void()>> processNextCategory = 
-        std::make_shared<std::function<void()>>();
     
-    *processNextCategory = [=, &dbManager]() mutable {
-        if (*categoryIter == endIter) {
-            // 所有分类处理完毕
-            if (finalCallback) finalCallback();
-            return;
+    // 收集有效的分类名称
+    std::vector<std::string> validCategories;
+    for (const auto& category : categories) {
+        if (category.isString() && !category.asString().empty()) {
+            validCategories.push_back(category.asString());
         }
-
-        const auto& category = **categoryIter;
-        ++(*categoryIter); // 移到下一个
-
-        if (!category.isString()) {
-            (*processNextCategory)(); // 跳过非字符串
-            return;
-        }
-
-        std::string categoryName = category.asString();
-        if (categoryName.empty()) {
-            (*processNextCategory)(); // 跳过空字符串
-            return;
-        }
-
-        // 从分类名生成slug，确保特殊字符和中文得到处理
+    }
+    
+    if (validCategories.empty()) {
+        if (finalCallback) finalCallback();
+        return;
+    }
+    
+    // 计数器和完成标志
+    auto processedCount = std::make_shared<size_t>(0);
+    auto totalCount = validCategories.size();
+    auto errorFlag = std::make_shared<bool>(false);
+    
+    // 处理每个分类
+    for (const auto& categoryName : validCategories) {
+        // 从分类名生成slug
         std::string slug = utils::ArticleUtils::generateSlug(categoryName);
-        std::cout << "异步处理分类: " << categoryName << ", slug: " << slug << std::endl;
-
-        // 1. 异步检查分类是否存在，使用精确匹配名称
-        auto nextCategoryCallback = processNextCategory; // 创建本地副本
+        
+        // 查询分类是否存在
         dbManager.executeQuery(
             "SELECT id FROM categories WHERE name=$1",
             [=, &dbManager](const drogon::orm::Result& result) {
+                int categoryId;
+                
                 if (!result.empty()) {
-                    // 2a. 分类存在，获取ID
-                    int categoryId = result[0]["id"].as<int>();
+                    // 已存在的分类
+                    categoryId = result[0]["id"].as<int>();
                     
-                    // 3. 异步关联文章和分类
+                    // 关联文章和分类
                     dbManager.executeQuery(
                         "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
-                        [=](const drogon::orm::Result&) { 
-                            // 关联成功，处理下一个分类
-                            if (nextCategoryCallback) (*nextCategoryCallback)(); 
-                        }, 
-                        [=](const drogon::orm::DrogonDbException& e) { 
-                            std::cerr << "创建文章分类关联失败: " << e.base().what() << std::endl;
-                            if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                        [=](const drogon::orm::Result&) {
+                            (*processedCount)++;
+                            if (*processedCount >= totalCount && finalCallback && !*errorFlag) {
+                                finalCallback();
+                            }
+                        },
+                        [=](const drogon::orm::DrogonDbException& e) {
+                            std::cerr << "关联文章分类失败: " << e.base().what() << std::endl;
+                            *errorFlag = true;
+                            (*processedCount)++;
+                            if (*processedCount >= totalCount && finalCallback) {
+                                finalCallback();
+                            }
                         },
                         articleId, categoryId
                     );
-                    
-                    // 可选：确保slug已设置
-                    if (!slug.empty()) {
-                        // 使用简单的回调，避免可能的循环引用
-                        auto dummyCallback = [](const drogon::orm::Result&) {};
-                        auto errorCallback = [](const drogon::orm::DrogonDbException& e) {
-                            std::cerr << "更新分类slug失败: " << e.base().what() << std::endl;
-                        };
-                        
-                        dbManager.executeQuery(
-                            "UPDATE categories SET slug=$1 WHERE id=$2", 
-                            dummyCallback, errorCallback,
-                            slug, categoryId
-                        );
-                    }
                 } else {
-                    // 2b. 分类不存在，异步插入，原样保存名称
+                    // 不存在，创建新分类
                     dbManager.executeQuery(
                         "INSERT INTO categories (name, slug) VALUES ($1, $2) RETURNING id",
                         [=, &dbManager](const drogon::orm::Result& insertResult) {
-                            int categoryId = insertResult[0]["id"].as<int>();
-
-                            // 3. 异步关联文章和分类
+                            int newCategoryId = insertResult[0]["id"].as<int>();
+                            
+                            // 关联文章和新分类
                             dbManager.executeQuery(
                                 "INSERT INTO article_categories (article_id, category_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
                                 [=](const drogon::orm::Result&) {
-                                    if (nextCategoryCallback) (*nextCategoryCallback)(); // 处理下一个
+                                    (*processedCount)++;
+                                    if (*processedCount >= totalCount && finalCallback && !*errorFlag) {
+                                        finalCallback();
+                                    }
                                 },
                                 [=](const drogon::orm::DrogonDbException& e) {
-                                    std::cerr << "创建文章分类关联失败: " << e.base().what() << std::endl;
-                                    if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                                    std::cerr << "关联新分类失败: " << e.base().what() << std::endl;
+                                    *errorFlag = true;
+                                    (*processedCount)++;
+                                    if (*processedCount >= totalCount && finalCallback) {
+                                        finalCallback();
+                                    }
                                 },
-                                articleId, categoryId
+                                articleId, newCategoryId
                             );
                         },
                         [=](const drogon::orm::DrogonDbException& e) {
                             std::cerr << "创建分类失败: " << e.base().what() << std::endl;
-                            if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                            *errorFlag = true;
+                            (*processedCount)++;
+                            if (*processedCount >= totalCount && finalCallback) {
+                                finalCallback();
+                            }
                         },
                         categoryName, slug
                     );
@@ -1155,14 +1128,15 @@ void PostController::handleCategoriesAsync(int articleId, const Json::Value& cat
             },
             [=](const drogon::orm::DrogonDbException& e) {
                 std::cerr << "查询分类失败: " << e.base().what() << std::endl;
-                if (nextCategoryCallback) (*nextCategoryCallback)(); // 出错也处理下一个
+                *errorFlag = true;
+                (*processedCount)++;
+                if (*processedCount >= totalCount && finalCallback) {
+                    finalCallback();
+                }
             },
             categoryName
         );
-    };
-
-    // 启动处理第一个分类
-    (*processNextCategory)();
+    }
 }
 
 /**

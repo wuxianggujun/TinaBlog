@@ -34,8 +34,10 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'markdown-editor': ['markdown-it', 'highlight.js'],
-          'vue-vendor': ['vue', 'vue-router']
+          'vue-vendor': ['vue', 'vue-router'],
+          'cherry': ['cherry-markdown'],
+          'echarts': ['echarts'],
+          'marked': ['marked']
         }
       }
     }

@@ -26,7 +26,7 @@
           <span class="icon">💬</span>
         </div>
         <div class="stat-data">
-          <div class="stat-value">{{ comments ? comments.length : 0 }}</div>
+          <div class="stat-value">{{ comments && Array.isArray(comments) ? comments.length : 0 }}</div>
           <div class="stat-label">评论数</div>
         </div>
       </div>
@@ -36,7 +36,7 @@
           <span class="icon">🏷️</span>
         </div>
         <div class="stat-data">
-          <div class="stat-value">{{ categories ? categories.length : 0 }}</div>
+          <div class="stat-value">{{ categories && Array.isArray(categories) ? categories.length : 0 }}</div>
           <div class="stat-label">分类数</div>
         </div>
       </div>
@@ -44,7 +44,7 @@
     
     <div class="chart-section">
       <div class="section-header">
-        <h3>访问统计</h3>
+        <h3>访问统计 <span class="mock-data-tag">(模拟数据)</span></h3>
         <div class="time-filter">
           <button 
             class="time-btn" 
@@ -208,7 +208,9 @@ export default {
       calendarDays: [],
       // 静态图表数据
       staticChartLabels: [],
-      staticChartData: []
+      staticChartData: [],
+      // 星期标签
+      weekDays: ['日', '一', '二', '三', '四', '五', '六']
     };
   },
   computed: {
@@ -938,5 +940,12 @@ export default {
     transform: translateX(-50%) rotate(-45deg);
     transform-origin: top left;
   }
+}
+
+.mock-data-tag {
+  font-size: 0.7rem;
+  color: #e74c3c;
+  font-weight: normal;
+  margin-left: 8px;
 }
 </style> 

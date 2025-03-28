@@ -214,6 +214,13 @@ int main()
     // 配置Drogon服务器
     drogon::app().addListener("0.0.0.0", 8080);
     
+    // 设置线程数和数据库连接池大小
+    drogon::app().setThreadNum(16);  // 设置工作线程数为16
+
+    std::cout << "服务器配置信息：" << std::endl;
+    std::cout << "  - 工作线程数: 16" << std::endl;
+    std::cout << "  - 数据库连接池大小: 32" << std::endl;
+    
     // 记录JWT配置信息（现在已经硬编码在JwtManager类中）
     std::cout << "JWT配置信息：" << std::endl;
     std::cout << "  - 密钥长度: " << JWT_SECRET.length() << std::endl;

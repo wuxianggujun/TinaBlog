@@ -5,9 +5,52 @@
 #include "blog/db/DbManager.hpp"
 #include <iostream>
 #include <regex>
+#include <thread>
+#include <mutex>
 
 namespace api {
 namespace v1 {
+
+/**
+ * 创建带超时保护的执行环境
+ * @param callback 原始回调函数
+ * @param timeoutMessage 超时消息
+ * @param timeoutSeconds 超时秒数
+ * @param action 需要执行的操作函数
+ */
+template<typename F>
+void executeWithTimeout(
+    std::function<void(const drogon::HttpResponsePtr&)> callback,
+    const std::string& timeoutMessage,
+    int timeoutSeconds,
+    F&& action) {
+    // 使用共享指针追踪响应状态和线程安全保护
+    auto responseGuard = std::make_shared<bool>(false);
+    auto responseMutex = std::make_shared<std::mutex>();
+    
+    // 安全地发送响应的辅助函数
+    auto sendResponse = [responseGuard, responseMutex, callback](const drogon::HttpResponsePtr& resp) {
+        std::lock_guard<std::mutex> lock(*responseMutex);
+        if (!*responseGuard) {
+            *responseGuard = true;
+            callback(resp);
+        }
+    };
+    
+    // 设置超时处理，确保不会无限等待
+    auto timeoutTimer = std::make_shared<std::thread>([responseGuard, responseMutex, callback, timeoutMessage, timeoutSeconds]() {
+        std::this_thread::sleep_for(std::chrono::seconds(timeoutSeconds));
+        std::lock_guard<std::mutex> lock(*responseMutex);
+        if (!*responseGuard) {
+            *responseGuard = true;
+            callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, timeoutMessage));
+        }
+    });
+    timeoutTimer->detach(); // 分离线程，允许它在后台运行
+    
+    // 执行实际操作
+    action(sendResponse);
+}
 
 /**
  * 获取主页精选文章 
@@ -15,54 +58,61 @@ namespace v1 {
 void HomeController::getFeaturedArticles(const drogon::HttpRequestPtr& req,
                                       std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
     try {
-        auto& dbManager = DbManager::getInstance();
-        
-        // 简单实现：返回最新的5篇文章而不是阅读量最高的
-        std::string sql = 
-            "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
-            "a.updated_at, a.is_published, u.username as author, "
-            "(SELECT COUNT(*) FROM articles WHERE is_published = true) as total_count "
-            "FROM articles a "
-            "LEFT JOIN users u ON a.user_uuid = u.uuid "
-            "WHERE a.is_published = true "
-            "ORDER BY a.created_at DESC "
-            "LIMIT 5";  // 直接使用字面值5，不使用占位符
-        
-        dbManager.executeQuery(
-            sql,
-            [callback=callback](const drogon::orm::Result& result) {
-                Json::Value articles(Json::arrayValue);
+        executeWithTimeout(
+            callback,
+            "获取精选文章超时，请稍后重试",
+            5, // 5秒超时
+            [&](auto sendResponse) {
+                auto& dbManager = DbManager::getInstance();
                 
-                for (const auto& row : result) {
-                    Json::Value article;
-                    article["id"] = row["id"].as<int>();
-                    article["title"] = row["title"].as<std::string>();
-                    article["slug"] = row["slug"].as<std::string>();
-                    
-                    // 如果有摘要则使用摘要，否则截取内容的一部分
-                    if (!row["summary"].isNull()) {
-                        article["summary"] = row["summary"].as<std::string>();
-                    } else {
-                        std::string content = row["content"].as<std::string>();
-                        article["summary"] = utils::ArticleUtils::generateSummary(content);
+                // 简单实现：返回最新的5篇文章而不是阅读量最高的
+                std::string sql = 
+                    "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
+                    "a.updated_at, a.is_published, u.username as author, "
+                    "(SELECT COUNT(*) FROM articles WHERE is_published = true) as total_count "
+                    "FROM articles a "
+                    "LEFT JOIN users u ON a.user_uuid = u.uuid "
+                    "WHERE a.is_published = true "
+                    "ORDER BY a.created_at DESC "
+                    "LIMIT 5";  // 直接使用字面值5，不使用占位符
+                
+                dbManager.executeQuery(
+                    sql,
+                    [sendResponse](const drogon::orm::Result& result) {
+                        Json::Value articles(Json::arrayValue);
+                        
+                        for (const auto& row : result) {
+                            Json::Value article;
+                            article["id"] = row["id"].as<int>();
+                            article["title"] = row["title"].as<std::string>();
+                            article["slug"] = row["slug"].as<std::string>();
+                            
+                            // 如果有摘要则使用摘要，否则截取内容的一部分
+                            if (!row["summary"].isNull()) {
+                                article["summary"] = row["summary"].as<std::string>();
+                            } else {
+                                std::string content = row["content"].as<std::string>();
+                                article["summary"] = utils::ArticleUtils::generateSummary(content);
+                            }
+                            
+                            article["created_at"] = row["created_at"].as<std::string>();
+                            article["author"] = row["author"].as<std::string>();
+                            
+                            articles.append(article);
+                        }
+                        
+                        // 构建响应数据
+                        Json::Value responseData;
+                        responseData["articles"] = articles;
+                        responseData["isFeatured"] = true;
+                        
+                        sendResponse(utils::createSuccessResponse("获取精选文章成功", responseData));
+                    },
+                    [sendResponse](const drogon::orm::DrogonDbException& e) {
+                        std::cerr << "获取精选文章出错: " << e.base().what() << std::endl;
+                        sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
                     }
-                    
-                    article["created_at"] = row["created_at"].as<std::string>();
-                    article["author"] = row["author"].as<std::string>();
-                    
-                    articles.append(article);
-                }
-                
-                // 构建响应数据
-                Json::Value responseData;
-                responseData["articles"] = articles;
-                responseData["isFeatured"] = true;
-                
-                callback(utils::createSuccessResponse("获取精选文章成功", responseData));
-            },
-            [callback=callback](const drogon::orm::DrogonDbException& e) {
-                std::cerr << "获取精选文章出错: " << e.base().what() << std::endl;
-                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                );
             }
         );
     } catch (const std::exception& e) {
@@ -77,47 +127,54 @@ void HomeController::getFeaturedArticles(const drogon::HttpRequestPtr& req,
 void HomeController::getRecentArticles(const drogon::HttpRequestPtr& req,
                                      std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
     try {
-        auto& dbManager = DbManager::getInstance();
-        
-        // 从URL参数中获取分页信息
-        int page = 1;
-        int pageSize = 10;
-        
-        auto parameters = req->getParameters();
-        if (parameters.find("page") != parameters.end()) {
-            page = std::stoi(parameters["page"]);
-            if (page < 1) page = 1;
-        }
-        
-        if (parameters.find("pageSize") != parameters.end()) {
-            pageSize = std::stoi(parameters["pageSize"]);
-            if (pageSize < 1) pageSize = 10;
-            if (pageSize > 50) pageSize = 50; // 限制最大页面大小
-        }
-        
-        // 计算偏移量
-        int offset = (page - 1) * pageSize;
-        
-        // 构建不使用参数的SQL查询
-        std::string sql = 
-            "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
-            "a.updated_at, a.is_published, u.username as author, "
-            "(SELECT COUNT(*) FROM articles WHERE is_published = true) as total_count "
-            "FROM articles a "
-            "LEFT JOIN users u ON a.user_uuid = u.uuid "
-            "WHERE a.is_published = true "
-            "ORDER BY a.created_at DESC "
-            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
-        
-        dbManager.executeQuery(
-            sql,
-            [callback=callback, page, pageSize](const drogon::orm::Result& result) {
-                callback(utils::createSuccessResponse("获取最新文章成功", 
-                    utils::ArticleUtils::buildArticleResponse(result, page, pageSize)));
-            },
-            [callback=callback](const drogon::orm::DrogonDbException& e) {
-                std::cerr << "获取最新文章出错: " << e.base().what() << std::endl;
-                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+        executeWithTimeout(
+            callback,
+            "获取最新文章超时，请稍后重试",
+            5, // 5秒超时
+            [&](auto sendResponse) {
+                auto& dbManager = DbManager::getInstance();
+                
+                // 从URL参数中获取分页信息
+                int page = 1;
+                int pageSize = 10;
+                
+                auto parameters = req->getParameters();
+                if (parameters.find("page") != parameters.end()) {
+                    page = std::stoi(parameters["page"]);
+                    if (page < 1) page = 1;
+                }
+                
+                if (parameters.find("pageSize") != parameters.end()) {
+                    pageSize = std::stoi(parameters["pageSize"]);
+                    if (pageSize < 1) pageSize = 10;
+                    if (pageSize > 50) pageSize = 50; // 限制最大页面大小
+                }
+                
+                // 计算偏移量
+                int offset = (page - 1) * pageSize;
+                
+                // 构建不使用参数的SQL查询
+                std::string sql = 
+                    "SELECT a.id, a.title, a.slug, a.summary, a.content, a.created_at, "
+                    "a.updated_at, a.is_published, u.username as author, "
+                    "(SELECT COUNT(*) FROM articles WHERE is_published = true) as total_count "
+                    "FROM articles a "
+                    "LEFT JOIN users u ON a.user_uuid = u.uuid "
+                    "WHERE a.is_published = true "
+                    "ORDER BY a.created_at DESC "
+                    "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
+                
+                dbManager.executeQuery(
+                    sql,
+                    [sendResponse, page, pageSize](const drogon::orm::Result& result) {
+                        sendResponse(utils::createSuccessResponse("获取最新文章成功", 
+                            utils::ArticleUtils::buildArticleResponse(result, page, pageSize)));
+                    },
+                    [sendResponse](const drogon::orm::DrogonDbException& e) {
+                        std::cerr << "获取最新文章出错: " << e.base().what() << std::endl;
+                        sendResponse(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+                    }
+                );
             }
         );
     } catch (const std::exception& e) {
