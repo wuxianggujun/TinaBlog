@@ -23,7 +23,7 @@
           @click="activeTab = 'social'" 
           :class="['tab-btn', { active: activeTab === 'social' }]"
         >
-          私密信息
+          外部链接
         </button>
       </div>
       
@@ -176,7 +176,7 @@
         </div>
       </div>
       
-      <!-- 私密信息标签页 -->
+      <!-- 外部链接标签页 -->
       <div v-if="activeTab === 'social'" class="tab-content">
         <form @submit.prevent="updateSocialLinks" class="profile-form">
           <div class="form-group">

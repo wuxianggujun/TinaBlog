@@ -30,6 +30,8 @@ public:
     ADD_METHOD_TO(AuthController::getUploadToken, "/api/auth/upload-token", drogon::Get, "JwtAuthFilter");
     // 代理上传图片到图床
     ADD_METHOD_TO(AuthController::uploadImage, "/api/auth/upload-image", drogon::Post, "JwtAuthFilter");
+    // 更新社交链接
+    ADD_METHOD_TO(AuthController::updateSocialLinks, "/api/auth/social-links", drogon::Put, "JwtAuthFilter");
     METHOD_LIST_END
     
     /**
@@ -116,6 +118,14 @@ public:
      */
     void uploadImage(const drogon::HttpRequestPtr& req, 
                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+    
+    /**
+     * 更新用户社交链接
+     * @param req 请求对象
+     * @param callback 回调函数
+     */
+    void updateSocialLinks(const drogon::HttpRequestPtr& req, 
+                        std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
 
 private:
     std::string m_jwtSecret;

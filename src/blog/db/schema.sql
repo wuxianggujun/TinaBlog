@@ -14,6 +14,12 @@ CREATE TABLE IF NOT EXISTS users (
     display_name VARCHAR(100),
     bio TEXT,
     avatar VARCHAR(255),
+    github_url VARCHAR(255),
+    website_url VARCHAR(255),
+    twitter_url VARCHAR(255),
+    weibo_url VARCHAR(255),
+    linkedin_url VARCHAR(255),
+    contact_email VARCHAR(100),
     is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -113,6 +119,16 @@ CREATE INDEX IF NOT EXISTS idx_article_tags_article_id ON article_tags(article_i
 CREATE INDEX IF NOT EXISTS idx_article_tags_tag_id ON article_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_comments_article_id ON comments(article_id);
 CREATE INDEX IF NOT EXISTS idx_comments_user_uuid ON comments(user_uuid);
+CREATE INDEX IF NOT EXISTS idx_users_github_url ON users(github_url);
+CREATE INDEX IF NOT EXISTS idx_users_website_url ON users(website_url);
+
+-- 社交链接字段注释
+COMMENT ON COLUMN users.github_url IS 'GitHub主页链接';
+COMMENT ON COLUMN users.website_url IS '个人网站链接';
+COMMENT ON COLUMN users.twitter_url IS 'Twitter/X链接';
+COMMENT ON COLUMN users.weibo_url IS '微博链接';
+COMMENT ON COLUMN users.linkedin_url IS 'LinkedIn链接';
+COMMENT ON COLUMN users.contact_email IS '公开联系邮箱';
 
 -- 创建更新时间触发器
 CREATE OR REPLACE FUNCTION update_timestamp()
