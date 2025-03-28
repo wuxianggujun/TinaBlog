@@ -45,6 +45,16 @@
           <span class="menu-icon">🏷️</span>
           <span class="menu-text">分类管理</span>
         </div>
+        
+        <div 
+          v-if="userInfo && userInfo.is_admin"
+          class="menu-item" 
+          :class="{ active: activeMenu === 'users' }"
+          @click="activeMenu = 'users'"
+        >
+          <span class="menu-icon">👥</span>
+          <span class="menu-text">用户管理</span>
+        </div>
       </div>
     </div>
     
@@ -54,9 +64,7 @@
       <div class="admin-topbar">
         <div class="topbar-left">
           <div class="breadcrumb">
-            <router-link to="/" class="breadcrumb-item">首页</router-link>
-            <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-item">管理后台</span>
+            <span class="breadcrumb-item active">管理后台</span>
             <span class="breadcrumb-separator">/</span>
             <span class="breadcrumb-item active">{{ getMenuTitle }}</span>
           </div>
@@ -78,9 +86,9 @@
             </template>
           </div>
           
-          <button v-if="activeMenu === 'articles'" class="new-post-btn" @click="$router.push('/write')">
-            <span class="btn-icon">+</span>
-            <span class="btn-text">新建文章</span>
+          <button class="exit-btn" @click="$router.push('/')">
+            <span class="btn-icon">🏠</span>
+            <span class="btn-text">返回首页</span>
           </button>
         </div>
       </div>
@@ -116,6 +124,12 @@
             v-else-if="activeMenu === 'categories'" 
             :articles="articles"
           />
+          
+          <!-- 用户管理 -->
+          <users-view 
+            v-else-if="activeMenu === 'users' && userInfo && userInfo.is_admin" 
+            @reload="fetchUsers"
+          />
         </transition>
       </div>
     </div>
@@ -128,6 +142,7 @@ import DashboardView from '../components/admin/DashboardView.vue';
 import ArticlesView from '../components/admin/ArticlesView.vue';
 import CommentsView from '../components/admin/CommentsView.vue';
 import CategoriesView from '../components/admin/CategoriesView.vue';
+import UsersView from '../components/admin/UsersView.vue';
 
 export default {
   name: 'MyArticlesView',
@@ -135,7 +150,8 @@ export default {
     DashboardView,
     ArticlesView,
     CommentsView,
-    CategoriesView
+    CategoriesView,
+    UsersView
   },
   data() {
     return {
@@ -144,6 +160,7 @@ export default {
       articles: [],
       comments: [],
       categories: [],
+      users: [],
       isLoading: false
     };
   },
@@ -154,6 +171,7 @@ export default {
         case 'articles': return '文章管理';
         case 'comments': return '评论管理';
         case 'categories': return '分类管理';
+        case 'users': return '用户管理';
         default: return '';
       }
     }
@@ -175,6 +193,9 @@ export default {
         const response = await axios.get('/api/user/info');
         if (response.data.code === 0) {
           this.userInfo = response.data.data;
+          if (this.userInfo.is_admin) {
+            this.fetchUsers();
+          }
         } else {
           console.error('获取用户信息失败:', response.data.message);
         }
@@ -228,6 +249,23 @@ export default {
       } catch (error) {
         console.error('获取分类列表请求错误:', error);
         this.categories = [];
+      }
+    },
+    
+    async fetchUsers() {
+      if (!this.userInfo || !this.userInfo.is_admin) return;
+      
+      try {
+        const response = await axios.get('/api/admin/users');
+        if (response.data.code === 0) {
+          this.users = response.data.data || [];
+        } else {
+          console.error('获取用户列表失败:', response.data.message);
+          this.users = [];
+        }
+      } catch (error) {
+        console.error('获取用户列表请求错误:', error);
+        this.users = [];
       }
     }
   }
@@ -382,12 +420,12 @@ export default {
   font-weight: 500;
 }
 
-.new-post-btn {
+.exit-btn {
   display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  background-color: #3498db;
+  background-color: #e74c3c;
   color: white;
   border: none;
   border-radius: 4px;
@@ -395,8 +433,8 @@ export default {
   transition: background-color 0.2s;
 }
 
-.new-post-btn:hover {
-  background-color: #2980b9;
+.exit-btn:hover {
+  background-color: #c0392b;
 }
 
 .btn-icon {
