@@ -179,6 +179,14 @@ install_project_libraries() {
     if [ $? -ne 0 ]; then
         print_error "安装sodium失败"
         return 1
+    fi    
+    
+    # 安装sodium
+    print_info "正在安装curl..."
+    ./vcpkg install curl:${platform}
+    if [ $? -ne 0 ]; then
+        print_error "安装curl失败"
+        return 1
     fi
     
     print_success "所有项目依赖库安装成功"

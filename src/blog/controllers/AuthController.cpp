@@ -6,6 +6,13 @@
 #include <fstream> // 添加fstream头文件用于文件操作
 #include <sstream> // 添加sstream头文件用于字符串流
 #include <ctime>   // 添加ctime头文件用于时间操作
+#include <curl/curl.h>  // 添加libcurl头文件
+
+// libcurl写入回调函数声明
+static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
 
 /**
  * 构造函数
@@ -804,6 +811,8 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
         
         // 检查Content-Type
         std::string contentType = req->getHeader("Content-Type");
+        LOG_INFO << "收到上传请求，Content-Type: " << contentType;
+        
         if (contentType.find("multipart/form-data") == std::string::npos) {
             (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "需要multipart/form-data请求"));
             return;
@@ -815,10 +824,26 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
             return;
         }
         
+        LOG_INFO << "请求体长度: " << req->bodyLength() << " 字节";
+        
         // 为文件创建一个临时文件
-        std::string tempFileName = "/tmp/avatar_" + std::to_string(std::time(nullptr)) + ".jpg";
+        std::string tempDir;
+        
+        // 根据操作系统确定临时目录
+        #ifdef _WIN32
+            tempDir = "C:/temp/";  // Windows临时目录
+            // 确保目录存在
+            system("mkdir C:\\temp 2>NUL");
+        #else
+            tempDir = "/tmp/";     // Unix/Linux临时目录
+        #endif
+        
+        std::string tempFileName = tempDir + "avatar_" + std::to_string(std::time(nullptr)) + ".jpg";
+        LOG_INFO << "临时文件路径: " << tempFileName;
+        
         std::ofstream outFile(tempFileName, std::ios::binary);
         if (!outFile) {
+            LOG_ERROR << "无法创建临时文件: " << tempFileName;
             (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "无法创建临时文件"));
             return;
         }
@@ -829,8 +854,17 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
         
         // 验证文件大小（限制为2MB）
         std::ifstream tempFile(tempFileName, std::ios::binary | std::ios::ate);
+        if (!tempFile) {
+            LOG_ERROR << "无法打开临时文件进行验证: " << tempFileName;
+            std::remove(tempFileName.c_str());
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "内部服务器错误"));
+            return;
+        }
+        
         auto fileSize = tempFile.tellg();
         tempFile.close();
+        
+        LOG_INFO << "上传文件大小: " << fileSize << " 字节";
         
         if (fileSize > 2 * 1024 * 1024) {
             std::remove(tempFileName.c_str());
@@ -841,95 +875,128 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
         // ImageHub API密钥
         const std::string IMAGE_HUB_API_KEY = "chv_s9Gk_c68593c1beea9e74ca78bf4598e6c22acfb50f2d2b4e411a3aec12aeea36ce4bc338cda2818eefb15243f12fa6ae4c30497b1c58edd9912356d687bf3b3d8480";
         
-        // 构建curl命令
-        std::string curlCmd = "curl -s -X POST https://www.imagehub.cc/api/1/upload -H \"X-API-Key: " + 
-                             IMAGE_HUB_API_KEY + "\" -F \"source=@" + tempFileName + "\"";
+        // 使用Drogon的HTTP客户端上传图片，而不是curl命令
+        auto client = drogon::HttpClient::newHttpClient("https://www.imagehub.cc");
         
-        // 执行curl命令
-        FILE* pipe = popen(curlCmd.c_str(), "r");
-        if (!pipe) {
-            std::cerr << "执行curl命令失败" << std::endl;
+        // 读取文件到内存
+        std::ifstream inFile(tempFileName, std::ios::binary);
+        if (!inFile) {
+            LOG_ERROR << "无法读取临时文件: " << tempFileName;
             std::remove(tempFileName.c_str());
-            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "上传图片到图床失败"));
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "无法读取临时文件"));
             return;
         }
         
-        // 读取curl的输出
-        char buffer[4096];
-        std::string curlOutput;
-        while (!feof(pipe)) {
-            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                curlOutput += buffer;
-            }
-        }
-        pclose(pipe);
+        // 读取文件到内存
+        std::vector<char> fileData((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
+        inFile.close();
+        
+        LOG_INFO << "已读取文件到内存，大小: " << fileData.size() << " 字节";
         
         // 删除临时文件
         std::remove(tempFileName.c_str());
         
-        // 解析curl输出的JSON响应
-        Json::Value respJson;
-        Json::Reader reader;
-        if (!reader.parse(curlOutput, respJson) || !respJson.isObject()) {
-            std::cerr << "解析图床API响应失败: " << curlOutput << std::endl;
-            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "解析图床响应失败"));
-            return;
-        }
+        // 手动构建multipart/form-data格式
+        std::string boundary = "----WebKitFormBoundary" + std::to_string(std::time(nullptr));
+        std::string contentType2 = "multipart/form-data; boundary=" + boundary;
         
-        // 检查上传是否成功
-        if (respJson["status_code"].asInt() != 200) {
-            std::string errorMsg = "图床上传失败: ";
-            if (respJson["status_txt"].isString()) {
-                errorMsg += respJson["status_txt"].asString();
+        std::string fileContent(fileData.begin(), fileData.end());
+        
+        // 构建multipart请求体
+        std::ostringstream requestBody;
+        requestBody << "--" << boundary << "\r\n";
+        requestBody << "Content-Disposition: form-data; name=\"source\"; filename=\"avatar.jpg\"\r\n";
+        requestBody << "Content-Type: image/jpeg\r\n\r\n";
+        requestBody << fileContent << "\r\n";
+        requestBody << "--" << boundary << "--\r\n";
+        
+        // 创建请求
+        auto multipartReq = drogon::HttpRequest::newHttpRequest();
+        multipartReq->setMethod(drogon::Post);
+        multipartReq->setPath("/api/1/upload");
+        multipartReq->addHeader("Content-Type", contentType2);
+        multipartReq->addHeader("X-API-Key", IMAGE_HUB_API_KEY);
+        multipartReq->addHeader("Origin", "https://www.imagehub.cc");  // 添加Origin头，避免CORS问题
+        multipartReq->setBody(requestBody.str());
+        
+        LOG_INFO << "开始上传图片到图床...";
+        
+        // 发送异步请求
+        client->sendRequest(multipartReq, [callbackPtr, userUuid](drogon::ReqResult result, const drogon::HttpResponsePtr& response) {
+            if (result != drogon::ReqResult::Ok || !response) {
+                LOG_ERROR << "上传图片到图床失败: " << static_cast<int>(result);
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "上传图片到图床失败"));
+                return;
             }
-            std::cerr << errorMsg << std::endl;
-            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, errorMsg));
-            return;
-        }
-        
-        // 获取图片URL
-        if (!respJson["image"].isObject() || !respJson["image"]["url"].isString()) {
-            std::cerr << "图床响应格式错误" << std::endl;
-            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "图床响应格式错误"));
-            return;
-        }
-        
-        std::string imageUrl = respJson["image"]["url"].asString();
-        
-        // 将图片URL保存到用户资料中
-        auto& dbManager = DbManager::getInstance();
-        dbManager.executeQuery(
-            "UPDATE users SET avatar = $1, updated_at = NOW() WHERE uuid = $2 RETURNING username, display_name, email, bio, avatar",
-            [callbackPtr, imageUrl](const drogon::orm::Result& result) {
-                if (result.size() > 0) {
-                    Json::Value userData;
-                    userData["username"] = result[0]["username"].as<std::string>();
-                    userData["display_name"] = result[0]["display_name"].as<std::string>();
-                    userData["email"] = result[0]["email"].as<std::string>();
-                    userData["avatar"] = imageUrl;
-                    
-                    if (!result[0]["bio"].isNull()) {
-                        userData["bio"] = result[0]["bio"].as<std::string>();
-                    }
-                    
-                    // 返回成功响应，包含图片URL和用户数据
-                    Json::Value responseData;
-                    responseData["image_url"] = imageUrl;
-                    responseData["user_info"] = userData;
-                    
-                    (*callbackPtr)(utils::createSuccessResponse("头像上传并更新成功", responseData));
-                } else {
-                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+            
+            // 解析响应，将string_view转换为string
+            std::string responseBody(response->getBody().data(), response->getBody().length());
+            LOG_INFO << "图床响应: " << responseBody;
+            
+            Json::Value respJson;
+            Json::Reader reader;
+            if (!reader.parse(responseBody, respJson) || !respJson.isObject()) {
+                LOG_ERROR << "解析图床API响应失败: " << responseBody;
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "解析图床响应失败"));
+                return;
+            }
+            
+            // 检查上传是否成功
+            if (respJson["status_code"].asInt() != 200) {
+                std::string errorMsg = "图床上传失败: ";
+                if (respJson["status_txt"].isString()) {
+                    errorMsg += respJson["status_txt"].asString();
                 }
-            },
-            [callbackPtr](const drogon::orm::DrogonDbException& e) {
-                std::cerr << "更新用户头像失败: " << e.base().what() << std::endl;
-                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新用户头像失败"));
-            },
-            imageUrl, userUuid
-        );
+                LOG_ERROR << errorMsg;
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, errorMsg));
+                return;
+            }
+            
+            // 获取图片URL
+            if (!respJson["image"].isObject() || !respJson["image"]["url"].isString()) {
+                LOG_ERROR << "图床响应格式错误";
+                (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::EXTERNAL_SERVICE_ERROR, "图床响应格式错误"));
+                return;
+            }
+            
+            std::string imageUrl = respJson["image"]["url"].asString();
+            LOG_INFO << "图片上传成功，URL: " << imageUrl;
+            
+            // 将图片URL保存到用户资料中
+            auto& dbManager = DbManager::getInstance();
+            dbManager.executeQuery(
+                "UPDATE users SET avatar = $1, updated_at = NOW() WHERE uuid = $2 RETURNING username, display_name, email, bio, avatar",
+                [callbackPtr, imageUrl](const drogon::orm::Result& result) {
+                    if (result.size() > 0) {
+                        Json::Value userData;
+                        userData["username"] = result[0]["username"].as<std::string>();
+                        userData["display_name"] = result[0]["display_name"].as<std::string>();
+                        userData["email"] = result[0]["email"].as<std::string>();
+                        userData["avatar"] = imageUrl;
+                        
+                        if (!result[0]["bio"].isNull()) {
+                            userData["bio"] = result[0]["bio"].as<std::string>();
+                        }
+                        
+                        // 返回成功响应，包含图片URL和用户数据
+                        Json::Value responseData;
+                        responseData["image_url"] = imageUrl;
+                        responseData["user_info"] = userData;
+                        
+                        (*callbackPtr)(utils::createSuccessResponse("头像上传并更新成功", responseData));
+                    } else {
+                        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+                    }
+                },
+                [callbackPtr](const drogon::orm::DrogonDbException& e) {
+                    LOG_ERROR << "更新用户头像失败: " << e.base().what();
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新用户头像失败"));
+                },
+                imageUrl, userUuid
+            );
+        });
     } catch (const std::exception& e) {
-        std::cerr << "头像上传异常: " << e.what() << std::endl;
+        LOG_ERROR << "头像上传异常: " << e.what();
         (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
     }
 } 
