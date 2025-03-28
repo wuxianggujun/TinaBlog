@@ -22,6 +22,8 @@ public:
     ADD_METHOD_TO(PostController::createPost, "/api/posts", drogon::Post, "JwtAuthFilter");
     // 获取文章列表
     ADD_METHOD_TO(PostController::getPosts, "/api/posts", drogon::Get);
+    // 获取当前用户的文章列表
+    ADD_METHOD_TO(PostController::getPosts, "/api/articles/my", drogon::Get, "JwtAuthFilter");
     // 获取单篇文章
     ADD_METHOD_TO(PostController::getPost, "/api/posts/{id}", drogon::Get);
     // 更新文章

@@ -16,6 +16,8 @@ public:
     ADD_METHOD_TO(AuthController::login, "/api/auth/login", drogon::Post);
     // 使用JwtAuthFilter过滤器保护getUserInfo接口 - 参照示例简化
     ADD_METHOD_TO(AuthController::getUserInfo, "/api/auth/info", drogon::Get, "JwtAuthFilter");
+    // 添加额外路由，指向相同的getUserInfo方法
+    ADD_METHOD_TO(AuthController::getUserInfo, "/api/user/info", drogon::Get, "JwtAuthFilter");
     ADD_METHOD_TO(AuthController::registerUser, "/api/auth/register", drogon::Post);
     // 添加验证和登出接口
     ADD_METHOD_TO(AuthController::verifyToken, "/api/auth/verify", drogon::Get, "JwtAuthFilter");

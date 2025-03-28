@@ -28,6 +28,8 @@ public:
     METHOD_LIST_BEGIN
     // 获取文章评论列表
     ADD_METHOD_TO(CommentController::getArticleComments, "/api/articles/{article_id}/comments", drogon::Get);
+    // 获取所有评论列表
+    ADD_METHOD_TO(CommentController::getComments, "/api/comments", drogon::Get);
     // 添加评论
     ADD_METHOD_TO(CommentController::addComment, "/api/comments", drogon::Post, "JwtAuthFilter");
     // 添加匿名评论
@@ -44,6 +46,12 @@ public:
     void getArticleComments(const drogon::HttpRequestPtr& req,
                           std::function<void(const drogon::HttpResponsePtr&)>&& callback,
                           int article_id) const;
+    
+    /**
+     * 获取所有评论列表
+     */
+    void getComments(const drogon::HttpRequestPtr& req,
+                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
     
     /**
      * 添加评论

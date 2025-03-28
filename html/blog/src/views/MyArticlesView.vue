@@ -207,11 +207,16 @@ export default {
     async fetchArticles() {
       this.isLoading = true;
       try {
-        const response = await axios.get('/api/articles/my');
-        if (response.data.code === 0) {
-          this.articles = response.data.data || [];
+        const response = await axios.get('/api/user/articles');
+        if (response.data && response.data.code === 0) {
+          if (Array.isArray(response.data.data)) {
+            this.articles = [...response.data.data];
+          } else {
+            console.error('文章数据不是数组:', response.data);
+            this.articles = [];
+          }
         } else {
-          console.error('获取文章列表失败:', response.data.message);
+          console.error('获取文章列表失败:', response.data ? response.data.message : '无响应数据');
           this.articles = [];
         }
       } catch (error) {

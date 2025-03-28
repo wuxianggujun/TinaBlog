@@ -193,14 +193,22 @@ export default {
   },
   computed: {
     popularArticles() {
-      return [...this.articles]
-        .sort((a, b) => b.views - a.views)
-        .slice(0, 5);
+      if (!this.articles || !Array.isArray(this.articles)) return [];
+      
+      return Array.isArray(this.articles) ? 
+        [...this.articles]
+          .filter(a => a && typeof a === 'object')
+          .sort((a, b) => (b.views || 0) - (a.views || 0))
+          .slice(0, 5) : [];
     },
     recentComments() {
-      return [...this.comments]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5);
+      if (!this.comments || !Array.isArray(this.comments)) return [];
+      
+      return Array.isArray(this.comments) ?
+        [...this.comments]
+          .filter(c => c && typeof c === 'object' && c.created_at)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 5) : [];
     },
     currentMonth() {
       const months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
@@ -238,9 +246,16 @@ export default {
     this.initViewsChart();
     this.updateCalendar();
   },
+  beforeDestroy() {
+    // 在组件销毁前销毁图表实例，避免内存泄漏和循环引用
+    if (this.viewsChart) {
+      this.viewsChart.destroy();
+      this.viewsChart = null;
+    }
+  },
   methods: {
     calculateArticleStats() {
-      if (!this.articles || !this.articles.length) {
+      if (!this.articles || !Array.isArray(this.articles) || this.articles.length === 0) {
         this.articleStats = {
           totalCount: 0,
           publishedCount: 0,
@@ -251,9 +266,12 @@ export default {
       }
       
       const totalCount = this.articles.length;
-      const publishedCount = this.articles.filter(a => a.is_published).length;
+      const publishedCount = this.articles.filter(a => a && a.is_published).length;
       const draftCount = totalCount - publishedCount;
-      const totalViews = this.articles.reduce((sum, article) => sum + (article.views || 0), 0);
+      const totalViews = this.articles.reduce((sum, article) => {
+        if (!article) return sum;
+        return sum + (article.views || 0);
+      }, 0);
       
       this.articleStats = {
         totalCount,
@@ -264,8 +282,11 @@ export default {
     },
     
     initViewsChart() {
-      if (this.$refs.viewsChart) {
-        this.viewsChart = new Chart(this.$refs.viewsChart, {
+      if (!this.$refs.viewsChart) return;
+
+      try {
+        // 创建默认配置对象，避免直接使用this
+        const chartConfig = {
           type: 'line',
           data: {
             labels: [],
@@ -305,9 +326,19 @@ export default {
               }
             }
           }
-        });
+        };
         
+        // 创建新图表实例
+        this.viewsChart = new Chart(
+          this.$refs.viewsChart.getContext('2d'),
+          JSON.parse(JSON.stringify(chartConfig)) // 使用JSON序列化创建深拷贝
+        );
+        
+        // 初始化完成后更新图表数据
         this.updateViewsChart();
+      } catch (error) {
+        console.error('初始化图表失败:', error);
+        this.viewsChart = null;
       }
     },
     
@@ -338,9 +369,22 @@ export default {
       }
       
       // 更新图表数据
-      this.viewsChart.data.labels = labels;
-      this.viewsChart.data.datasets[0].data = data;
-      this.viewsChart.update();
+      const chartData = {
+        labels: labels,
+        datasets: [{
+          label: '文章访问量',
+          data: data,
+          borderColor: '#3498db',
+          backgroundColor: 'rgba(52, 152, 219, 0.1)',
+          tension: 0.4,
+          fill: true
+        }]
+      };
+      
+      // 断开可能的循环引用
+      this.viewsChart.data.labels = chartData.labels;
+      this.viewsChart.data.datasets = chartData.datasets;
+      this.viewsChart.update('none'); // 使用'none'模式更新，减少动画和潜在的引用问题
     },
     
     setTimeRange(range) {
@@ -441,44 +485,66 @@ export default {
     },
     
     generateActivities() {
-      // 合并文章和评论活动
-      const activities = [];
+      // 清空旧的活动数据
+      this.activities = [];
       
-      // 添加文章发布活动
-      if (this.articles && this.articles.length) {
+      // 确保articles是数组
+      if (this.articles && Array.isArray(this.articles)) {
+        // 添加文章发布活动
         this.articles.forEach(article => {
-          if (article.created_at) {
-            activities.push({
-              type: 'article',
-              date: new Date(article.created_at),
-              title: article.title,
-              id: article.id
-            });
+          if (article && article.created_at) {
+            try {
+              const date = new Date(article.created_at);
+              if (!isNaN(date.getTime())) { // 验证是有效的日期
+                this.activities.push({
+                  type: 'article',
+                  date: new Date(date.getTime()), // 创建一个新的日期对象，避免引用
+                  title: article.title || '无标题文章',
+                  id: article.id
+                });
+              }
+            } catch (e) {
+              console.error('无效的文章日期', article.created_at);
+            }
           }
         });
       }
       
-      // 添加评论活动
-      if (this.comments && this.comments.length) {
+      // 确保comments是数组
+      if (this.comments && Array.isArray(this.comments)) {
+        // 添加评论活动
         this.comments.forEach(comment => {
-          if (comment.created_at) {
-            activities.push({
-              type: 'comment',
-              date: new Date(comment.created_at),
-              author: comment.author_name,
-              content: comment.content,
-              id: comment.id
-            });
+          if (comment && comment.created_at) {
+            try {
+              const date = new Date(comment.created_at);
+              if (!isNaN(date.getTime())) { // 验证是有效的日期
+                this.activities.push({
+                  type: 'comment',
+                  date: new Date(date.getTime()), // 创建一个新的日期对象，避免引用
+                  author: comment.author_name || '匿名用户',
+                  contentSummary: comment.content ? 
+                    (comment.content.length > 20 ? comment.content.substring(0, 20) + '...' : comment.content) : '',
+                  id: comment.id
+                });
+              }
+            } catch (e) {
+              console.error('无效的评论日期', comment.created_at);
+            }
           }
         });
       }
-      
-      this.activities = activities;
     },
     
     getActivitiesForDate(date) {
       // 返回指定日期的活动列表
+      if (!this.activities || !Array.isArray(this.activities)) return [];
+      if (!date || !(date instanceof Date) || isNaN(date.getTime())) return [];
+      
       return this.activities.filter(activity => {
+        if (!activity || !activity.date || !(activity.date instanceof Date) || isNaN(activity.date.getTime())) {
+          return false;
+        }
+        
         return activity.date.getFullYear() === date.getFullYear() &&
                activity.date.getMonth() === date.getMonth() &&
                activity.date.getDate() === date.getDate();

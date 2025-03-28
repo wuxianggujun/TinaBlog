@@ -23,6 +23,7 @@
 #include "blog/controllers/PostController.hpp"
 #include "blog/controllers/CommentController.hpp"
 #include "blog/controllers/AdminController.hpp"
+#include "blog/controllers/ArticleController.hpp"
 #include <drogon/drogon.h>
 
 // 定义JWT密钥（在实际应用中应从配置文件或环境变量获取）

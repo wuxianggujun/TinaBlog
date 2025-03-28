@@ -592,5 +592,102 @@ void CommentController::insertComment(DbManager& dbManager, int articleId, const
     }
 }
 
+/**
+ * 获取所有评论列表
+ */
+void CommentController::getComments(const drogon::HttpRequestPtr& req,
+                                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
+    try {
+        auto& dbManager = DbManager::getInstance();
+        
+        // 从URL参数中获取分页信息
+        int page = 1;
+        int pageSize = 20;
+        
+        auto parameters = req->getParameters();
+        if (parameters.find("page") != parameters.end()) {
+            page = std::stoi(parameters["page"]);
+            if (page < 1) page = 1;
+        }
+        
+        if (parameters.find("pageSize") != parameters.end()) {
+            pageSize = std::stoi(parameters["pageSize"]);
+            if (pageSize < 1) pageSize = 10;
+            if (pageSize > 50) pageSize = 50; // 限制最大页面大小
+        }
+        
+        // 计算偏移量
+        int offset = (page - 1) * pageSize;
+        
+        // 查询评论
+        std::string sql = 
+            "SELECT c.id, c.content, c.created_at, "
+            "c.article_id, c.parent_id, a.title as article_title, "
+            "COALESCE(u.username, c.author_name) as author_name, "
+            "u.avatar as author_avatar, "
+            "(SELECT COUNT(*) FROM comments) as total_count "
+            "FROM comments c "
+            "LEFT JOIN articles a ON c.article_id = a.id "
+            "LEFT JOIN users u ON c.user_uuid = u.uuid "
+            "ORDER BY c.created_at DESC "
+            "LIMIT " + std::to_string(pageSize) + " OFFSET " + std::to_string(offset);
+        
+        dbManager.executeQuery(
+            sql,
+            [callback=callback, page, pageSize](const drogon::orm::Result& result) {
+                Json::Value commentsArray(Json::arrayValue);
+                int totalCount = 0;
+                
+                for (const auto& row : result) {
+                    Json::Value comment;
+                    comment["id"] = row["id"].as<int>();
+                    comment["content"] = row["content"].as<std::string>();
+                    comment["created_at"] = row["created_at"].as<std::string>();
+                    comment["article_id"] = row["article_id"].as<int>();
+                    
+                    if (!row["parent_id"].isNull()) {
+                        comment["parent_id"] = row["parent_id"].as<int>();
+                    }
+                    
+                    comment["article_title"] = row["article_title"].as<std::string>();
+                    comment["author_name"] = row["author_name"].as<std::string>();
+                    
+                    if (!row["author_avatar"].isNull()) {
+                        comment["author_avatar"] = row["author_avatar"].as<std::string>();
+                    }
+                    
+                    commentsArray.append(comment);
+                    
+                    // 获取总记录数（所有行都有相同的值）
+                    if (result.size() > 0 && totalCount == 0) {
+                        totalCount = row["total_count"].as<int>();
+                    }
+                }
+                
+                // 计算总页数
+                int totalPages = (totalCount + pageSize - 1) / pageSize;
+                
+                // 构建响应数据
+                Json::Value responseData;
+                responseData["comments"] = commentsArray;
+                responseData["pagination"] = Json::Value();
+                responseData["pagination"]["total"] = totalCount;
+                responseData["pagination"]["page"] = page;
+                responseData["pagination"]["pageSize"] = pageSize;
+                responseData["pagination"]["totalPages"] = totalPages;
+                
+                callback(utils::createSuccessResponse("获取评论列表成功", responseData));
+            },
+            [callback=callback](const drogon::orm::DrogonDbException& e) {
+                std::cerr << "获取评论列表出错: " << e.base().what() << std::endl;
+                callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR));
+            }
+        );
+    } catch (const std::exception& e) {
+        std::cerr << "获取评论列表异常: " << e.what() << std::endl;
+        callback(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
+}
+
 } // namespace v1
 } // namespace api 
