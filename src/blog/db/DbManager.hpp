@@ -79,6 +79,24 @@ public:
     bool createTables();
 
     /**
+     * 为数据库表和列添加中文注释
+     * @return 是否成功添加注释
+     */
+    bool createComments();
+
+    /**
+     * 初始化数据库（创建数据库、表结构、注释等）
+     * @return 是否初始化成功
+     */
+    bool init();
+
+    /**
+     * 插入默认数据
+     * @return 是否成功插入默认数据
+     */
+    bool insertDefaultData();
+
+    /**
      * 析构函数
      */
     virtual ~DbManager() = default;
@@ -96,6 +114,9 @@ private:
     
     // 连接信息
     std::string m_connectionInfo;
+    
+    // 连接池大小
+    size_t m_connectionNumber{3};
     
     // 初始化状态
     std::atomic<bool> m_initialized{false};

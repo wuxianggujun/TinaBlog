@@ -24,7 +24,6 @@
 #include "blog/controllers/CommentController.hpp"
 #include "blog/controllers/AdminController.hpp"
 #include <drogon/drogon.h>
-#include <json/json.h>
 
 // 定义JWT密钥（在实际应用中应从配置文件或环境变量获取）
 const std::string JWT_SECRET = "wuxianggujun-tina-blog-3344207732";

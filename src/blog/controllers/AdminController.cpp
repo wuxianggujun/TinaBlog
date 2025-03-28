@@ -1,11 +1,11 @@
 #include "AdminController.hpp"
-#include "../db/DbManager.hpp"
-#include "../utils/HttpUtils.hpp"
-#include "../utils/ErrorCode.hpp"
+#include "blog/db/DbManager.hpp"
+#include "blog/utils/HttpUtils.hpp"
+#include "blog/utils/ErrorCode.hpp"
 #include <json/json.h>
 #include <drogon/HttpResponse.h>
 #include <drogon/HttpRequest.h>
-#include <drogon/utils/Utilities.h>
+#include <drogon/utils/Utilities.h> 
 #include <iostream>
 
 using namespace api::v1;
@@ -15,13 +15,13 @@ bool AdminController::validateAdmin(const drogon::HttpRequestPtr& req,
                              std::function<void(const drogon::HttpResponsePtr&)>& callback) const {
     auto session = req->getSession();
     if (!session) {
-        auto resp = utils::HttpUtils::buildUnauthorizedResponse("未登录");
+        auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "未登录");
         callback(resp);
         return false;
     }
 
     if (!session->find("user_uuid")) {
-        auto resp = utils::HttpUtils::buildUnauthorizedResponse("会话无效");
+        auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "会话无效");
         callback(resp);
         return false;
     }
@@ -36,21 +36,21 @@ bool AdminController::validateAdmin(const drogon::HttpRequestPtr& req,
         );
         
         if (result.size() == 0) {
-            auto resp = utils::HttpUtils::buildUnauthorizedResponse("用户不存在");
+            auto resp = utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "用户不存在");
             callback(resp);
             return false;
         }
         
         bool isAdmin = result[0]["is_admin"].as<bool>();
         if (!isAdmin) {
-            auto resp = utils::HttpUtils::buildForbiddenResponse("需要管理员权限");
+            auto resp = utils::createErrorResponse(utils::ErrorCode::FORBIDDEN, "需要管理员权限");
             callback(resp);
             return false;
         }
         
         return true;
     } catch (const std::exception& e) {
-        auto resp = utils::HttpUtils::buildServerErrorResponse("权限验证过程中发生错误");
+        auto resp = utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR, "权限验证过程中发生错误");
         callback(resp);
         return false;
     }
@@ -68,8 +68,7 @@ void AdminController::getUsers(const drogon::HttpRequestPtr& req,
     try {
         auto& dbManager = DbManager::getInstance();
         auto result = dbManager.execSyncQuery(
-            "SELECT uuid, username, display_name, email, bio, avatar, github_url, "
-            "website_url, twitter_url, weibo_url, linkedin_url, contact_email, "
+            "SELECT uuid, username, display_name, email, bio, avatar, "
             "is_admin, is_banned, ban_reason, banned_at, created_at, updated_at "
             "FROM users ORDER BY created_at DESC"
         );
@@ -91,24 +90,6 @@ void AdminController::getUsers(const drogon::HttpRequestPtr& req,
             if (!row["avatar"].isNull())
                 user["avatar"] = row["avatar"].as<std::string>();
             
-            if (!row["github_url"].isNull())
-                user["github_url"] = row["github_url"].as<std::string>();
-            
-            if (!row["website_url"].isNull())
-                user["website_url"] = row["website_url"].as<std::string>();
-            
-            if (!row["twitter_url"].isNull())
-                user["twitter_url"] = row["twitter_url"].as<std::string>();
-            
-            if (!row["weibo_url"].isNull())
-                user["weibo_url"] = row["weibo_url"].as<std::string>();
-            
-            if (!row["linkedin_url"].isNull())
-                user["linkedin_url"] = row["linkedin_url"].as<std::string>();
-            
-            if (!row["contact_email"].isNull())
-                user["contact_email"] = row["contact_email"].as<std::string>();
-            
             if (!row["ban_reason"].isNull())
                 user["ban_reason"] = row["ban_reason"].as<std::string>();
             
@@ -123,14 +104,32 @@ void AdminController::getUsers(const drogon::HttpRequestPtr& req,
             user["created_at"] = row["created_at"].as<std::string>();
             user["updated_at"] = row["updated_at"].as<std::string>();
             
+            // 获取用户的社交链接
+            try {
+                auto linkResult = dbManager.execSyncQuery(
+                    "SELECT link_type, link_url FROM user_links WHERE user_uuid = $1",
+                    row["uuid"].as<std::string>()
+                );
+                
+                for (const auto& linkRow : linkResult) {
+                    std::string linkType = linkRow["link_type"].as<std::string>();
+                    std::string linkUrl = linkRow["link_url"].as<std::string>();
+                    user[linkType] = linkUrl;
+                }
+            } catch (const std::exception& e) {
+                // 如果获取链接失败，记录错误但继续处理
+                std::cerr << "获取用户 " << row["uuid"].as<std::string>() << " 的链接失败: " << e.what() << std::endl;
+            }
+            
             users.append(user);
         }
         
-        auto resp = utils::HttpUtils::buildSuccessResponse(users);
+        auto resp = utils::createSuccessResponse("获取用户列表成功", users);
         (*callbackPtr)(resp);
     } catch (const std::exception& e) {
         std::cerr << "获取用户列表错误: " << e.what() << std::endl;
-        auto resp = utils::HttpUtils::buildServerErrorResponse(
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::SERVER_ERROR,
             "获取用户列表失败: " + std::string(e.what())
         );
         (*callbackPtr)(resp);
@@ -173,7 +172,7 @@ void AdminController::banUser(const drogon::HttpRequestPtr& req,
         );
         
         if (checkResult.size() == 0) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
+            auto resp = utils::createErrorResponse(
                 utils::ErrorCode::RESOURCE_NOT_FOUND,
                 "用户不存在"
             );
@@ -182,8 +181,8 @@ void AdminController::banUser(const drogon::HttpRequestPtr& req,
         }
         
         if (uuid == adminUuid) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
-                utils::ErrorCode::BAD_REQUEST,
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::INVALID_REQUEST,
                 "不能封禁自己"
             );
             (*callbackPtr)(resp);
@@ -191,7 +190,7 @@ void AdminController::banUser(const drogon::HttpRequestPtr& req,
         }
         
         if (checkResult[0]["is_admin"].as<bool>()) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
+            auto resp = utils::createErrorResponse(
                 utils::ErrorCode::FORBIDDEN,
                 "不能封禁管理员"
             );
@@ -207,7 +206,7 @@ void AdminController::banUser(const drogon::HttpRequestPtr& req,
         );
         
         if (result.size() == 0) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
+            auto resp = utils::createErrorResponse(
                 utils::ErrorCode::RESOURCE_NOT_FOUND,
                 "用户不存在"
             );
@@ -221,12 +220,13 @@ void AdminController::banUser(const drogon::HttpRequestPtr& req,
         responseData["is_banned"] = result[0]["is_banned"].as<bool>();
         responseData["message"] = "用户已被封禁";
         
-        auto resp = utils::HttpUtils::buildSuccessResponse(responseData);
+        auto resp = utils::createSuccessResponse("封禁用户成功", responseData);
         (*callbackPtr)(resp);
         
     } catch (const std::exception& e) {
         std::cerr << "封禁用户错误: " << e.what() << std::endl;
-        auto resp = utils::HttpUtils::buildServerErrorResponse(
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::SERVER_ERROR,
             "封禁用户失败: " + std::string(e.what())
         );
         (*callbackPtr)(resp);
@@ -253,7 +253,7 @@ void AdminController::unbanUser(const drogon::HttpRequestPtr& req,
         );
         
         if (result.size() == 0) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
+            auto resp = utils::createErrorResponse(
                 utils::ErrorCode::RESOURCE_NOT_FOUND,
                 "用户不存在"
             );
@@ -267,12 +267,13 @@ void AdminController::unbanUser(const drogon::HttpRequestPtr& req,
         responseData["is_banned"] = result[0]["is_banned"].as<bool>();
         responseData["message"] = "用户已解除封禁";
         
-        auto resp = utils::HttpUtils::buildSuccessResponse(responseData);
+        auto resp = utils::createSuccessResponse("解除用户封禁成功", responseData);
         (*callbackPtr)(resp);
         
     } catch (const std::exception& e) {
         std::cerr << "解除封禁错误: " << e.what() << std::endl;
-        auto resp = utils::HttpUtils::buildServerErrorResponse(
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::SERVER_ERROR,
             "解除封禁失败: " + std::string(e.what())
         );
         (*callbackPtr)(resp);
@@ -303,7 +304,7 @@ void AdminController::deleteUser(const drogon::HttpRequestPtr& req,
         );
         
         if (checkResult.size() == 0) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
+            auto resp = utils::createErrorResponse(
                 utils::ErrorCode::RESOURCE_NOT_FOUND,
                 "用户不存在"
             );
@@ -314,8 +315,8 @@ void AdminController::deleteUser(const drogon::HttpRequestPtr& req,
         std::string username = checkResult[0]["username"].as<std::string>();
         
         if (uuid == adminUuid) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
-                utils::ErrorCode::BAD_REQUEST,
+            auto resp = utils::createErrorResponse(
+                utils::ErrorCode::INVALID_REQUEST,
                 "不能删除自己"
             );
             (*callbackPtr)(resp);
@@ -323,7 +324,7 @@ void AdminController::deleteUser(const drogon::HttpRequestPtr& req,
         }
         
         if (checkResult[0]["is_admin"].as<bool>()) {
-            auto resp = utils::HttpUtils::buildErrorResponse(
+            auto resp = utils::createErrorResponse(
                 utils::ErrorCode::FORBIDDEN,
                 "不能删除管理员账户"
             );
@@ -369,19 +370,29 @@ void AdminController::deleteUser(const drogon::HttpRequestPtr& req,
         }
         
         // 提交事务
-        transPtr->commit();
+        transPtr->setCommitCallback([](bool committed){
+            if (committed) {
+                LOG_INFO << "删除用户事务提交成功";
+            } else {
+                LOG_ERROR << "删除用户事务提交失败";
+            }
+        });
+        
+        // 执行事务
+        transPtr->execSqlSync("COMMIT");
         
         Json::Value responseData;
         responseData["uuid"] = uuid;
         responseData["username"] = username;
         responseData["message"] = "用户已永久删除";
         
-        auto resp = utils::HttpUtils::buildSuccessResponse(responseData);
+        auto resp = utils::createSuccessResponse("删除用户成功", responseData);
         (*callbackPtr)(resp);
         
     } catch (const std::exception& e) {
         std::cerr << "删除用户错误: " << e.what() << std::endl;
-        auto resp = utils::HttpUtils::buildServerErrorResponse(
+        auto resp = utils::createErrorResponse(
+            utils::ErrorCode::SERVER_ERROR,
             "删除用户失败: " + std::string(e.what())
         );
         (*callbackPtr)(resp);

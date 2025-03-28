@@ -183,8 +183,8 @@ void AuthController::getUserInfo(const drogon::HttpRequestPtr& req,
         auto& dbManager = DbManager::getInstance();
         
         dbManager.executeQuery(
-            "SELECT email, display_name, bio FROM users WHERE uuid=$1",
-            [=](const drogon::orm::Result& result) {
+            "SELECT email, display_name, bio, avatar FROM users WHERE uuid=$1",
+            [=, &dbManager](const drogon::orm::Result& result) {
                 Json::Value userData;
                 userData["uuid"] = userUuid;
                 userData["username"] = username;
@@ -192,17 +192,54 @@ void AuthController::getUserInfo(const drogon::HttpRequestPtr& req,
                 
                 if (result.size() > 0) {
                     userData["email"] = result[0]["email"].as<std::string>();
-                    userData["display_name"] = result[0]["display_name"].as<std::string>();
+                    
+                    // 添加display_name字段，如果不为空
+                    if (!result[0]["display_name"].isNull()) {
+                        userData["display_name"] = result[0]["display_name"].as<std::string>();
+                    }
                     
                     // 添加bio字段，如果不为空
                     if (!result[0]["bio"].isNull()) {
                         userData["bio"] = result[0]["bio"].as<std::string>();
                     }
+                    
+                    // 添加avatar字段，如果不为空
+                    if (!result[0]["avatar"].isNull()) {
+                        userData["avatar"] = result[0]["avatar"].as<std::string>();
+                    }
+                    
+                    // 然后查询用户的社交链接信息
+                    dbManager.executeQuery(
+                        "SELECT link_type, link_url FROM user_links WHERE user_uuid=$1",
+                        [=](const drogon::orm::Result& linkResult) mutable {
+                            // 处理用户链接
+                            for (const auto& row : linkResult) {
+                                std::string linkType = row["link_type"].as<std::string>();
+                                std::string linkUrl = row["link_url"].as<std::string>();
+                                
+                                // 将链接添加到用户数据中
+                                userData[linkType] = linkUrl;
+                            }
+                            
+                            // 返回成功响应
+                            auto resp = utils::createSuccessResponse("获取用户信息成功", userData);
+                            (*callbackPtr)(resp);
+                        },
+                        [=](const drogon::orm::DrogonDbException& e) mutable {
+                            // 如果查询链接失败，仍然返回基本信息
+                            std::cerr << "Error fetching user links: " << e.base().what() << std::endl;
+                            
+                            // 返回成功响应，但没有链接数据
+                            auto resp = utils::createSuccessResponse("获取用户基本信息成功", userData);
+                            (*callbackPtr)(resp);
+                        },
+                        userUuid
+                    );
+                } else {
+                    // 返回成功响应，只有基本信息
+                    auto resp = utils::createSuccessResponse("获取用户基本信息成功", userData);
+                    (*callbackPtr)(resp);
                 }
-                
-                // 返回成功响应
-                auto resp = utils::createSuccessResponse("获取用户信息成功", userData);
-                (*callbackPtr)(resp);
             },
             [=](const drogon::orm::DrogonDbException& e) {
                 // 如果查询失败，仍然返回基本信息
@@ -1126,110 +1163,143 @@ void AuthController::uploadImage(const drogon::HttpRequestPtr& req,
  */
 void AuthController::updateSocialLinks(const drogon::HttpRequestPtr& req, 
                            std::function<void(const drogon::HttpResponsePtr&)>&& callback) const {
-    std::string userUuid = req->getSession()->get<std::string>("user_uuid");
+    // 创建回调函数的共享指针，防止回调函数被意外移动
+    auto callbackPtr = std::make_shared<std::function<void(const drogon::HttpResponsePtr&)>>(std::move(callback));
     
-    // 确认用户已登录
-    if (userUuid.empty()) {
-        callback(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "请先登录"));
-        return;
-    }
-    
-    // 获取请求体
-    std::string requestBody = std::string(req->getBody());
-    if (requestBody.empty()) {
-        callback(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "请求体不能为空"));
-        return;
-    }
-    
-    Json::Value reqJson;
-    Json::Reader reader;
-    if (!reader.parse(requestBody, reqJson)) {
-        callback(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的JSON格式"));
-        return;
-    }
-    
-    // 处理并验证输入字段
-    std::string githubUrl = reqJson.get("github", "").asString();
-    std::string websiteUrl = reqJson.get("website", "").asString();
-    std::string twitterUrl = reqJson.get("twitter", "").asString();
-    std::string weiboUrl = reqJson.get("weibo", "").asString();
-    std::string linkedinUrl = reqJson.get("linkedin", "").asString();
-    std::string contactEmail = reqJson.get("contactEmail", "").asString();
-    
-    // 简单的URL验证
-    auto validateUrl = [](const std::string& url) -> bool {
-        return url.empty() || url.find("http://") == 0 || url.find("https://") == 0;
-    };
-    
-    // 验证社交链接格式
-    if (!validateUrl(githubUrl) || !validateUrl(websiteUrl) || !validateUrl(twitterUrl) || 
-        !validateUrl(weiboUrl) || !validateUrl(linkedinUrl)) {
-        callback(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的URL格式，必须以http://或https://开头"));
-        return;
-    }
-    
-    // 验证联系邮箱格式
-    if (!contactEmail.empty() && contactEmail.find('@') == std::string::npos) {
-        callback(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的邮箱格式"));
-        return;
-    }
-    
-    // 更新数据库
-    auto& dbManager = DbManager::getInstance();
-    dbManager.executeQuery(
-        "UPDATE users SET github_url = $1, website_url = $2, twitter_url = $3, "
-        "weibo_url = $4, linkedin_url = $5, contact_email = $6, updated_at = NOW() "
-        "WHERE uuid = $7 RETURNING username, display_name, email, bio, avatar, "
-        "github_url, website_url, twitter_url, weibo_url, linkedin_url, contact_email",
-        [callback](const drogon::orm::Result& result) {
-            if (result.size() > 0) {
-                Json::Value userData;
-                userData["username"] = result[0]["username"].as<std::string>();
-                userData["display_name"] = result[0]["display_name"].as<std::string>();
-                userData["email"] = result[0]["email"].as<std::string>();
+    try {
+        // 从请求属性中获取用户UUID（已由JWT过滤器添加）
+        std::string userUuid = req->getAttributes()->get<std::string>("user_uuid");
+        if (userUuid.empty()) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::UNAUTHORIZED, "请先登录"));
+            return;
+        }
+        
+        // 获取请求体
+        auto jsonBody = req->getJsonObject();
+        if (!jsonBody) {
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的请求格式"));
+            return;
+        }
+        
+        // 定义可能的链接类型
+        const std::vector<std::string> linkTypes = {
+            "github", "website", "twitter", "weibo", "linkedin", "contact_email"
+        };
+        
+        // 验证URL格式的函数
+        auto validateUrl = [](const std::string& url) -> bool {
+            return url.empty() || url.find("http://") == 0 || url.find("https://") == 0;
+        };
+        
+        // 验证并收集链接数据
+        std::vector<std::pair<std::string, std::string>> validLinks;
+        
+        for (const auto& type : linkTypes) {
+            if ((*jsonBody)[type].isString()) {
+                std::string url = (*jsonBody)[type].asString();
                 
-                if (!result[0]["bio"].isNull()) {
-                    userData["bio"] = result[0]["bio"].as<std::string>();
+                // 特殊处理email类型
+                if (type == "contact_email") {
+                    if (!url.empty() && url.find('@') == std::string::npos) {
+                        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, "无效的邮箱格式"));
+                        return;
+                    }
+                } else {
+                    // 验证URL格式
+                    if (!validateUrl(url)) {
+                        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::INVALID_REQUEST, 
+                            "无效的URL格式，必须以http://或https://开头"));
+                        return;
+                    }
                 }
                 
-                if (!result[0]["avatar"].isNull()) {
-                    userData["avatar"] = result[0]["avatar"].as<std::string>();
+                // 如果URL不为空，添加到有效链接列表
+                if (!url.empty()) {
+                    validLinks.push_back(std::make_pair(type, url));
                 }
-                
-                // 添加社交链接字段
-                if (!result[0]["github_url"].isNull()) {
-                    userData["github_url"] = result[0]["github_url"].as<std::string>();
-                }
-                
-                if (!result[0]["website_url"].isNull()) {
-                    userData["website_url"] = result[0]["website_url"].as<std::string>();
-                }
-                
-                if (!result[0]["twitter_url"].isNull()) {
-                    userData["twitter_url"] = result[0]["twitter_url"].as<std::string>();
-                }
-                
-                if (!result[0]["weibo_url"].isNull()) {
-                    userData["weibo_url"] = result[0]["weibo_url"].as<std::string>();
-                }
-                
-                if (!result[0]["linkedin_url"].isNull()) {
-                    userData["linkedin_url"] = result[0]["linkedin_url"].as<std::string>();
-                }
-                
-                if (!result[0]["contact_email"].isNull()) {
-                    userData["contact_email"] = result[0]["contact_email"].as<std::string>();
-                }
-                
-                callback(utils::createSuccessResponse("社交链接更新成功", userData));
-            } else {
-                callback(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
             }
-        },
-        [callback](const drogon::orm::DrogonDbException& e) {
+        }
+        
+        // 开始数据库事务
+        auto& dbManager = DbManager::getInstance();
+        auto clientPtr = drogon::app().getDbClient();
+        auto transPtr = clientPtr->newTransaction();
+        
+        try {
+            // 先删除现有的链接
+            transPtr->execSqlSync("DELETE FROM user_links WHERE user_uuid = $1", userUuid);
+            
+            // 插入新的链接
+            for (const auto& link : validLinks) {
+                transPtr->execSqlSync(
+                    "INSERT INTO user_links (user_uuid, link_type, link_url, created_at, updated_at) "
+                    "VALUES ($1, $2, $3, NOW(), NOW())",
+                    userUuid, link.first, link.second
+                );
+            }
+            
+            // 提交事务
+            transPtr->execSqlSync("COMMIT");
+            
+            // 查询更新后的用户完整信息
+            dbManager.executeQuery(
+                "SELECT uuid, username, email, display_name, bio, avatar FROM users WHERE uuid = $1",
+                [=, &dbManager](const drogon::orm::Result& result) {
+                    if (result.size() > 0) {
+                        Json::Value userData;
+                        userData["uuid"] = result[0]["uuid"].as<std::string>();
+                        userData["username"] = result[0]["username"].as<std::string>();
+                        userData["email"] = result[0]["email"].as<std::string>();
+                        
+                        if (!result[0]["display_name"].isNull()) {
+                            userData["display_name"] = result[0]["display_name"].as<std::string>();
+                        }
+                        
+                        if (!result[0]["bio"].isNull()) {
+                            userData["bio"] = result[0]["bio"].as<std::string>();
+                        }
+                        
+                        if (!result[0]["avatar"].isNull()) {
+                            userData["avatar"] = result[0]["avatar"].as<std::string>();
+                        }
+                        
+                        // 查询用户的社交链接
+                        dbManager.executeQuery(
+                            "SELECT link_type, link_url FROM user_links WHERE user_uuid = $1",
+                            [=](const drogon::orm::Result& linkResult) mutable {
+                                // 添加社交链接到用户数据
+                                for (const auto& row : linkResult) {
+                                    std::string linkType = row["link_type"].as<std::string>();
+                                    std::string linkUrl = row["link_url"].as<std::string>();
+                                    userData[linkType] = linkUrl;
+                                }
+                                
+                                // 返回成功响应
+                                (*callbackPtr)(utils::createSuccessResponse("社交链接更新成功", userData));
+                            },
+                            [=](const drogon::orm::DrogonDbException& e) mutable {
+                                LOG_ERROR << "获取用户链接失败: " << e.base().what();
+                                // 仍然返回基本用户数据
+                                (*callbackPtr)(utils::createSuccessResponse("社交链接更新成功，但无法获取完整链接信息", userData));
+                            },
+                            userUuid
+                        );
+                    } else {
+                        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::RESOURCE_NOT_FOUND, "用户不存在"));
+                    }
+                },
+                [=](const drogon::orm::DrogonDbException& e) {
+                    LOG_ERROR << "获取用户信息失败: " << e.base().what();
+                    (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新社交链接成功，但无法获取用户信息"));
+                },
+                userUuid
+            );
+        } catch (const drogon::orm::DrogonDbException& e) {
             LOG_ERROR << "更新用户社交链接失败: " << e.base().what();
-            callback(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新社交链接失败"));
-        },
-        githubUrl, websiteUrl, twitterUrl, weiboUrl, linkedinUrl, contactEmail, userUuid
-    );
+            (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::DB_QUERY_ERROR, "更新社交链接失败"));
+        }
+    } catch (const std::exception& e) {
+        LOG_ERROR << "更新用户社交链接异常: " << e.what();
+        (*callbackPtr)(utils::createErrorResponse(utils::ErrorCode::SERVER_ERROR));
+    }
 } 
