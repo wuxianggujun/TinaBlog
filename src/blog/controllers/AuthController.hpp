@@ -24,6 +24,12 @@ public:
     ADD_METHOD_TO(AuthController::updateProfile, "/api/auth/profile", drogon::Put, "JwtAuthFilter");
     // 修改密码
     ADD_METHOD_TO(AuthController::changePassword, "/api/auth/change-password", drogon::Post, "JwtAuthFilter");
+    // 更新头像
+    ADD_METHOD_TO(AuthController::updateAvatar, "/api/auth/avatar", drogon::Put, "JwtAuthFilter");
+    // 获取上传授权
+    ADD_METHOD_TO(AuthController::getUploadToken, "/api/auth/upload-token", drogon::Get, "JwtAuthFilter");
+    // 代理上传图片到图床
+    ADD_METHOD_TO(AuthController::uploadImage, "/api/auth/upload-image", drogon::Post, "JwtAuthFilter");
     METHOD_LIST_END
     
     /**
@@ -86,6 +92,30 @@ public:
      */
     void changePassword(const drogon::HttpRequestPtr& req, 
                        std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+                       
+    /**
+     * 更新用户头像
+     * @param req 请求对象
+     * @param callback 回调函数
+     */
+    void updateAvatar(const drogon::HttpRequestPtr& req, 
+                     std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+    
+    /**
+     * 获取图片上传授权
+     * @param req 请求对象
+     * @param callback 回调函数
+     */
+    void getUploadToken(const drogon::HttpRequestPtr& req, 
+                       std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
+    
+    /**
+     * 代理上传图片到图床
+     * @param req 请求对象
+     * @param callback 回调函数
+     */
+    void uploadImage(const drogon::HttpRequestPtr& req, 
+                    std::function<void(const drogon::HttpResponsePtr&)>&& callback) const;
 
 private:
     std::string m_jwtSecret;

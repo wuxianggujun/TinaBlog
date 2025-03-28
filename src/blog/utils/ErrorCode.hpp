@@ -39,7 +39,10 @@ enum class ErrorCode {
     SERVER_ERROR = 4003,
     RESOURCE_NOT_FOUND = 4004,
     REQUEST_TIMEOUT = 4005,
-    INTERNAL_ERROR = 500
+    INTERNAL_ERROR = 500,
+    
+    // 外部服务错误 (502)
+    EXTERNAL_SERVICE_ERROR = 502001
 };
 
 // 错误信息映射
@@ -70,7 +73,9 @@ inline const std::unordered_map<ErrorCode, std::string> ERROR_MESSAGES = {
     {ErrorCode::SERVER_ERROR, "服务器内部错误"},
     {ErrorCode::RESOURCE_NOT_FOUND, "资源不存在"},
     {ErrorCode::REQUEST_TIMEOUT, "请求超时"},
-    {ErrorCode::INTERNAL_ERROR, "内部错误"}
+    {ErrorCode::INTERNAL_ERROR, "内部错误"},
+    
+    {ErrorCode::EXTERNAL_SERVICE_ERROR, "外部服务错误"}
 };
 
 // 获取错误信息

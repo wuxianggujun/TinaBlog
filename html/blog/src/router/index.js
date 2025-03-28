@@ -48,6 +48,17 @@ const routes = [
       title: '个人信息 - Tina博客'
     }
   },
+  // 我的文章页面路由
+  {
+    path: '/profile/articles',
+    name: 'my-articles',
+    component: () => import('../views/ProfileView.vue'),
+    meta: { 
+      requiresAuth: true,
+      title: '我的文章 - Tina博客'
+    },
+    props: { activeTab: 'articles' }
+  },
   // 修改密码页面路由
   {
     path: '/profile/password',
@@ -113,6 +124,23 @@ const routes = [
     path: '/404',
     name: 'not-found',
     component: NotFound
+  },
+  {
+    path: '/tags',
+    name: 'tags',
+    component: () => import('../views/TagsView.vue'),
+    meta: {
+      title: '标签 - Tina博客'
+    }
+  },
+  {
+    path: '/tag/:slug',
+    name: 'tag',
+    component: () => import('../views/TagDetailView.vue'),
+    props: true,
+    meta: {
+      title: '标签文章 - Tina博客'
+    }
   },
   // 捕获所有未匹配的路由
   {

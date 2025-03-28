@@ -88,47 +88,91 @@
           <p>热爱技术，热爱生活的程序员</p>
         </div>
         
+        <!-- 分类区域 - 美化后 -->
         <div class="widget category-widget">
-          <h3>分类</h3>
-          <div v-if="categoriesLoading" class="loading">
-            <p>加载中...</p>
+          <h3 class="widget-title">
+            <i class="fas fa-folder-open"></i> 分类
+            <router-link to="/categories" class="view-all">全部 <i class="fas fa-chevron-right"></i></router-link>
+          </h3>
+          <div v-if="categoriesLoading" class="loading-container">
+            <div class="spinner"></div>
           </div>
-          <div v-else-if="categoriesError" class="error">
+          <div v-else-if="categoriesError" class="error-message">
             <p>加载分类失败</p>
             <button @click="fetchCategories" class="btn">重试</button>
           </div>
-          <ul v-else>
-            <li v-for="category in categories" :key="category.id">
-              <router-link :to="'/category/' + category.slug">
-                {{ category.name }} ({{ category.count }})
-              </router-link>
-            </li>
-          </ul>
+          <div v-else class="category-list">
+            <router-link 
+              v-for="category in categories.slice(0, 6)" 
+              :key="category.id" 
+              :to="`/category/${category.slug}`"
+              class="category-item"
+            >
+              <div class="category-icon">
+                <i :class="getCategoryIcon(category.name)"></i>
+              </div>
+              <div class="category-info">
+                <span class="category-name">{{ category.name }}</span>
+                <span class="category-count">{{ category.count || 0 }}</span>
+              </div>
+            </router-link>
+          </div>
         </div>
         
-        <!-- 用户标签组件 - 仅已登录用户显示 -->
-        <div v-if="isLoggedIn" class="widget tag-widget">
-          <h3>我的标签</h3>
-          <div v-if="tagsLoading" class="loading">
-            <p>加载中...</p>
+        <!-- 标签云 - 改为热门标签 -->
+        <div class="widget tag-widget">
+          <h3 class="widget-title">
+            <i class="fas fa-tags"></i> 热门标签
+            <router-link to="/tags" class="view-all">全部 <i class="fas fa-chevron-right"></i></router-link>
+          </h3>
+          <div v-if="tagsLoading" class="loading-container">
+            <div class="spinner"></div>
           </div>
-          <div v-else-if="tagsError" class="error">
+          <div v-else-if="tagsError" class="error-message">
             <p>加载标签失败</p>
-            <button @click="fetchUserTags" class="btn">重试</button>
+            <button @click="fetchAllTags" class="btn">重试</button>
           </div>
-          <div v-else-if="userTags.length === 0" class="empty-tags">
+          <div v-else-if="tags.length === 0" class="empty-message">
             <p>暂无标签</p>
-            <p class="hint">发布文章时添加标签，它们将显示在这里</p>
           </div>
           <div v-else class="tag-cloud">
             <router-link 
+              v-for="tag in tags.slice(0, 20)" 
+              :key="tag.id" 
+              :to="`/tag/${tag.slug}`"
+              class="tag-item"
+              :style="{ fontSize: calculateTagSize(tag.count, tags) }"
+            >
+              #{{ tag.name }}
+            </router-link>
+          </div>
+        </div>
+        
+        <!-- 用户标签组件 - 仅已登录用户显示 -->
+        <div v-if="isLoggedIn" class="widget user-tag-widget">
+          <h3 class="widget-title">
+            <i class="fas fa-user-tag"></i> 我的标签
+          </h3>
+          <div v-if="userTagsLoading" class="loading-container">
+            <div class="spinner"></div>
+          </div>
+          <div v-else-if="userTagsError" class="error-message">
+            <p>加载标签失败</p>
+            <button @click="fetchUserTags" class="btn">重试</button>
+          </div>
+          <div v-else-if="userTags.length === 0" class="empty-message">
+            <p>暂无个人标签</p>
+            <p class="hint">发布文章时添加标签，它们将显示在这里</p>
+          </div>
+          <div v-else class="tag-cloud user-tags">
+            <router-link 
               v-for="tag in userTags" 
               :key="tag.id" 
-              :to="'/tag/' + tag.slug"
-              class="tag-item"
-              :style="{ fontSize: calculateTagSize(tag.count) }"
+              :to="`/tag/${tag.slug}`"
+              class="tag-item user-tag"
+              :style="{ fontSize: calculateTagSize(tag.count, userTags) }"
             >
-              {{ tag.name }}
+              #{{ tag.name }}
             </router-link>
           </div>
         </div>
@@ -146,13 +190,16 @@ export default {
     return {
       posts: [],
       categories: [],
+      tags: [],
       userTags: [],
       isLoading: true,
       categoriesLoading: true,
-      tagsLoading: false,
+      tagsLoading: true,
+      userTagsLoading: false,
       error: false,
       categoriesError: false,
       tagsError: false,
+      userTagsError: false,
       errorMessage: '加载失败',
       currentPage: 1,
       pageSize: 10,
@@ -166,6 +213,8 @@ export default {
     this.isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
     this.fetchArticles();
     this.fetchCategories();
+    this.fetchAllTags();
+    
     // 添加事件监听，当用户登录状态改变时刷新标签
     window.addEventListener('storage', this.handleStorageChange);
     
@@ -281,16 +330,40 @@ export default {
         });
     },
     
+    fetchAllTags() {
+      this.tagsLoading = true;
+      this.tagsError = false;
+      
+      axios.get('/api/tags')
+        .then(response => {
+          console.log('标签响应:', response.data);
+          if (response.data.code === 0 && response.data.data) {
+            this.tags = response.data.data.tags || [];
+            console.log('获取到标签:', this.tags.length);
+          } else {
+            this.tagsError = true;
+            console.error('获取标签响应错误:', response.data.message);
+          }
+        })
+        .catch(error => {
+          console.error('获取标签失败:', error);
+          this.tagsError = true;
+        })
+        .finally(() => {
+          this.tagsLoading = false;
+        });
+    },
+    
     fetchUserTags() {
       if (!this.isLoggedIn) return;
       
-      this.tagsLoading = true;
-      this.tagsError = false;
+      this.userTagsLoading = true;
+      this.userTagsError = false;
       
       // 获取token
       const token = localStorage.getItem('token');
       if (!token) {
-        this.tagsLoading = false;
+        this.userTagsLoading = false;
         return;
       }
       
@@ -306,34 +379,71 @@ export default {
             this.userTags = response.data.data.tags || [];
             console.log('获取到用户标签:', this.userTags.length);
           } else {
-            this.tagsError = true;
+            this.userTagsError = true;
             console.error('获取用户标签响应错误:', response.data.message);
           }
         })
         .catch(error => {
           console.error('获取用户标签失败:', error);
-          this.tagsError = true;
+          this.userTagsError = true;
         })
         .finally(() => {
-          this.tagsLoading = false;
+          this.userTagsLoading = false;
         });
     },
     
     // 根据标签使用次数计算标签云中的字体大小
-    calculateTagSize(count) {
+    calculateTagSize(count, tagCollection) {
       // 基础字体大小12px，最大18px
       const minSize = 12;
       const maxSize = 18;
       const minCount = 1;
       
       // 获取所有标签中最高的count值
-      const maxCount = Math.max(...this.userTags.map(tag => tag.count), minCount);
+      const maxCount = Math.max(...tagCollection.map(tag => tag.count || 0), minCount);
+      
+      // 如果所有标签都是相同的count，返回默认尺寸
+      if (maxCount === minCount) return `${minSize}px`;
       
       // 计算大小比例
       let size = minSize + (count - minCount) * (maxSize - minSize) / (maxCount - minCount);
       // 确保在范围内
       size = Math.max(minSize, Math.min(maxSize, size));
       return `${size}px`;
+    },
+    
+    // 根据分类名称获取对应的图标class
+    getCategoryIcon(categoryName) {
+      const icons = {
+        '技术': 'fas fa-code',
+        '编程': 'fas fa-laptop-code',
+        '前端': 'fab fa-js',
+        '后端': 'fas fa-server',
+        '数据库': 'fas fa-database',
+        '人工智能': 'fas fa-robot',
+        '机器学习': 'fas fa-brain',
+        '深度学习': 'fas fa-network-wired',
+        '算法': 'fas fa-calculator',
+        '区块链': 'fab fa-bitcoin',
+        '云计算': 'fas fa-cloud',
+        '运维': 'fas fa-cogs',
+        '网络': 'fas fa-network-wired',
+        '安全': 'fas fa-shield-alt',
+        '开源': 'fab fa-github',
+        '工具': 'fas fa-tools',
+        '生活': 'fas fa-coffee',
+        '随笔': 'fas fa-pen',
+        '读书': 'fas fa-book',
+        '影评': 'fas fa-film',
+        '旅行': 'fas fa-plane',
+        '摄影': 'fas fa-camera',
+        '音乐': 'fas fa-music',
+        '游戏': 'fas fa-gamepad',
+        '设计': 'fas fa-palette',
+        '其他': 'fas fa-folder'
+      };
+      
+      return icons[categoryName] || 'fas fa-folder';
     },
     
     changePage(newPage) {
@@ -513,39 +623,173 @@ export default {
   background: white;
   border-radius: 8px;
   padding: 1.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.widget h3 {
-  margin: 0 0 1rem;
-  color: #1a1a1a;
-  font-size: 1.25rem;
+.widget:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.category-widget ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.category-widget li {
-  margin-bottom: 0.75rem;
-}
-
-.category-widget li:last-child {
-  margin-bottom: 0;
-}
-
-.category-widget a {
-  color: #4a4a4a;
-  text-decoration: none;
+.widget-title {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #eee;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
-.category-widget a:hover {
+.widget-title i {
+  margin-right: 0.5rem;
   color: #6366f1;
+}
+
+.view-all {
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #888;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.view-all:hover {
+  color: #6366f1;
+}
+
+.view-all i {
+  font-size: 0.75rem;
+  margin-left: 0.3rem;
+}
+
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.6rem;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  transition: all 0.3s;
+}
+
+.category-item:hover {
+  background-color: #eef2ff;
+  transform: translateY(-2px);
+}
+
+.category-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  background-color: #6366f1;
+  border-radius: 50%;
+  margin-right: 0.75rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.category-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.category-name {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-count {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag-item {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  background-color: #f0f2f5;
+  border-radius: 20px;
+  color: #555;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+
+.tag-item:hover {
+  background-color: #e6f7ff;
+  color: #1677ff;
+  transform: translateY(-2px);
+}
+
+.user-tags {
+  margin-top: 0.5rem;
+}
+
+.user-tag {
+  background-color: #eef2ff;
+}
+
+.user-tag:hover {
+  background-color: #d1d5f0;
+  color: #4f46e5;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  color: #e74c3c;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.empty-message {
+  color: #666;
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 0.5rem;
 }
 
 .pagination {
@@ -619,42 +863,6 @@ export default {
   margin-top: 1rem;
 }
 
-.tag-widget .tag-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.tag-widget .tag-item {
-  display: inline-block;
-  background-color: #f0f0f0;
-  padding: 0.25rem 0.75rem;
-  border-radius: 16px;
-  color: #666;
-  text-decoration: none;
-  transition: all 0.3s;
-  text-align: center;
-}
-
-.tag-widget .tag-item:hover {
-  background-color: #e6e7ff;
-  color: #6366f1;
-  transform: translateY(-2px);
-}
-
-.empty-tags {
-  text-align: center;
-  padding: 1rem 0;
-  color: #888;
-}
-
-.empty-tags .hint {
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
-  font-style: italic;
-}
-
 @media (max-width: 1600px) {
   .main-container {
     max-width: 100%;
@@ -674,6 +882,10 @@ export default {
 
   .sidebar {
     min-width: 100%;
+  }
+
+  .category-list {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

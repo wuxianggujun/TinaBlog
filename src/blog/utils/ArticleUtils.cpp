@@ -7,6 +7,7 @@
 #include <regex>
 #include <chrono>
 #include <iostream>
+#include <unordered_map>
 
 namespace utils {
 
@@ -131,30 +132,65 @@ std::string ArticleUtils::generateSlug(const std::string& text) {
     // 转为小写
     std::transform(slug.begin(), slug.end(), slug.begin(), 
         [](unsigned char c){ return std::tolower(c); });
-        
-    // 特殊字符处理
-    for (size_t i = 0; i < slug.length(); i++) {
-        unsigned char c = slug[i];
-        // 对于非ASCII字符(可能是中文、日文等)，替换为x
+    
+    // 使用简单的中文转拼音映射
+    // 常见中文字符的拼音首字母映射表
+    static const std::unordered_map<unsigned char, std::string> chineseToPinyin = {
+        // 简体中文常用汉字拼音首字母映射
+        {0xB0, "a"}, {0xB1, "b"}, {0xB2, "c"}, {0xB3, "d"}, {0xB4, "e"}, 
+        {0xB5, "f"}, {0xB6, "g"}, {0xB7, "h"}, {0xB8, "j"}, {0xB9, "k"},
+        {0xBA, "l"}, {0xBB, "m"}, {0xBC, "n"}, {0xBD, "o"}, {0xBE, "p"}, 
+        {0xBF, "q"}, {0xC0, "r"}, {0xC1, "s"}, {0xC2, "t"}, {0xC3, "w"},
+        {0xC4, "x"}, {0xC5, "y"}, {0xC6, "z"}
+    };
+    
+    // 处理中文字符
+    std::string processed;
+    for (size_t i = 0; i < slug.length(); ++i) {
+        unsigned char c = static_cast<unsigned char>(slug[i]);
+        // 对于UTF-8中文字符
         if (c > 127) {
-            slug[i] = 'x';
+            // 尝试使用简单规则将中文转为拼音首字母
+            if (i + 1 < slug.length() && (c & 0xE0) == 0xC0) {
+                // 双字节UTF-8
+                unsigned char next = static_cast<unsigned char>(slug[i + 1]);
+                auto it = chineseToPinyin.find(next);
+                if (it != chineseToPinyin.end()) {
+                    processed += it->second;
+                } else {
+                    processed += "z"; // 默认值
+                }
+                i++; // 跳过下一个字节
+            } else if (i + 2 < slug.length() && (c & 0xF0) == 0xE0) {
+                // 三字节UTF-8，大多数中文
+                processed += "z"; // 简单处理
+                i += 2; // 跳过接下来的两个字节
+            } else {
+                // 其他情况，简单处理
+                processed += "z";
+                // 跳过剩余的UTF-8字节
+                while (i + 1 < slug.length() && (static_cast<unsigned char>(slug[i + 1]) & 0xC0) == 0x80) {
+                    i++;
+                }
+            }
+        } else if (std::isalnum(c) || c == '-') {
+            // 保留字母、数字和连字符
+            processed += c;
+        } else if (c == ' ') {
+            // 空格转换为连字符
+            processed += '-';
         }
     }
     
-    // 替换空格为连字符
-    std::replace(slug.begin(), slug.end(), ' ', '-');
+    slug = processed;
     
-    // 移除非字母数字和连字符的字符
-    slug.erase(std::remove_if(slug.begin(), slug.end(), 
-        [](unsigned char c){ return !(std::isalnum(c) || c == '-'); }), slug.end());
-        
     // 确保没有连续的连字符
     slug = std::regex_replace(slug, std::regex("-+"), "-");
     
     // 去除首尾连字符
     slug = std::regex_replace(slug, std::regex("^-|-$"), "");
     
-    // 如果slug为空(可能全是中文被替换后被移除)，则使用格式化时间戳
+    // 如果slug为空，则使用格式化时间戳
     if (slug.empty()) {
         auto now = std::chrono::system_clock::now();
         auto time_t_now = std::chrono::system_clock::to_time_t(now);

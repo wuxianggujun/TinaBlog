@@ -1,6 +1,9 @@
 -- Tina博客系统数据库架构
 -- PostgreSQL 17.x
 
+-- 使用UTF8编码，支持中文字符
+-- 注意: PostgreSQL默认使用UTF8编码，无需额外设置
+
 -- 用户表
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
@@ -9,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     display_name VARCHAR(100),
+    bio TEXT,
+    avatar VARCHAR(255),
     is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
