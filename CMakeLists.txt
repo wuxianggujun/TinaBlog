@@ -58,14 +58,8 @@ if (MSVC)
     add_compile_options(/utf-8)
     # 禁用一些警告
     add_compile_options(/wd4819)  # 文件编码警告
-
-    # 添加宏定义以解决picojson和MSVC兼容性问题
-    add_definitions(-D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
-    add_definitions(-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
     add_definitions(-DNOMINMAX)
 endif ()
-
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 # 查找依赖包
 find_package(Drogon CONFIG REQUIRED)
@@ -74,27 +68,27 @@ find_package(unofficial-sodium CONFIG REQUIRED)
 find_package(CURL REQUIRED)
 
 
-# 添加定义确保启用PostgreSQL支持
-add_compile_definitions(USE_POSTGRESQL)
-
 set(TINA_BLOG_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(TINA_BLOG_FRONTEND_DIR ${CMAKE_CURRENT_SOURCE_DIR}/html)
 
 # 包含目录
 include_directories(${TINA_BLOG_SOURCE_DIR})
 
 # 源文件
 file(GLOB_RECURSE SOURCES
-        "${TINA_BLOG_SOURCE_DIR}/blog/*.cpp"
-        "${TINA_BLOG_SOURCE_DIR}/blog/auth/*.cpp"
-        "${TINA_BLOG_SOURCE_DIR}/blog/controllers/*.cpp"
-        "${TINA_BLOG_SOURCE_DIR}/blog/utils/*.cpp"
+        "${TINA_BLOG_SOURCE_DIR}/*.cpp"
 )
 
+# 添加定义确保启用PostgreSQL支持
+add_compile_definitions(USE_POSTGRESQL)
+
+add_compile_definitions(TINA_BLOG_FRONTEND_PATH="${TINA_BLOG_FRONTEND_DIR}")
+
 # 可执行文件
-add_executable(TinaBlog ${SOURCES})
+add_executable(${PROJECT_NAME} ${SOURCES})
 
 # 链接库
-target_link_libraries(TinaBlog PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
         Drogon::Drogon
         jwt-cpp::jwt-cpp
         unofficial-sodium::sodium
@@ -102,22 +96,7 @@ target_link_libraries(TinaBlog PRIVATE
 )
 
 # 安装规则
-install(TARGETS TinaBlog DESTINATION bin)
-
-# 设置前端构建目录
-set(FRONTEND_BUILD_DIR ${CMAKE_BINARY_DIR}/html)
-
-# 确保每次构建都执行删除旧文件并重新复制
-add_custom_target(copy_frontend ALL
-        COMMAND ${CMAKE_COMMAND} -E remove_directory ${FRONTEND_BUILD_DIR}/blog  # 删除旧目录
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${FRONTEND_BUILD_DIR}/blog   # 重新创建目录
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/html/blog/dist ${FRONTEND_BUILD_DIR}/blog  # 复制新文件
-        COMMENT "删除旧文件并复制前端文件..."
-        VERBATIM
-)
-
-# 确保在主应用构建前完成前端文件复制
-add_dependencies(${PROJECT_NAME} copy_frontend)
+install(TARGETS ${PROJECT_NAME} DESTINATION bin)
 
 # 输出信息
 message(STATUS "TinaBlog配置完成")
